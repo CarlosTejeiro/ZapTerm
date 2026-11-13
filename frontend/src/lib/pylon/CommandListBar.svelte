@@ -5,7 +5,7 @@
   /// `<placeholder>` is typed up to it and waits; other placeholders and
   /// recipes (multi-line debugs) ask for their values in a small form first.
   import { ask } from '@tauri-apps/plugin-dialog'
-  import { sendInputText } from '$lib/bridge/commands'
+  import { sendInputText, writeUserCmdlist } from '$lib/bridge/commands'
   import { errorText } from '$lib/bridge/errors'
   import { barContext, recents, loadRecents } from '$lib/stores/snippets.svelte'
   import Icon from '$lib/icons/Icon.svelte'
@@ -35,6 +35,18 @@
     type RecipeItem,
   } from '$lib/cmdlists'
   import { userLists } from '$lib/cmdlists/userLists.svelte'
+  import { parseVendorLists } from '$lib/cmdlists'
+  import {
+    CUSTOM_ID,
+    CUSTOM_PLATFORM,
+    customCommand,
+    customFileText,
+    customList,
+    hasCommand,
+    withItem,
+    withoutItem,
+    type ItemAt,
+  } from '$lib/cmdlists/custom'
   import type { PylonTheme } from '$lib/themes/index'
 
   interface Props {
@@ -60,7 +72,12 @@
     | { kind: 'command'; item: CommandItem; values: Record<string, string> }
   let form = $state<Form | null>(null)
 
-  const openList = $derived(vendor?.lists.find((l) => l.id === openId) ?? null)
+  /// The user's own commands, the same on every platform.
+  const custom = $derived(customList(userLists.lists))
+  const customOpen = $derived(openId === CUSTOM_ID)
+  const openList = $derived(
+    customOpen ? custom : (vendor?.lists.find((l) => l.id === openId) ?? null),
+  )
 
   /// Sections filtered by the search box, and the same items flat (for ↑↓).
   const filtered = $derived.by(() => {
@@ -97,6 +114,98 @@
   function close() {
     openId = null
     form = null
+    edit = null
+  }
+
+  // ── Custom list ───────────────────────────────────────────────────────
+  /// The add/edit form of the custom panel (`at` null = adding).
+  let edit = $state<{ at: ItemAt | null; cmd: string; desc: string } | null>(null)
+  let customError = $state('')
+
+  function toggleCustom() {
+    if (customOpen) {
+      close()
+      return
+    }
+    recentOpen = false
+    openId = CUSTOM_ID
+    query = ''
+    activeIndex = 0
+    form = null
+    edit = null
+    customError = ''
+    const row = rowEl?.getBoundingClientRect()
+    if (row) panelLeft = Math.max(0, row.width - 600 - 8)
+    queueMicrotask(() => searchEl?.focus())
+  }
+
+  /// Where an item of the custom list is (the rows show the same objects).
+  function customPos(item: ListItem): ItemAt | null {
+    for (const [si, s] of custom.sections.entries()) {
+      const ii = s.items.indexOf(item)
+      if (ii >= 0) return { si, ii }
+    }
+    return null
+  }
+
+  async function saveCustom(next: CommandList): Promise<boolean> {
+    // A hand-edited custom.json with a mistake is shown as empty: saving now
+    // would overwrite it and lose the user's commands.
+    const broken = userLists.errors[CUSTOM_PLATFORM]
+    if (broken) {
+      customError = `custom.json has an error, fix it and press Reload in Settings → Command lists: ${broken}`
+      showToast({ kind: 'error', title: 'custom.json has an error', detail: broken })
+      return false
+    }
+    const text = customFileText(next)
+    try {
+      await writeUserCmdlist(CUSTOM_PLATFORM, text)
+    } catch (e) {
+      customError = `Couldn't save: ${errorText(e)}`
+      return false
+    }
+    const r = parseVendorLists(text, CUSTOM_PLATFORM)
+    if (r.ok) userLists.lists = { ...userLists.lists, [CUSTOM_PLATFORM]: r.value }
+    customError = ''
+    return true
+  }
+
+  function startEdit(item: ListItem | null) {
+    const at = item ? customPos(item) : null
+    edit =
+      item && item.kind === 'command'
+        ? { at, cmd: item.cmd, desc: item.desc }
+        : { at: null, cmd: '', desc: '' }
+  }
+
+  async function submitEdit() {
+    if (!edit) return
+    const item = customCommand(edit.cmd, edit.desc)
+    if (!item) return
+    if (await saveCustom(withItem(custom, edit.at, item))) edit = null
+  }
+
+  async function removeCustom(item: ListItem) {
+    const at = customPos(item)
+    if (!at) return
+    const label = item.kind === 'command' ? item.cmd : item.name
+    const yes = await ask(`Remove this from Custom?\n\n${label}`, {
+      title: 'Remove from Custom',
+      kind: 'warning',
+    })
+    if (yes) await saveCustom(withoutItem(custom, at))
+  }
+
+  /// ☆ on a Recent entry: keep it in the custom list.
+  async function saveRecent(r: RecentCommand) {
+    const item = customCommand(r.text)
+    if (!item) return
+    if (hasCommand(custom, item.cmd)) {
+      showToast({ kind: 'info', title: 'Already in Custom', detail: item.cmd })
+      return
+    }
+    if (await saveCustom(withItem(custom, null, item)))
+      showToast({ kind: 'success', title: 'Saved to Custom', detail: item.cmd })
   }
 
   // Close on a click outside the row/panel.
@@ -464,6 +573,20 @@
     <span class="spacer"></span>
   {/if}
 
+  <button
+    type="button"
+    class="recent-btn custom-btn"
+    class:open={customOpen}
+    onclick={toggleCustom}
+    title={customOpen ? undefined : 'Your own commands, on every platform'}
+    aria-haspopup="dialog"
+    aria-expanded={customOpen}
+  >
+    <span aria-hidden="true">★</span>
+    <span>Custom</span>
+    {#if count(custom)}<span class="chip-count">{count(custom)}</span>{/if}
+  </button>
+
   <div class="recent-wrap" bind:this={recentWrap}>
     <button
       type="button"
@@ -499,6 +622,13 @@
                 aria-label="Type {r.text} without Enter"
                 onclick={() => pickRecent(r, true)}>Type</button
               >
+              <button
+                type="button"
+                class="type-btn star-btn"
+                title="Save to Custom"
+                aria-label="Save {r.text} to Custom"
+                onclick={() => saveRecent(r)}>☆</button
+              >
             </div>
           {/each}
         {/if}
@@ -525,7 +655,7 @@
           <span class="head-title">{openList.name}</span>
           <span class="head-sub">{openList.summary} · {count(openList)}</span>
         </div>
-        <span class="vendor">{vendor?.label}</span>
+        <span class="vendor">{customOpen ? 'All platforms' : vendor?.label}</span>
         {#if openList.debug}
           <button
             type="button"
@@ -602,6 +732,55 @@
             >
           </div>
         </div>
+      {:else if edit}
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div
+          class="form"
+          onkeydown={(e) => {
+            if (e.key === 'Escape') {
+              e.stopPropagation()
+              edit = null
+            }
+          }}
+        >
+          <button type="button" class="back" onclick={() => (edit = null)}>‹ Back</button>
+          <div class="form-title">{edit.at ? 'Edit command' : 'Add a command'}</div>
+          <div class="fields">
+            <label class="field">
+              <span>Command</span>
+              <!-- svelte-ignore a11y_autofocus -->
+              <input
+                class="mono-input"
+                bind:value={edit.cmd}
+                placeholder="show interfaces <name>"
+                spellcheck="false"
+                autofocus
+                onkeydown={(e) => e.key === 'Enter' && submitEdit()}
+              />
+            </label>
+            <label class="field">
+              <span>Description (optional)</span>
+              <input
+                bind:value={edit.desc}
+                placeholder="What it shows or does"
+                onkeydown={(e) => e.key === 'Enter' && submitEdit()}
+              />
+            </label>
+          </div>
+          <div class="form-desc">
+            <span class="hole">name</span> in angle brackets, like &lt;name&gt;, is asked for when you
+            run it.
+          </div>
+          {#if customError}<div class="form-error">{customError}</div>{/if}
+          <div class="form-actions">
+            <button
+              type="button"
+              class="primary-btn"
+              disabled={!edit.cmd.trim()}
+              onclick={submitEdit}>Save</button
+            >
+          </div>
+        </div>
       {:else}
         <label class="search">
           <svg
@@ -627,7 +806,18 @@
 
         <div class="items">
           {#if flat.length === 0}
-            <div class="empty">No command matches “{query}”.</div>
+            {#if customOpen && userLists.errors[CUSTOM_PLATFORM]}
+              <div class="empty form-error">
+                custom.json has an error, fix it and press Reload in Settings → Command lists:
+                {userLists.errors[CUSTOM_PLATFORM]}
+              </div>
+            {:else if customOpen && !query}
+              <div class="empty">
+                No commands yet. Add one below, or save one from Recent with ☆.
+              </div>
+            {:else}
+              <div class="empty">No command matches “{query}”.</div>
+            {/if}
           {/if}
           {#each filtered as section, si (si)}
             <div class="section-title">{section.title}</div>
@@ -643,6 +833,7 @@
                   type="button"
                   class="item"
                   class:with-type={canTypeOnly(item)}
+                  class:with-tools={customOpen}
                   onpointerdown={notePress}
                   onclick={(e) => pick(item, shiftClick(e))}
                 >
@@ -667,7 +858,7 @@
                   </span>
                   <span class="item-desc">{item.desc}</span>
                 </button>
-                {#if canTypeOnly(item)}
+                {#if canTypeOnly(item) && !customOpen}
                   <button
                     type="button"
                     class="type-btn"
@@ -676,12 +867,44 @@
                     onclick={() => pick(item, true)}>Type</button
                   >
                 {/if}
+                {#if customOpen}
+                  <div class="row-tools">
+                    {#if canTypeOnly(item)}
+                      <button
+                        type="button"
+                        class="type-btn"
+                        title="Type without Enter — edit it before running"
+                        aria-label="Type {item.kind === 'command' ? item.cmd : ''} without Enter"
+                        onclick={() => pick(item, true)}>Type</button
+                      >
+                    {/if}
+                    <button
+                      type="button"
+                      class="type-btn icon-btn"
+                      title="Edit"
+                      aria-label="Edit"
+                      onclick={() => startEdit(item)}>✎</button
+                    >
+                    <button
+                      type="button"
+                      class="type-btn icon-btn danger"
+                      title="Remove from Custom"
+                      aria-label="Remove from Custom"
+                      onclick={() => removeCustom(item)}>✕</button
+                    >
+                  </div>
+                {/if}
               </div>
             {/each}
           {/each}
         </div>
 
         <div class="panel-foot">
+          {#if customOpen}
+            <button type="button" class="add-btn" onclick={() => startEdit(null)}
+              >+ Add command</button
+            >
+          {/if}
           <span><b>Click</b> runs</span>
           <span><b>Type</b> or <b>Shift+click</b> types without Enter</span>
           <span><span class="hole">value</span> you fill in</span>
@@ -1231,5 +1454,63 @@
   .primary-btn:disabled {
     opacity: 0.5;
     cursor: default;
+  }
+
+  /* ── Custom list ── */
+  .custom-btn {
+    margin-right: 6px;
+  }
+  .item.with-tools {
+    padding-right: 120px;
+  }
+  .item-row .row-tools {
+    position: absolute;
+    right: 8px;
+    top: 7px;
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+  }
+  .item-row:hover .row-tools,
+  .item-row.active .row-tools,
+  .row-tools:focus-within {
+    opacity: 1;
+  }
+  .item-row .row-tools .type-btn {
+    position: static;
+    opacity: 1;
+  }
+  .icon-btn {
+    min-width: 24px;
+  }
+  .icon-btn.danger:hover {
+    color: #e5484d;
+    border-color: #e5484d;
+  }
+  .star-btn {
+    font-size: 12px;
+  }
+  .mono-input {
+    font-family: var(--mono) !important;
+  }
+  .form-error {
+    color: #e5484d;
+    font-size: 12px;
+  }
+  .add-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+    font-family: inherit;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--c, var(--border));
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .add-btn:hover {
+    background: var(--hover);
   }
 </style>

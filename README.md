@@ -80,6 +80,8 @@ The little things that add up across a long day:
 - **Command lists per vendor** — grouped commands and recipes under the
   terminal for the detected platform. They are JSON files: make your own copy
   in **Settings → Command Lists** and edit it; updates never change your copy.
+- **★ Custom commands** — your own command list, the same on every platform,
+  next to Recent in the command bar (add, edit, remove, or ☆ a Recent entry).
 - **Keyword highlighting** — per-rule regex in true-color ANSI, with
   user-overridable vendor catalogs (Cisco, Juniper, Fortinet, Palo Alto, F5…).
 - **Triggers** — per-session regex/literal matches on output that notify you,
