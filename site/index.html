@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ZapTerm — the terminal for network engineers</title>
+  <meta name="description" content="ZapTerm is a free, open-source SSH, Telnet and Serial terminal for network engineers: vendor command lists, inline hints, split panes, broadcast, a credential vault and Python automation. Windows, macOS and Linux.">
+  <meta property="og:title" content="ZapTerm — the terminal for network engineers">
+  <meta property="og:description" content="SSH · Telnet · Serial in one app, with vendor command lists, hints, split panes, broadcast, a credential vault and Python automation.">
+  <meta property="og:image" content="img/hero.webp">
+  <meta name="theme-color" content="#0b0d14">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="#top"><img src="icon.svg" alt="" width="28" height="28"><span>ZapTerm</span></a>
+    <nav class="nav-links" aria-label="Sections">
+      <a href="#features">Features</a>
+      <a href="#vendors">Vendors</a>
+      <a href="#themes">Themes</a>
+      <a href="#download">Download</a>
+    </nav>
+    <a class="btn btn-ghost btn-sm" href="https://github.com/CarlosTejeiro/ZapTerm">
+      <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub
+    </a>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ── Hero ─────────────────────────────────────────────────────────── -->
+  <section class="hero">
+    <div class="glow glow-a"></div><div class="glow glow-b"></div>
+    <div class="wrap hero-inner">
+      <p class="eyebrow"><span class="dot"></span> Version 1.0 · free &amp; open source</p>
+      <h1>The terminal built for<br><span class="grad">network engineers</span></h1>
+      <p class="lede">SSH, Telnet and Serial in one fast app. Command lists for every vendor you touch,
+        hints as you type, split panes, broadcast to many devices, a credential vault and
+        Python automation — on Windows, macOS and Linux.</p>
+      <div class="cta">
+        <a class="btn btn-primary" href="#download" data-dl-primary>Download ZapTerm</a>
+        <a class="btn btn-ghost" href="https://github.com/CarlosTejeiro/ZapTerm">View source</a>
+      </div>
+      <p class="fine">GPL-3.0 · no account needed · no telemetry</p>
+    </div>
+    <div class="wrap">
+      <figure class="window hero-shot">
+        <div class="window-bar"><i></i><i></i><i></i></div>
+        <img src="img/hero.webp" width="1920" height="1200" alt="ZapTerm with four device tabs open: a Cisco router's interface list and syslog highlighted in color, the session sidebar with folders and tags, and the Cisco command lists at the bottom." data-zoom>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ── Platform strip ───────────────────────────────────────────────── -->
+  <section class="strip" aria-label="Supported platforms">
+    <div class="wrap">
+      <p>Command lists and hints that know your gear</p>
+      <ul class="chips">
+        <li>Cisco IOS / IOS-XE</li><li>Cisco IOS XR</li><li>Arista EOS</li><li>Juniper Junos</li>
+        <li>FortiGate</li><li>Linux</li><li>Windows PowerShell</li><li>Palo Alto</li>
+        <li>MikroTik</li><li>F5 BIG-IP</li><li>Check Point</li><li>Aruba</li><li>HP Comware</li>
+        <li>FortiManager</li><li>Brocade FOS</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ── Features ─────────────────────────────────────────────────────── -->
+  <section id="features" class="features">
+    <div class="wrap">
+      <header class="section-head">
+        <p class="kicker">Features</p>
+        <h2>Everything a long day on the CLI needs</h2>
+        <p>Built around the work itself: the commands you type every day, many devices at once,
+          credentials kept safe and repetitive work automated.</p>
+      </header>
+
+      <article class="feature">
+        <div class="feature-text">
+          <span class="tag">Command lists</span>
+          <h3>The right command, one click away</h3>
+          <p>ZapTerm detects the platform from the prompt and shows that vendor's command lists
+            under the terminal: interfaces, routing, BGP, OSPF, IPsec, HA, security, debug…
+            Click to run, or press <b>Type</b> to put the command at the prompt and finish it yourself.
+            Placeholders like <code>&lt;interface&gt;</code> are left for you to fill in.</p>
+          <ul class="ticks">
+            <li>Lists for Cisco IOS &amp; IOS XR, Arista, Junos, FortiGate, Linux and PowerShell</li>
+            <li>Filter any list as you type</li>
+          </ul>
+        </div>
+        <figure class="shot"><img src="img/lists-popup.webp" width="1220" height="1280" alt="The Interfaces command list for Cisco IOS: show ip interface brief, show interfaces status, CDP and LLDP neighbors, each with a short description and a Type button." data-zoom></figure>
+      </article>
+
+      <article class="feature flip">
+        <div class="feature-text">
+          <span class="tag">Hints</span>
+          <h3>Ghost-text hints as you type</h3>
+          <p>Start typing and ZapTerm suggests the rest in grey — from your own history and from
+            built-in catalogs for 15 platforms. Press <kbd>→</kbd> to accept, or <kbd>Ctrl</kbd>+<kbd>Space</kbd>
+            for the full list. Passwords typed at a prompt are never recorded.</p>
+        </div>
+        <figure class="shot"><img src="img/hints.webp" width="1640" height="760" alt="A Cisco prompt where 'show ip ' is typed and ZapTerm suggests 'bgp summary' in grey." data-zoom></figure>
+      </article>
+
+      <article class="feature">
+        <div class="feature-text">
+          <span class="tag">Workspace</span>
+          <h3>Split panes and broadcast</h3>
+          <p>Split any tab into panes and watch a router, a switch and a firewall side by side.
+            Turn on <b>Multi</b> and one master input sends the same command to every pane —
+            with <b>Run &amp; compare</b> to line the outputs up.</p>
+          <ul class="ticks">
+            <li>Recursive splits, horizontal and vertical</li>
+            <li>Broadcast groups open many hosts as a grid</li>
+            <li>Command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>) for sessions and actions</li>
+          </ul>
+        </div>
+        <figure class="shot"><img src="img/multi.webp" width="1920" height="1200" alt="Three panes — a Cisco core router, an Arista spine and a FortiGate — with the broadcast bar at the bottom about to send 'show version' to all three hosts." data-zoom></figure>
+      </article>
+
+      <article class="feature flip">
+        <div class="feature-text">
+          <span class="tag">Highlighting</span>
+          <h3>Output that reads itself</h3>
+          <p><span class="hl-g">up</span> in green, <span class="hl-r">down</span> in red, IP addresses, MACs,
+            VLANs and syslog severities picked out at a glance. Every rule is a regex you can edit,
+            test on sample output, and export or import as JSON to share with your team.</p>
+        </div>
+        <figure class="shot"><img src="img/highlight.webp" width="1360" height="1540" alt="Settings, Highlight Rules: a list of regex rules for syslog errors, interface up and down, IPv4 and IPv6 addresses, MACs and VLANs, with a form to add a new rule." data-zoom></figure>
+      </article>
+
+      <article class="feature">
+        <div class="feature-text">
+          <span class="tag">Sessions</span>
+          <h3>Every device, organised</h3>
+          <p>SSH with password, key, agent or 2FA; Telnet; Serial consoles; local shells and,
+            on Windows, WSL distributions. Folders, tags and notes, jump hosts through saved
+            sessions, port forwarding, anti-idle keepalives and macros that run on connect.</p>
+          <ul class="ticks">
+            <li>Import from <code>~/.ssh/config</code>, PuTTY, MobaXterm and SecureCRT</li>
+            <li>Login automation with expect / send steps</li>
+            <li>SFTP browser with streaming transfers</li>
+          </ul>
+        </div>
+        <figure class="shot"><img src="img/new-session.webp" width="1360" height="1690" alt="The New Session dialog: protocol, name, host and port, username, authentication, jump host, folder, tags, notes, anti-idle, auto-reconnect, platform, color scheme and a macro to run on connect." data-zoom></figure>
+      </article>
+
+      <article class="feature flip">
+        <div class="feature-text">
+          <span class="tag">Credential vault</span>
+          <h3>Secrets stay secret</h3>
+          <p>Reusable credentials live in your OS keyring (Windows Credential Manager, macOS Keychain,
+            Secret Service), with an AES-256-GCM fallback. Sessions and macros reference them by name —
+            the secret is resolved in the backend and never reaches the UI, exports or logs.</p>
+        </div>
+        <figure class="shot"><img src="img/vault.webp" width="1000" height="520" alt="The Credential vault with two entries, 'FortiGate admin' and 'NetOps (TACACS+)', each with Edit and Delete." data-zoom></figure>
+      </article>
+
+      <article class="feature">
+        <div class="feature-text">
+          <span class="tag">Automation</span>
+          <h3>Python scripts with a safety net</h3>
+          <p>Drive real terminal tabs from Python: open sessions, run commands, wait for prompts,
+            report results. Every run starts in <b>Dry run</b> — nothing is sent, every action is listed —
+            then <b>Read-only</b> (display commands only) and finally <b>Run</b>. Notebooks in VS Code or
+            JupyterLab can connect too.</p>
+        </div>
+        <div class="shot-stack">
+          <figure class="shot"><img src="img/script-run.webp" width="990" height="580" alt="The Run script dialog for hello.py with Dry run, Read-only and Run modes." data-zoom></figure>
+          <figure class="shot"><img src="img/script-panel.webp" width="1124" height="470" alt="The script panel after a dry run: core-rtr-01 OK, and a log saying it would run 'uname -a'." data-zoom></figure>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- ── Vendors gallery ──────────────────────────────────────────────── -->
+  <section id="vendors" class="gallery">
+    <div class="wrap">
+      <header class="section-head">
+        <p class="kicker">Multi-vendor</p>
+        <h2>At home on every box in the rack</h2>
+        <p>The bottom bar follows the device you're on — each platform gets its own lists.</p>
+      </header>
+      <div class="tabs" role="tablist" data-tabs="vendor">
+        <button role="tab" aria-selected="true" data-src="img/hero.webp" data-alt="A Cisco IOS-XE core router: show ip interface brief and show logging, with the Cisco command lists.">Cisco IOS-XE</button>
+        <button role="tab" aria-selected="false" data-src="img/junos.webp" data-alt="A Juniper MX: show interfaces terse and show bgp summary, with the Junos command lists.">Juniper Junos</button>
+        <button role="tab" aria-selected="false" data-src="img/arista.webp" data-alt="An Arista spine: show ip bgp summary and show lldp neighbors, with the Arista EOS command lists.">Arista EOS</button>
+        <button role="tab" aria-selected="false" data-src="img/fortigate.webp" data-alt="A FortiGate: system performance and VPN tunnel list, with the FortiGate command lists.">FortiGate</button>
+      </div>
+      <figure class="window">
+        <div class="window-bar"><i></i><i></i><i></i></div>
+        <img id="vendor-img" src="img/hero.webp" width="1920" height="1200" alt="A Cisco IOS-XE core router: show ip interface brief and show logging, with the Cisco command lists." data-zoom>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ── Themes ───────────────────────────────────────────────────────── -->
+  <section id="themes" class="gallery themes">
+    <div class="wrap">
+      <header class="section-head">
+        <p class="kicker">Make it yours</p>
+        <h2>Five themes, light and dark</h2>
+        <p>Each theme restyles the whole app; terminal color schemes, fonts and shortcuts are yours to pick.</p>
+      </header>
+      <div class="tabs" role="tablist" data-tabs="theme">
+        <button role="tab" aria-selected="true" data-src="img/theme-midnight.webp" data-alt="ZapTerm in the Midnight theme." data-swatch="#0b0f15">Midnight</button>
+        <button role="tab" aria-selected="false" data-src="img/theme-aurora.webp" data-alt="ZapTerm in the Aurora theme." data-swatch="#17122b">Aurora</button>
+        <button role="tab" aria-selected="false" data-src="img/theme-ember.webp" data-alt="ZapTerm in the Ember theme." data-swatch="#1a1410">Ember</button>
+        <button role="tab" aria-selected="false" data-src="img/theme-parchment.webp" data-alt="ZapTerm in the Parchment theme." data-swatch="#f7f4ed">Parchment</button>
+        <button role="tab" aria-selected="false" data-src="img/theme-porcelain.webp" data-alt="ZapTerm in the Porcelain theme." data-swatch="#f3f6fa">Porcelain</button>
+      </div>
+      <figure class="window">
+        <div class="window-bar"><i></i><i></i><i></i></div>
+        <img id="theme-img" src="img/theme-midnight.webp" width="1920" height="1200" alt="ZapTerm in the Midnight theme." data-zoom>
+      </figure>
+      <div class="mini-shots">
+        <figure class="shot"><img src="img/settings.webp" width="1360" height="1540" alt="Settings, Appearance: terminal color schemes, font family and size, local shell and cursor style." data-zoom><figcaption>Color schemes, fonts &amp; cursor</figcaption></figure>
+        <figure class="shot"><img src="img/hint-settings.webp" width="1360" height="1320" alt="Settings, Hints: ghost text, suggestions popup, default platform, snippets and custom catalogs." data-zoom><figcaption>Hints &amp; custom catalogs</figcaption></figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── More ─────────────────────────────────────────────────────────── -->
+  <section class="more">
+    <div class="wrap">
+      <header class="section-head">
+        <p class="kicker">And more</p>
+        <h2>The little things that add up</h2>
+      </header>
+      <div class="grid">
+        <div class="card"><h4>Encrypted backup &amp; sync</h4><p>One passphrase-sealed file with everything, credentials included. Point ZapTerm at any cloud-synced folder to keep installs in step — the provider only sees ciphertext.</p></div>
+        <div class="card"><h4>Macros</h4><p>A sidebar library of expect / send / wait macros, in folders, with JSON and MobaXterm import.</p></div>
+        <div class="card"><h4>Triggers</h4><p>Match output by regex to notify you, auto-reply or ring the bell.</p></div>
+        <div class="card"><h4>Search &amp; logging</h4><p>In-terminal search with regex, plus plain or raw session logs with rotation.</p></div>
+        <div class="card"><h4>Port forwarding</h4><p>Local, remote and SOCKS5 dynamic tunnels, saved per session.</p></div>
+        <div class="card"><h4>Portable mode</h4><p>A Windows portable <code>.exe</code> that keeps all its data beside it — on a USB stick, if you like.</p></div>
+        <div class="card"><h4>Rock-solid links</h4><p>SSH keepalives, auto-reconnect on drop and anti-idle strings for picky servers.</p></div>
+        <div class="card"><h4>Keyboard first</h4><p>Every action has a shortcut, and every shortcut can be changed.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── ZAPX ─────────────────────────────────────────────────────────── -->
+  <section class="zapx">
+    <div class="wrap zapx-inner">
+      <div>
+        <p class="kicker">Coming from ZAPX?</p>
+        <h2>ZapTerm is what ZAPX became</h2>
+        <p>ZAPX is frozen at 0.42.1 and all new work happens in ZapTerm. On its first start,
+          ZapTerm imports your ZAPX sessions, settings and saved credentials — ZAPX itself is left
+          untouched. ZAPX backups, exports and scripts (<code>import zapx</code>) keep working.</p>
+      </div>
+      <a class="btn btn-ghost" href="https://github.com/CarlosTejeiro/ZapTerm/blob/main/CHANGELOG.md">Read the 1.0 changelog</a>
+    </div>
+  </section>
+
+  <!-- ── Download ─────────────────────────────────────────────────────── -->
+  <section id="download" class="download">
+    <div class="glow glow-c"></div>
+    <div class="wrap">
+      <header class="section-head">
+        <p class="kicker">Download</p>
+        <h2>Get ZapTerm <span data-version></span></h2>
+        <p>Free software under the GNU GPL v3. Pick your platform:</p>
+      </header>
+      <div class="dl-grid">
+        <div class="dl-card" data-os="windows">
+          <h3>Windows</h3>
+          <a class="btn btn-primary" data-asset="x64-setup.exe" href="https://github.com/CarlosTejeiro/ZapTerm/releases/latest">Installer (.exe)</a>
+          <a class="dl-alt" data-asset="x64_en-US.msi" href="https://github.com/CarlosTejeiro/ZapTerm/releases/latest">MSI</a>
+          <a class="dl-alt" data-asset="x64_portable.exe" href="https://github.com/CarlosTejeiro/ZapTerm/releases/latest">Portable .exe</a>
+        </div>
+        <div class="dl-card" data-os="mac">
+          <h3>macOS</h3>
+          <a class="btn btn-primary" data-asset="aarch64.dmg" href="https://github.com/CarlosTejeiro/ZapTerm/releases/latest">Apple silicon (.dmg)</a>
+          <a class="dl-alt" data-asset="x64.dmg" href="https://github.com/CarlosTejeiro/ZapTerm/releases/latest">Intel (.dmg)</a>
+          <p class="dl-note">Not yet notarized: after copying it to Applications, run <code>xattr -cr /Applications/ZapTerm.app</code></p>
+        </div>
+        <div class="dl-card" data-os="linux">
+          <h3>Linux</h3>
+          <a class="btn btn-primary" data-asset="amd64.AppImage" href="https://github.com/CarlosTejeiro/ZapTerm/releases/latest">AppImage (x86-64)</a>
+          <a class="dl-alt" data-asset="amd64.deb" href="https://github.com/CarlosTejeiro/ZapTerm/releases/latest">.deb</a>
+          <a class="dl-alt" data-asset="x86_64.rpm" href="https://github.com/CarlosTejeiro/ZapTerm/releases/latest">.rpm</a>
+          <a class="dl-alt" data-asset="arm64.deb" href="https://github.com/CarlosTejeiro/ZapTerm/releases/latest">ARM64 .deb</a>
+        </div>
+      </div>
+      <p class="fine center"><a href="https://github.com/CarlosTejeiro/ZapTerm/releases">All releases and older versions</a></p>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <span class="brand"><img src="icon.svg" alt="" width="20" height="20"> ZapTerm</span>
+    <span>Free software · <a href="https://github.com/CarlosTejeiro/ZapTerm/blob/main/LICENSE">GPL-3.0-or-later</a></span>
+    <span><a href="https://github.com/CarlosTejeiro/ZapTerm">GitHub</a> · <a href="https://github.com/CarlosTejeiro/ZapTerm/issues">Issues</a> · <a href="https://github.com/CarlosTejeiro/ZapTerm/tree/main/docs/user-guide">User guide</a></span>
+  </div>
+  <p class="wrap fine">Screenshots show simulated lab devices; host names and addresses are fictional.</p>
+</footer>
+
+<div class="lightbox" hidden><img alt=""></div>
+<script src="main.js" defer></script>
+</body>
+</html>

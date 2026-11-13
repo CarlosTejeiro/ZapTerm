@@ -2,6 +2,8 @@
 
 > Modern terminal for network engineers — SSH · Telnet · Serial in one app.
 
+**Website:** <https://carlostejeiro.github.io/ZapTerm/>
+
 **Free software (GNU GPL v3 or later).**
 **Status: alpha — functional but not yet hardened for production.**
 
