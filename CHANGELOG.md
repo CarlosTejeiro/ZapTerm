@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.0.1] - 2026-11-13
+
+### Fixed
+- **No connection to an external font service on start.** The app's page
+  still pointed at fonts.bunny.net (a preconnect plus a stylesheet the app's
+  content security policy already blocked). The fonts were always bundled with
+  the app, so nothing changes visually; ZapTerm just no longer reaches out.
+
 ## [1.0.0] - 2026-11-13
 
 ### Changed
