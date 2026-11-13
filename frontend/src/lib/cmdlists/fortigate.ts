@@ -521,9 +521,6 @@ export const fortigate: VendorLists = {
               ],
               lines: ["diagnose sniffer packet {{iface}} '{{filter}}' {{verbose}} {{count}} l"],
             },
-            c('Ctrl+C', 'Stop a running sniffer (or any command waiting on output)', {
-              keys: '\x03',
-            }),
             c('diagnose debug flow trace stop', 'Stop a running flow trace'),
             c('diagnose debug flow filter clear', 'Clear the IPv4 debug flow filters'),
           ],

@@ -234,7 +234,10 @@ fn make_on_data<F>(
 where
     F: Fn(Vec<u8>) + Send + 'static,
 {
+    let inner = Arc::new(Mutex::new(inner));
+    let hold_arc = Arc::new(Mutex::new(LineHold::default()));
     move |data: Vec<u8>| {
+        let hold = &hold_arc;
         // Count raw bytes (pre-highlight) — the StatusBar shows the wire rate.
         rx_total.fetch_add(data.len() as u64, std::sync::atomic::Ordering::Relaxed);
         if let Ok(mut map) = loggers.lock() {
@@ -262,8 +265,77 @@ where
                 cb(p);
             }
         }
-        let highlighted = highlighter.read().unwrap().apply(&data);
-        inner(highlighted);
+        // Highlight whole lines: rules can't match text split across reads
+        // (a serial console delivers a few bytes at a time, so an IP address
+        // often arrives in two pieces). The incomplete last line waits for the
+        // rest, or is shown as is after HIGHLIGHT_HOLD (prompts, typed keys).
+        let mut hold = hold.lock().unwrap();
+        if let Some(complete) = hold.push(&data) {
+            out(&highlighter, &inner, &complete);
+        }
+        if hold.has_pending() {
+            let gen = hold.generation();
+            let (hold, highlighter, inner) = (
+                Arc::clone(&hold_arc),
+                Arc::clone(&highlighter),
+                Arc::clone(&inner),
+            );
+            tauri::async_runtime::spawn(async move {
+                tokio::time::sleep(HIGHLIGHT_HOLD).await;
+                let mut hold = hold.lock().unwrap();
+                if let Some(rest) = hold.take_if_unchanged(gen) {
+                    out(&highlighter, &inner, &rest);
+                }
+            });
+        }
+    }
+}
+
+/// How long an incomplete line waits for the rest of it before it's shown
+/// anyway (a prompt or a typed key never gets a newline).
+const HIGHLIGHT_HOLD: std::time::Duration = std::time::Duration::from_millis(25);
+
+/// Highlight `bytes` and hand them to the session's sink.
+fn out<F: Fn(Vec<u8>)>(
+    highlighter: &RwLock<core_highlight::Highlighter>,
+    inner: &Mutex<F>,
+    bytes: &[u8],
+) {
+    let highlighted = highlighter.read().unwrap().apply(bytes);
+    (inner.lock().unwrap())(highlighted);
+}
+
+/// Splits a byte stream into whole lines for highlighting, keeping the
+/// incomplete last line until more data (or a timeout) arrives.
+#[derive(Default)]
+struct LineHold {
+    pending: Vec<u8>,
+    generation: u64,
+}
+
+impl LineHold {
+    /// Add `data`; returns everything up to and including the last newline,
+    /// if there is one. The rest stays pending.
+    fn push(&mut self, data: &[u8]) -> Option<Vec<u8>> {
+        self.pending.extend_from_slice(data);
+        self.generation += 1;
+        let end = self.pending.iter().rposition(|&b| b == b'\n')? + 1;
+        let rest = self.pending.split_off(end);
+        Some(std::mem::replace(&mut self.pending, rest))
+    }
+
+    fn has_pending(&self) -> bool {
+        !self.pending.is_empty()
+    }
+
+    fn generation(&self) -> u64 {
+        self.generation
+    }
+
+    /// The pending bytes, if nothing arrived since `generation` was read.
+    fn take_if_unchanged(&mut self, generation: u64) -> Option<Vec<u8>> {
+        (self.generation == generation && !self.pending.is_empty())
+            .then(|| std::mem::take(&mut self.pending))
     }
 }
 
@@ -2544,5 +2616,79 @@ mod tests {
             Some("s3cret")
         );
         let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+#[cfg(test)]
+mod highlight_stream_tests {
+    use super::{make_on_data, LineHold};
+    use std::collections::HashMap;
+    use std::sync::{mpsc, Arc, Mutex, RwLock};
+    use std::time::Duration;
+
+    #[test]
+    fn line_hold_keeps_the_incomplete_line() {
+        let mut h = LineHold::default();
+        assert_eq!(h.push(b"IP=192.16"), None);
+        assert_eq!(
+            h.push(b"8.1.99 lan\r\nFGT # ").as_deref(),
+            Some(&b"IP=192.168.1.99 lan\r\n"[..])
+        );
+        let g = h.generation();
+        assert_eq!(h.take_if_unchanged(g).as_deref(), Some(&b"FGT # "[..]));
+        assert!(!h.has_pending());
+        h.push(b"x");
+        let g = h.generation();
+        h.push(b"y");
+        assert_eq!(
+            h.take_if_unchanged(g),
+            None,
+            "newer data arrived: keep waiting"
+        );
+    }
+
+    /// An IP address split across two reads (as a serial console delivers
+    /// it) is still highlighted, and a trailing prompt is shown after the hold.
+    #[test]
+    fn split_reads_are_highlighted_as_whole_lines() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let _guard = rt.enter();
+        let rule = core_highlight::HighlightRule {
+            id: 1,
+            name: "ip".into(),
+            pattern: r"\b(?:\d{1,3}\.){3}\d{1,3}\b".into(),
+            is_regex: true,
+            fg_color: Some("#60a5fa".into()),
+            bg_color: None,
+            bold: false,
+            underline: false,
+            enabled: true,
+            sort_order: 0,
+        };
+        let hl = Arc::new(RwLock::new(core_highlight::Highlighter::new(vec![rule])));
+        let alone = hl.read().unwrap().apply(b"IP=192.168.1.99 lan\r\n");
+        let (tx, rx) = mpsc::channel::<Vec<u8>>();
+        let on_data = make_on_data(
+            "s".into(),
+            Arc::new(Mutex::new(HashMap::new())),
+            hl,
+            Arc::new(Mutex::new(None)),
+            Arc::new(Mutex::new(None)),
+            Arc::new(std::sync::atomic::AtomicU64::new(0)),
+            None,
+            None,
+            move |b| tx.send(b).unwrap(),
+        );
+        on_data(b"IP=192.16".to_vec());
+        on_data(b"8.1.99 lan\r\nFGT # ".to_vec());
+        let first = rx.recv_timeout(Duration::from_secs(1)).unwrap();
+        assert_eq!(first, alone, "the whole line is highlighted at once");
+        assert_ne!(
+            first,
+            b"IP=192.168.1.99 lan\r\n".to_vec(),
+            "it has colour codes"
+        );
+        let prompt = rx.recv_timeout(Duration::from_secs(1)).unwrap();
+        assert_eq!(prompt, b"FGT # ".to_vec());
     }
 }
