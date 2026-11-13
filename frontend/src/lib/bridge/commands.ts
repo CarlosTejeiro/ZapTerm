@@ -1040,3 +1040,28 @@ export type {
   AuthMethod,
   HostKeyStatus,
 }
+
+// ── Command lists (user copies) ───────────────────────────────────────────
+
+/** A user command-list file as read from `<data dir>/cmdlists/`. */
+export interface UserListFile {
+  platform: string
+  json: string
+}
+
+export async function readUserCmdlists(): Promise<UserListFile[]> {
+  return invoke<UserListFile[]>('read_user_cmdlists')
+}
+
+export async function writeUserCmdlist(platform: string, json: string): Promise<void> {
+  return invoke<void>('write_user_cmdlist', { platform, json })
+}
+
+export async function deleteUserCmdlist(platform: string): Promise<void> {
+  return invoke<void>('delete_user_cmdlist', { platform })
+}
+
+/** Reveal the user lists folder; returns its path. */
+export async function openCmdlistsDir(): Promise<string> {
+  return invoke<string>('open_cmdlists_dir')
+}

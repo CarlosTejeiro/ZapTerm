@@ -1,0 +1,436 @@
+{
+  "format": "zapterm-command-lists",
+  "version": 1,
+  "platform": "windows",
+  "notes": "Windows (PowerShell) command lists. Also shown for local tabs on Windows, which run PowerShell (pwsh when installed, else Windows PowerShell). Every command below was checked against Microsoft's documentation on learn.microsoft.com — nothing was added from memory: the PowerShell module references (Microsoft.PowerShell.Management/Utility/Core/Diagnostics, Storage, CimCmdlets, NetTCPIP, NetAdapter, NetConnection, DnsClient, NetSecurity, Hyper-V), the Windows Commands reference (systeminfo, ipconfig, ping, tracert, pathping), \"Basic commands for WSL\" and \"Creating Get-WinEvent queries with FilterHashtable\" (Level 2 = Error). Get-Uptime needs PowerShell 6 or later. The Hyper-V cmdlets need the Hyper-V module and an elevated session; Measure-VM needs resource metering enabled on the VM.",
+  "label": "Windows · PowerShell",
+  "stopDebug": [],
+  "lists": [
+    {
+      "id": "system",
+      "name": "System",
+      "icon": "system",
+      "color": "#5B4FC4",
+      "summary": "OS, uptime, updates, disks, processes and services",
+      "sections": [
+        {
+          "title": "System",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "systeminfo",
+              "desc": "OS, build, boot time, memory and hotfixes"
+            },
+            {
+              "kind": "command",
+              "cmd": "Get-ComputerInfo",
+              "desc": "Detailed system and OS properties"
+            },
+            {
+              "kind": "command",
+              "cmd": "Get-Uptime",
+              "desc": "Time since the last boot (PowerShell 6+)"
+            },
+            {
+              "kind": "command",
+              "cmd": "Get-HotFix",
+              "desc": "Installed updates"
+            },
+            {
+              "kind": "command",
+              "cmd": "Get-Volume",
+              "desc": "Volumes, file systems and free space"
+            }
+          ]
+        },
+        {
+          "title": "Processes & services",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "Get-Process | Sort-Object -Property CPU -Descending | Select-Object -First 15",
+              "desc": "Top 15 processes by CPU time"
+            },
+            {
+              "kind": "command",
+              "cmd": "Get-Process -Name <name>",
+              "desc": "One process by name"
+            },
+            {
+              "kind": "command",
+              "cmd": "Get-Service | Where-Object Status -EQ Running",
+              "desc": "Running services"
+            },
+            {
+              "kind": "command",
+              "cmd": "Get-Service -Name <name>",
+              "desc": "One service and its status"
+            },
+            {
+              "kind": "command",
+              "cmd": "Restart-Service -Name <name>",
+              "desc": "Restart a service",
+              "action": true
+            }
+          ]
+        },
+        {
+          "title": "Administrator",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "Start-Process -FilePath \"powershell\" -Verb RunAs",
+              "desc": "Open an elevated PowerShell in a new window (asks for admin credentials)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "network",
+      "name": "Network",
+      "icon": "interfaces",
+      "color": "#2F7A8C",
+      "summary": "Addresses, adapters, routes, neighbors, ports and DNS",
+      "sections": [
+        {
+          "title": "Addresses & adapters",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "ipconfig /all",
+              "desc": "Full IP configuration of every adapter"
+            },
+            {
+              "kind": "command",
+              "cmd": "Get-NetIPConfiguration",
+              "desc": "IP, gateway and DNS per interface"
+            },
+            {
+              "kind": "command",
+              "cmd": "Get-NetIPAddress -AddressFamily IPv4",
+              "desc": "IPv4 addresses"
+            },
+            {
+              "kind": "command",
+              "cmd": "Get-NetAdapter",
+              "desc": "Adapters, status and link speed"
+            },
+            {
+              "kind": "command",
+              "cmd": "Get-NetAdapterStatistics",
+              "desc": "Bytes and packets per adapter"
+            },
+            {
+              "kind": "command",
+              "cmd": "Get-NetConnectionProfile",
+              "desc": "Network category (Public/Private/Domain)"
+            }
+          ]
+        },
+        {
+          "title": "Routes & neighbors",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "Get-NetRoute -AddressFamily IPv4",
+              "desc": "IPv4 routing table"
+            },
+            {
+              "kind": "command",
+              "cmd": "Find-NetRoute -RemoteIPAddress <ip>",
+              "desc": "Route and source address for a destination"
+            },
+            {
+              "kind": "command",
+              "cmd": "Get-NetNeighbor -AddressFamily IPv4",
+              "desc": "ARP table"
+            }
+          ]
+        },
+        {
+          "title": "Ports",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "Get-NetTCPConnection -State Listen",
+              "desc": "Listening TCP ports"
+            },
+            {
+              "kind": "command",
+              "cmd": "Get-NetTCPConnection -State Established",
+              "desc": "Established TCP connections"
+            },
+            {
+              "kind": "command",
+              "cmd": "Get-NetUDPEndpoint",
+              "desc": "UDP endpoints"
+            }
+          ]
+        },
+        {
+          "title": "DNS",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "Get-DnsClientServerAddress",
+              "desc": "DNS servers per interface"
+            },
+            {
+              "kind": "command",
+              "cmd": "Get-DnsClientCache",
+              "desc": "DNS client cache"
+            },
+            {
+              "kind": "command",
+              "cmd": "Resolve-DnsName -Name <name>",
+              "desc": "Resolve a name"
+            },
+            {
+              "kind": "command",
+              "cmd": "Clear-DnsClientCache",
+              "desc": "Flush the DNS client cache",
+              "action": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "diagnostics",
+      "name": "Diagnostics",
+      "icon": "sdwan",
+      "color": "#3E6FC2",
+      "summary": "Reachability, paths and TCP port tests",
+      "sections": [
+        {
+          "title": "Reachability",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "ping /n 4 <host>",
+              "desc": "Four pings to a host"
+            },
+            {
+              "kind": "command",
+              "cmd": "tracert /d <host>",
+              "desc": "Path to a host, no name lookups"
+            },
+            {
+              "kind": "command",
+              "cmd": "pathping /n <host>",
+              "desc": "Path with per-hop loss, no name lookups"
+            },
+            {
+              "kind": "command",
+              "cmd": "Test-NetConnection -ComputerName <host> -Port <port>",
+              "desc": "Test a TCP port"
+            },
+            {
+              "kind": "command",
+              "cmd": "Test-NetConnection -ComputerName <host> -TraceRoute",
+              "desc": "Ping plus traceroute"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "wsl",
+      "name": "WSL",
+      "icon": "routing",
+      "color": "#B26A1E",
+      "summary": "Distributions, state and updates",
+      "sections": [
+        {
+          "title": "WSL",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "wsl --list --verbose",
+              "desc": "Installed distributions, state and WSL version"
+            },
+            {
+              "kind": "command",
+              "cmd": "wsl --status",
+              "desc": "Default distribution and WSL settings"
+            },
+            {
+              "kind": "command",
+              "cmd": "wsl --version",
+              "desc": "WSL, kernel and WSLg versions"
+            },
+            {
+              "kind": "command",
+              "cmd": "wsl --list --online",
+              "desc": "Distributions available to install"
+            },
+            {
+              "kind": "command",
+              "cmd": "wsl --update",
+              "desc": "Update WSL",
+              "action": true
+            },
+            {
+              "kind": "command",
+              "cmd": "wsl --terminate <distro>",
+              "desc": "Stop one distribution",
+              "action": true
+            },
+            {
+              "kind": "command",
+              "cmd": "wsl --shutdown",
+              "desc": "Stop every distribution and the WSL VM",
+              "action": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hyperv",
+      "name": "Hyper-V",
+      "icon": "ha",
+      "color": "#1F7A55",
+      "summary": "Host, VMs, switches, adapters, checkpoints and replication",
+      "sections": [
+        {
+          "title": "Host & VMs",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "Get-VMHost",
+              "desc": "Hyper-V host settings"
+            },
+            {
+              "kind": "command",
+              "cmd": "Get-VM",
+              "desc": "Virtual machines, state, CPU and memory"
+            },
+            {
+              "kind": "command",
+              "cmd": "Get-VM | Where-Object State -EQ Running",
+              "desc": "Running virtual machines"
+            },
+            {
+              "kind": "command",
+              "cmd": "Get-VM -Name <vm>",
+              "desc": "One virtual machine"
+            },
+            {
+              "kind": "command",
+              "cmd": "Measure-VM -Name <vm>",
+              "desc": "Resource use of a VM (needs resource metering)"
+            }
+          ]
+        },
+        {
+          "title": "Network & storage",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "Get-VMSwitch",
+              "desc": "Virtual switches"
+            },
+            {
+              "kind": "command",
+              "cmd": "Get-VMNetworkAdapter -All",
+              "desc": "Network adapters of every VM and the host"
+            },
+            {
+              "kind": "command",
+              "cmd": "Get-VMNetworkAdapter -VMName <vm>",
+              "desc": "Network adapters of one VM"
+            },
+            {
+              "kind": "command",
+              "cmd": "Get-VMHardDiskDrive -VMName <vm>",
+              "desc": "Virtual disks of one VM"
+            }
+          ]
+        },
+        {
+          "title": "Checkpoints, replication & integration",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "Get-VMSnapshot -VMName <vm>",
+              "desc": "Checkpoints of one VM"
+            },
+            {
+              "kind": "command",
+              "cmd": "Get-VMReplication",
+              "desc": "Replication state of the VMs"
+            },
+            {
+              "kind": "command",
+              "cmd": "Get-VMIntegrationService -VMName <vm>",
+              "desc": "Integration services of one VM"
+            }
+          ]
+        },
+        {
+          "title": "Actions",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "Start-VM -Name <vm>",
+              "desc": "Start a VM",
+              "action": true
+            },
+            {
+              "kind": "command",
+              "cmd": "Stop-VM -Name <vm>",
+              "desc": "Shut down a VM",
+              "action": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "security",
+      "name": "Firewall & events",
+      "icon": "security",
+      "color": "#A23B72",
+      "summary": "Firewall profiles and rules, recent event log entries",
+      "sections": [
+        {
+          "title": "Windows Firewall",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "Get-NetFirewallProfile",
+              "desc": "Firewall profiles and whether they are on"
+            },
+            {
+              "kind": "command",
+              "cmd": "Get-NetFirewallRule -Enabled True -Direction Inbound",
+              "desc": "Enabled inbound rules"
+            }
+          ]
+        },
+        {
+          "title": "Event logs",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "Get-WinEvent -FilterHashtable @{LogName='System'; Level=2} -MaxEvents 50",
+              "desc": "Last 50 errors in the System log"
+            },
+            {
+              "kind": "command",
+              "cmd": "Get-WinEvent -LogName System -MaxEvents 50",
+              "desc": "Last 50 System events"
+            },
+            {
+              "kind": "command",
+              "cmd": "Get-WinEvent -LogName Application -MaxEvents 50",
+              "desc": "Last 50 Application events"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

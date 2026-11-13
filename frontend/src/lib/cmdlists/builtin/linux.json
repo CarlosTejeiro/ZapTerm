@@ -1,0 +1,442 @@
+{
+  "format": "zapterm-command-lists",
+  "version": 1,
+  "platform": "linux",
+  "notes": "Linux command lists (also shown for local shell tabs). Every command and option below was checked against its man page on man7.org — nothing was added from memory: uname(1), hostnamectl(1), uptime(1), timedatectl(1), lscpu(1), free(1), df(1), lsblk(8), dmesg(1), who(1), w(1), last(1), systemctl(1), journalctl(1), ps(1), kill(1), lsof(8), ip(8), ip-address(8), ip-route(8), ip-rule(8), ip-neighbour(8), ip-netns(8), ss(8), resolvectl(1), ethtool(8), ping(8), tracepath(8), traceroute(8), arping(8), curl(1), watch(1), iptables(8), tcpdump(1). Left out: tools without a man7.org page (nft, nmcli, mtr, dig, nc…) and commands that reboot or wipe the machine. Commands that need root are listed as is: prefix them with sudo when needed.",
+  "label": "Linux",
+  "stopDebug": [],
+  "stopKeys": "\u0003",
+  "lists": [
+    {
+      "id": "system",
+      "name": "System",
+      "icon": "system",
+      "color": "#5B4FC4",
+      "summary": "Host, memory, disks, kernel messages and logins",
+      "sections": [
+        {
+          "title": "Host",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "uname -a",
+              "desc": "Kernel name, release and architecture"
+            },
+            {
+              "kind": "command",
+              "cmd": "hostnamectl",
+              "desc": "Hostname, OS, kernel and hardware"
+            },
+            {
+              "kind": "command",
+              "cmd": "uptime",
+              "desc": "Uptime and load average"
+            },
+            {
+              "kind": "command",
+              "cmd": "timedatectl",
+              "desc": "Time, time zone and NTP sync"
+            },
+            {
+              "kind": "command",
+              "cmd": "lscpu",
+              "desc": "CPU architecture and cores"
+            }
+          ]
+        },
+        {
+          "title": "Memory & disks",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "free -h",
+              "desc": "Memory and swap usage"
+            },
+            {
+              "kind": "command",
+              "cmd": "df -h",
+              "desc": "Disk space per filesystem"
+            },
+            {
+              "kind": "command",
+              "cmd": "lsblk",
+              "desc": "Block devices and partitions"
+            }
+          ]
+        },
+        {
+          "title": "Kernel",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "dmesg -T",
+              "desc": "Kernel messages with readable times"
+            },
+            {
+              "kind": "command",
+              "cmd": "dmesg --level=err,warn",
+              "desc": "Kernel errors and warnings only"
+            }
+          ]
+        },
+        {
+          "title": "Logins",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "who",
+              "desc": "Users logged in"
+            },
+            {
+              "kind": "command",
+              "cmd": "w",
+              "desc": "Users logged in and what they run"
+            },
+            {
+              "kind": "command",
+              "cmd": "last -n 20",
+              "desc": "Last 20 logins"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "services",
+      "name": "Services",
+      "icon": "logs",
+      "color": "#2E7D6B",
+      "summary": "systemd units, journal and processes",
+      "sections": [
+        {
+          "title": "Units",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "systemctl --failed",
+              "desc": "Units that failed"
+            },
+            {
+              "kind": "command",
+              "cmd": "systemctl list-units --type=service --state=running",
+              "desc": "Services running"
+            },
+            {
+              "kind": "command",
+              "cmd": "systemctl status <unit>",
+              "desc": "State and last log lines of a unit"
+            },
+            {
+              "kind": "command",
+              "cmd": "systemctl restart <unit>",
+              "desc": "Restart a unit",
+              "action": true
+            }
+          ]
+        },
+        {
+          "title": "Journal",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "journalctl -n 100 -u <unit>",
+              "desc": "Last 100 log lines of a unit"
+            },
+            {
+              "kind": "command",
+              "cmd": "journalctl -f",
+              "desc": "Follow the journal"
+            },
+            {
+              "kind": "command",
+              "cmd": "journalctl -p err -b",
+              "desc": "Errors since this boot"
+            },
+            {
+              "kind": "command",
+              "cmd": "journalctl -k",
+              "desc": "Kernel messages from the journal"
+            }
+          ]
+        },
+        {
+          "title": "Processes",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "ps aux",
+              "desc": "Every process"
+            },
+            {
+              "kind": "command",
+              "cmd": "ps aux --sort=-pcpu",
+              "desc": "Processes, most CPU first"
+            },
+            {
+              "kind": "command",
+              "cmd": "ps aux --sort=-pmem",
+              "desc": "Processes, most memory first"
+            },
+            {
+              "kind": "command",
+              "cmd": "kill <pid>",
+              "desc": "Ask a process to stop (SIGTERM)",
+              "action": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "network",
+      "name": "Network",
+      "icon": "interfaces",
+      "color": "#2F7A8C",
+      "summary": "Addresses, links, neighbors, DNS and sockets",
+      "sections": [
+        {
+          "title": "Addresses & links",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "ip -brief address",
+              "desc": "Interfaces and addresses, one line each"
+            },
+            {
+              "kind": "command",
+              "cmd": "ip address show dev <dev>",
+              "desc": "Addresses of one interface"
+            },
+            {
+              "kind": "command",
+              "cmd": "ip -brief link",
+              "desc": "Links and their state, one line each"
+            },
+            {
+              "kind": "command",
+              "cmd": "ip -s link show dev <dev>",
+              "desc": "Counters of one interface"
+            },
+            {
+              "kind": "command",
+              "cmd": "ethtool <dev>",
+              "desc": "Speed, duplex and link of a NIC"
+            },
+            {
+              "kind": "command",
+              "cmd": "ethtool -S <dev>",
+              "desc": "NIC statistics"
+            }
+          ]
+        },
+        {
+          "title": "Neighbors & DNS",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "ip neighbour show",
+              "desc": "ARP / NDP table"
+            },
+            {
+              "kind": "command",
+              "cmd": "resolvectl status",
+              "desc": "DNS servers per interface"
+            }
+          ]
+        },
+        {
+          "title": "Sockets",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "ss -tulpn",
+              "desc": "Listening TCP/UDP ports and their processes"
+            },
+            {
+              "kind": "command",
+              "cmd": "ss -tan",
+              "desc": "All TCP sockets"
+            },
+            {
+              "kind": "command",
+              "cmd": "ss -s",
+              "desc": "Socket summary"
+            },
+            {
+              "kind": "command",
+              "cmd": "lsof -i -P -n",
+              "desc": "Network files open per process"
+            },
+            {
+              "kind": "command",
+              "cmd": "lsof -i :<port>",
+              "desc": "Who uses a port"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "routing",
+      "name": "Routing",
+      "icon": "routing",
+      "color": "#B26A1E",
+      "summary": "Routes, policy rules and network namespaces",
+      "sections": [
+        {
+          "title": "Routing",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "ip route",
+              "desc": "IPv4 routing table"
+            },
+            {
+              "kind": "command",
+              "cmd": "ip route get <ip>",
+              "desc": "Route used for a destination"
+            },
+            {
+              "kind": "command",
+              "cmd": "ip -6 route",
+              "desc": "IPv6 routing table"
+            },
+            {
+              "kind": "command",
+              "cmd": "ip rule",
+              "desc": "Policy routing rules"
+            },
+            {
+              "kind": "command",
+              "cmd": "ip netns list",
+              "desc": "Network namespaces"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "diagnostics",
+      "name": "Diagnostics",
+      "icon": "sdwan",
+      "color": "#3E6FC2",
+      "summary": "Reachability, path and HTTP checks",
+      "sections": [
+        {
+          "title": "Reachability",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "ping -c 4 <host>",
+              "desc": "Four pings to a host"
+            },
+            {
+              "kind": "command",
+              "cmd": "tracepath -n <host>",
+              "desc": "Path and MTU to a host (no root)"
+            },
+            {
+              "kind": "command",
+              "cmd": "traceroute -n <host>",
+              "desc": "Path to a host"
+            },
+            {
+              "kind": "command",
+              "cmd": "arping -c 3 -I <iface> <ip>",
+              "desc": "ARP pings on one interface"
+            }
+          ]
+        },
+        {
+          "title": "HTTP & watch",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "curl -v <url>",
+              "desc": "Request with headers and TLS details"
+            },
+            {
+              "kind": "command",
+              "cmd": "curl -I <url>",
+              "desc": "Response headers only"
+            },
+            {
+              "kind": "command",
+              "cmd": "watch -n 1 <command>",
+              "desc": "Re-run a command every second"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "firewall",
+      "name": "Firewall",
+      "icon": "security",
+      "color": "#A23B72",
+      "summary": "iptables rules and counters",
+      "sections": [
+        {
+          "title": "iptables",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "iptables -L -n -v",
+              "desc": "Filter rules with counters"
+            },
+            {
+              "kind": "command",
+              "cmd": "iptables -t nat -L -n -v",
+              "desc": "NAT rules with counters"
+            },
+            {
+              "kind": "command",
+              "cmd": "iptables -S",
+              "desc": "Rules as iptables commands"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "capture",
+      "name": "Capture",
+      "icon": "debug",
+      "color": "#B23B3B",
+      "summary": "tcpdump — Ctrl+C or \"Stop debug\" ends it",
+      "debug": true,
+      "sections": [
+        {
+          "title": "tcpdump",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "tcpdump -D",
+              "desc": "Interfaces tcpdump can capture on"
+            },
+            {
+              "kind": "command",
+              "cmd": "tcpdump -nn -i <iface>",
+              "desc": "Capture on an interface, no name lookups"
+            },
+            {
+              "kind": "command",
+              "cmd": "tcpdump -nn -i <iface> host <ip>",
+              "desc": "Only traffic to or from a host"
+            },
+            {
+              "kind": "command",
+              "cmd": "tcpdump -nn -i <iface> port <port>",
+              "desc": "Only traffic on a port"
+            },
+            {
+              "kind": "command",
+              "cmd": "tcpdump -nn -i <iface> -w <file>",
+              "desc": "Save the capture to a pcap file"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

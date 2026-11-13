@@ -1,0 +1,648 @@
+{
+  "format": "zapterm-command-lists",
+  "version": 1,
+  "platform": "cisco_iosxr",
+  "notes": "Cisco IOS XR command lists. Every command below was checked against Cisco's IOS XR command references (command syntax or a documented example) — nothing was added from memory: • Cisco 8000: BGP, Routing, MPLS and System Setup command references • ASR 9000: General Administration, System Setup, Interface and Hardware Component, IP Addresses and Services, Routing, System Security, System Management, System Monitoring, Advanced System and L2VPN command references • NCS 5500: Interfaces, System Monitoring, System Management and System Security command references Left out: debug/undebug commands (not found in those references), commands that reload or erase the device, and ones not found there.",
+  "label": "Cisco IOS XR",
+  "stopDebug": [],
+  "lists": [
+    {
+      "id": "system",
+      "name": "System",
+      "icon": "system",
+      "color": "#5B4FC4",
+      "summary": "Version, nodes, resources, software, commits and licenses",
+      "sections": [
+        {
+          "title": "Status",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show version",
+              "desc": "Software version, uptime and hardware"
+            },
+            {
+              "kind": "command",
+              "cmd": "show clock",
+              "desc": "Current time"
+            },
+            {
+              "kind": "command",
+              "cmd": "show platform",
+              "desc": "Nodes (RPs, line cards) and their state"
+            },
+            {
+              "kind": "command",
+              "cmd": "show inventory",
+              "desc": "Hardware inventory and serial numbers"
+            },
+            {
+              "kind": "command",
+              "cmd": "show running-config",
+              "desc": "Running configuration"
+            },
+            {
+              "kind": "command",
+              "cmd": "show logging",
+              "desc": "Logging settings and buffered messages"
+            },
+            {
+              "kind": "command",
+              "cmd": "show alarms brief",
+              "desc": "Active and historical alarms"
+            },
+            {
+              "kind": "command",
+              "cmd": "show users",
+              "desc": "Users logged in"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ntp associations",
+              "desc": "NTP peers"
+            }
+          ]
+        },
+        {
+          "title": "Resources",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show processes cpu",
+              "desc": "CPU usage per process"
+            },
+            {
+              "kind": "command",
+              "cmd": "show memory summary",
+              "desc": "Memory summary"
+            },
+            {
+              "kind": "command",
+              "cmd": "show environment",
+              "desc": "Temperature, voltage, fans and power"
+            },
+            {
+              "kind": "command",
+              "cmd": "show watchdog memory-state",
+              "desc": "Memory state (normal, minor, severe…)"
+            },
+            {
+              "kind": "command",
+              "cmd": "show context",
+              "desc": "Core dumps of crashed processes"
+            }
+          ]
+        },
+        {
+          "title": "Redundancy & software",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show redundancy",
+              "desc": "Redundancy state of the route processors"
+            },
+            {
+              "kind": "command",
+              "cmd": "show redundancy summary",
+              "desc": "Redundancy summary"
+            },
+            {
+              "kind": "command",
+              "cmd": "show install active summary",
+              "desc": "Active software packages"
+            },
+            {
+              "kind": "command",
+              "cmd": "show install committed summary",
+              "desc": "Committed software packages"
+            },
+            {
+              "kind": "command",
+              "cmd": "show hw-module fpd",
+              "desc": "FPD (firmware) versions per card"
+            }
+          ]
+        },
+        {
+          "title": "Configuration commits",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show configuration commit list",
+              "desc": "Last configuration commits"
+            },
+            {
+              "kind": "command",
+              "cmd": "show configuration commit changes <commit-id>",
+              "desc": "What a commit changed"
+            }
+          ]
+        },
+        {
+          "title": "Licenses",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show license status",
+              "desc": "Smart Licensing status"
+            },
+            {
+              "kind": "command",
+              "cmd": "show license summary",
+              "desc": "Licenses in use and their status"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "interfaces",
+      "name": "Interfaces",
+      "icon": "interfaces",
+      "color": "#2F7A8C",
+      "summary": "Interfaces, optics, bundles, neighbors and ARP",
+      "sections": [
+        {
+          "title": "Interfaces",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show ipv4 interface brief",
+              "desc": "Interfaces, IPv4 and status in one line each"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ipv6 interface brief",
+              "desc": "Interfaces, IPv6 and status in one line each"
+            },
+            {
+              "kind": "command",
+              "cmd": "show interfaces brief",
+              "desc": "Interfaces, state, encapsulation and speed"
+            },
+            {
+              "kind": "command",
+              "cmd": "show interfaces description",
+              "desc": "Interfaces with their descriptions"
+            },
+            {
+              "kind": "command",
+              "cmd": "show interfaces summary",
+              "desc": "Interface counts per type and state"
+            },
+            {
+              "kind": "command",
+              "cmd": "show interfaces <interface>",
+              "desc": "Counters and details of one interface"
+            },
+            {
+              "kind": "command",
+              "cmd": "monitor interface <interface>",
+              "desc": "Live traffic rates of one interface"
+            },
+            {
+              "kind": "command",
+              "cmd": "show controllers optics <port>",
+              "desc": "Optics readings of one port (e.g. 0/0/0/0)"
+            }
+          ]
+        },
+        {
+          "title": "Bundles",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show bundle",
+              "desc": "Bundles and their members"
+            },
+            {
+              "kind": "command",
+              "cmd": "show bundle brief",
+              "desc": "Bundles, one line each"
+            },
+            {
+              "kind": "command",
+              "cmd": "show bundle Bundle-Ether <id>",
+              "desc": "One bundle and its members"
+            }
+          ]
+        },
+        {
+          "title": "Neighbors",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show lldp neighbors",
+              "desc": "LLDP neighbors"
+            },
+            {
+              "kind": "command",
+              "cmd": "show lldp neighbors detail",
+              "desc": "LLDP neighbors in detail"
+            },
+            {
+              "kind": "command",
+              "cmd": "show cdp neighbors",
+              "desc": "CDP neighbors"
+            },
+            {
+              "kind": "command",
+              "cmd": "show cdp neighbors detail",
+              "desc": "CDP neighbors in detail (IP, platform)"
+            }
+          ]
+        },
+        {
+          "title": "ARP & ND",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show arp",
+              "desc": "ARP table"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ipv6 neighbors",
+              "desc": "IPv6 neighbor table"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "routing",
+      "name": "Routing",
+      "icon": "routing",
+      "color": "#B26A1E",
+      "summary": "RIB, CEF, VRFs, BFD and FHRP",
+      "sections": [
+        {
+          "title": "Routing table",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show route",
+              "desc": "IPv4 routing table"
+            },
+            {
+              "kind": "command",
+              "cmd": "show route <ip>",
+              "desc": "Route lookup for a destination"
+            },
+            {
+              "kind": "command",
+              "cmd": "show route summary",
+              "desc": "Routes per protocol"
+            },
+            {
+              "kind": "command",
+              "cmd": "show route vrf <vrf>",
+              "desc": "Routing table of a VRF"
+            },
+            {
+              "kind": "command",
+              "cmd": "show route ipv6",
+              "desc": "IPv6 routing table"
+            },
+            {
+              "kind": "command",
+              "cmd": "show route bgp",
+              "desc": "BGP routes in the RIB"
+            },
+            {
+              "kind": "command",
+              "cmd": "show route static",
+              "desc": "Static routes"
+            },
+            {
+              "kind": "command",
+              "cmd": "show route connected",
+              "desc": "Connected routes"
+            },
+            {
+              "kind": "command",
+              "cmd": "show cef <ip>",
+              "desc": "CEF forwarding entry for a destination"
+            },
+            {
+              "kind": "command",
+              "cmd": "show vrf all",
+              "desc": "VRFs and their route distinguishers"
+            },
+            {
+              "kind": "command",
+              "cmd": "show protocols",
+              "desc": "Routing protocols running"
+            }
+          ]
+        },
+        {
+          "title": "BFD & FHRP",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show bfd session",
+              "desc": "BFD sessions"
+            },
+            {
+              "kind": "command",
+              "cmd": "show hsrp brief",
+              "desc": "HSRP groups, one line each"
+            },
+            {
+              "kind": "command",
+              "cmd": "show vrrp brief",
+              "desc": "VRRP groups, one line each"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bgp",
+      "name": "BGP",
+      "icon": "bgp",
+      "color": "#3E6FC2",
+      "summary": "Peers per address family, received and advertised routes",
+      "sections": [
+        {
+          "title": "Peers",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show bgp summary",
+              "desc": "BGP neighbors and their state"
+            },
+            {
+              "kind": "command",
+              "cmd": "show bgp ipv4 unicast summary",
+              "desc": "IPv4 unicast neighbors"
+            },
+            {
+              "kind": "command",
+              "cmd": "show bgp vpnv4 unicast summary",
+              "desc": "VPNv4 neighbors"
+            },
+            {
+              "kind": "command",
+              "cmd": "show bgp vrf all summary",
+              "desc": "Neighbors of every VRF"
+            },
+            {
+              "kind": "command",
+              "cmd": "show bgp vrf <vrf> summary",
+              "desc": "Neighbors of one VRF"
+            },
+            {
+              "kind": "command",
+              "cmd": "show bgp neighbors",
+              "desc": "Every BGP neighbor in detail"
+            },
+            {
+              "kind": "command",
+              "cmd": "show bgp neighbors <peer-ip>",
+              "desc": "One BGP neighbor in detail"
+            }
+          ]
+        },
+        {
+          "title": "Routes of a peer",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show bgp neighbors <peer-ip> received routes",
+              "desc": "Routes received from the peer (needs soft-reconfiguration inbound)"
+            },
+            {
+              "kind": "command",
+              "cmd": "show bgp neighbors <peer-ip> advertised-routes",
+              "desc": "Routes advertised to the peer"
+            },
+            {
+              "kind": "command",
+              "cmd": "show bgp neighbors <peer-ip> routes",
+              "desc": "Routes learned from the peer"
+            },
+            {
+              "kind": "command",
+              "cmd": "show bgp <prefix>",
+              "desc": "BGP entry for a prefix"
+            }
+          ]
+        },
+        {
+          "title": "Actions",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "clear bgp ipv4 unicast <peer-ip> soft",
+              "desc": "Soft reset of one IPv4 neighbor",
+              "action": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "igp",
+      "name": "OSPF & IS-IS",
+      "icon": "ospf",
+      "color": "#6B53B8",
+      "summary": "Neighbors, interfaces and link-state databases",
+      "sections": [
+        {
+          "title": "OSPF",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show ospf neighbor",
+              "desc": "OSPF neighbors"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ospf neighbor detail",
+              "desc": "OSPF neighbors in detail"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ospf interface",
+              "desc": "Interfaces running OSPF"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ospf database",
+              "desc": "OSPF link-state database"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ospfv3 neighbor",
+              "desc": "OSPFv3 neighbors (IPv6)"
+            }
+          ]
+        },
+        {
+          "title": "IS-IS",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show isis adjacency",
+              "desc": "IS-IS adjacencies"
+            },
+            {
+              "kind": "command",
+              "cmd": "show isis neighbors",
+              "desc": "IS-IS neighbors"
+            },
+            {
+              "kind": "command",
+              "cmd": "show isis interface brief",
+              "desc": "Interfaces running IS-IS"
+            },
+            {
+              "kind": "command",
+              "cmd": "show isis database",
+              "desc": "IS-IS link-state database"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mpls",
+      "name": "MPLS & L2VPN",
+      "icon": "vpn",
+      "color": "#1F7A55",
+      "summary": "LDP, forwarding, TE tunnels, xconnects and bridge domains",
+      "sections": [
+        {
+          "title": "MPLS",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show mpls ldp neighbor brief",
+              "desc": "LDP neighbors, one line each"
+            },
+            {
+              "kind": "command",
+              "cmd": "show mpls ldp neighbor",
+              "desc": "LDP neighbors in detail"
+            },
+            {
+              "kind": "command",
+              "cmd": "show mpls interfaces",
+              "desc": "Interfaces with MPLS enabled"
+            },
+            {
+              "kind": "command",
+              "cmd": "show mpls forwarding",
+              "desc": "Label forwarding table"
+            },
+            {
+              "kind": "command",
+              "cmd": "show mpls traffic-eng tunnels brief",
+              "desc": "TE tunnels, one line each"
+            }
+          ]
+        },
+        {
+          "title": "L2VPN",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show l2vpn xconnect",
+              "desc": "Point-to-point xconnects and their state"
+            },
+            {
+              "kind": "command",
+              "cmd": "show l2vpn xconnect detail",
+              "desc": "Xconnects in detail"
+            },
+            {
+              "kind": "command",
+              "cmd": "show l2vpn bridge-domain brief",
+              "desc": "Bridge domains, one line each"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "security",
+      "name": "Security",
+      "icon": "security",
+      "color": "#A23B72",
+      "summary": "Access lists, SSH, TACACS+ and RADIUS",
+      "sections": [
+        {
+          "title": "Access lists",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show access-lists",
+              "desc": "Access lists and their entries"
+            },
+            {
+              "kind": "command",
+              "cmd": "show access-lists ipv4",
+              "desc": "IPv4 access lists"
+            }
+          ]
+        },
+        {
+          "title": "Management access",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show ssh",
+              "desc": "SSH sessions in and out"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ssh session details",
+              "desc": "SSH sessions with their algorithms"
+            },
+            {
+              "kind": "command",
+              "cmd": "show tacacs",
+              "desc": "TACACS+ servers and their counters"
+            },
+            {
+              "kind": "command",
+              "cmd": "show radius",
+              "desc": "RADIUS servers and their counters"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "monitor",
+      "name": "Monitor",
+      "icon": "debug",
+      "color": "#B23B3B",
+      "summary": "Live output in this session",
+      "sections": [
+        {
+          "title": "Live output",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "terminal monitor",
+              "desc": "Show logging output in this (SSH/Telnet) session"
+            },
+            {
+              "kind": "command",
+              "cmd": "terminal monitor disable",
+              "desc": "Stop showing logging output here"
+            },
+            {
+              "kind": "command",
+              "cmd": "monitor interface <interface>",
+              "desc": "Live traffic rates of one interface"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

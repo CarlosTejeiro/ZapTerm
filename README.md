@@ -77,6 +77,9 @@ The little things that add up across a long day:
 - **Command hints** — autocomplete from your own history plus vendor catalogs
   for **12 platforms**, with automatic platform detection from the prompt.
 - **Snippets** — per-platform command snippets fired on `Ctrl+Shift+1..9`.
+- **Command lists per vendor** — grouped commands and recipes under the
+  terminal for the detected platform. They are JSON files: make your own copy
+  in **Settings → Command Lists** and edit it; updates never change your copy.
 - **Keyword highlighting** — per-rule regex in true-color ANSI, with
   user-overridable vendor catalogs (Cisco, Juniper, Fortinet, Palo Alto, F5…).
 - **Triggers** — per-session regex/literal matches on output that notify you,

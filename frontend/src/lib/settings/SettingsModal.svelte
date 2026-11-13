@@ -5,6 +5,7 @@
   import TerminalSettingsPanel from './TerminalSettingsPanel.svelte'
   import HighlightRulesPanel from '$lib/sessions/HighlightRulesPanel.svelte'
   import HintsPanel from './HintsPanel.svelte'
+  import CommandListsPanel from './CommandListsPanel.svelte'
   import LoggingPanel from './LoggingPanel.svelte'
   import SshPanel from './SshPanel.svelte'
   import DataPanel from './DataPanel.svelte'
@@ -28,6 +29,7 @@
     | 'appearance'
     | 'highlight'
     | 'hints'
+    | 'lists'
     | 'logging'
     | 'ssh'
     | 'data'
@@ -115,6 +117,13 @@
         </button>
         <button
           class="tab-btn"
+          class:active={activeTab === 'lists'}
+          onclick={() => (activeTab = 'lists')}
+        >
+          Command Lists
+        </button>
+        <button
+          class="tab-btn"
           class:active={activeTab === 'logging'}
           onclick={() => (activeTab = 'logging')}
         >
@@ -157,6 +166,8 @@
           <HighlightRulesPanel />
         {:else if activeTab === 'hints'}
           <HintsPanel />
+        {:else if activeTab === 'lists'}
+          <CommandListsPanel />
         {:else if activeTab === 'logging'}
           <LoggingPanel />
         {:else if activeTab === 'ssh'}

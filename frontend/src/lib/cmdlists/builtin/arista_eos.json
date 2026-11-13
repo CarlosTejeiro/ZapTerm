@@ -1,0 +1,543 @@
+{
+  "format": "zapterm-command-lists",
+  "version": 1,
+  "platform": "arista_eos",
+  "notes": "Arista EOS command lists. Every command below was checked against the Arista EOS 4.37.0F User Manual on arista.com (its command syntax or a documented example) — nothing was added from memory. Chapters: Command-Line Interface, Switch Administration Commands, Environment Commands, Ethernet Ports, Port Channels and LACP, Multi-Chassis Link Aggregation, Spanning Tree Protocol, LLDP, VLANs, IPv4, ACLs and Route Maps, VRRP and VARP, BFD, OSPFv2, BGP and VXLAN Commands. Left out: commands not found there (MAC address table, inventory, processes, debugs, tcpdump…) and commands that reload or erase the switch.",
+  "label": "Arista EOS",
+  "stopDebug": [],
+  "lists": [
+    {
+      "id": "system",
+      "name": "System",
+      "icon": "system",
+      "color": "#5B4FC4",
+      "summary": "Version, time, configuration, logs and environment",
+      "sections": [
+        {
+          "title": "Status",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show version",
+              "desc": "Model, serial number, EOS version and uptime"
+            },
+            {
+              "kind": "command",
+              "cmd": "show clock",
+              "desc": "Current time"
+            },
+            {
+              "kind": "command",
+              "cmd": "show hostname",
+              "desc": "Hostname and FQDN"
+            },
+            {
+              "kind": "command",
+              "cmd": "show running-config",
+              "desc": "Running configuration"
+            },
+            {
+              "kind": "command",
+              "cmd": "show logging",
+              "desc": "Logging settings and buffered messages"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ntp status",
+              "desc": "NTP synchronization"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ntp associations",
+              "desc": "NTP peers"
+            }
+          ]
+        },
+        {
+          "title": "Environment",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show system environment all",
+              "desc": "Temperature, cooling and power"
+            },
+            {
+              "kind": "command",
+              "cmd": "show system environment cooling",
+              "desc": "Fans"
+            },
+            {
+              "kind": "command",
+              "cmd": "show environment temperature",
+              "desc": "Temperature sensors"
+            },
+            {
+              "kind": "command",
+              "cmd": "show environment power",
+              "desc": "Power supplies"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "interfaces",
+      "name": "Interfaces",
+      "icon": "interfaces",
+      "color": "#2F7A8C",
+      "summary": "Ports, counters, optics, port-channels, LLDP and ARP",
+      "sections": [
+        {
+          "title": "Interfaces",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show interfaces status",
+              "desc": "Port status, VLAN, duplex and speed"
+            },
+            {
+              "kind": "command",
+              "cmd": "show interfaces status errdisabled",
+              "desc": "Error-disabled ports"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip interface brief",
+              "desc": "Interfaces, IP and status in one line each"
+            },
+            {
+              "kind": "command",
+              "cmd": "show interfaces <interface>",
+              "desc": "Counters and details of one interface"
+            },
+            {
+              "kind": "command",
+              "cmd": "show interfaces counters",
+              "desc": "Packet counters per port"
+            },
+            {
+              "kind": "command",
+              "cmd": "show interfaces counters errors",
+              "desc": "Error counters per port"
+            },
+            {
+              "kind": "command",
+              "cmd": "show interfaces counters rates",
+              "desc": "Traffic rates per port"
+            },
+            {
+              "kind": "command",
+              "cmd": "show interfaces transceiver",
+              "desc": "Optical transceiver readings"
+            }
+          ]
+        },
+        {
+          "title": "Port-channels",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show port-channel",
+              "desc": "Port-channels and their members"
+            },
+            {
+              "kind": "command",
+              "cmd": "show port-channel dense",
+              "desc": "Port-channels, compact view"
+            },
+            {
+              "kind": "command",
+              "cmd": "show lacp interface",
+              "desc": "LACP state per interface"
+            },
+            {
+              "kind": "command",
+              "cmd": "show lacp peer",
+              "desc": "LACP partners"
+            }
+          ]
+        },
+        {
+          "title": "Neighbors & ARP",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show lldp neighbors",
+              "desc": "LLDP neighbors"
+            },
+            {
+              "kind": "command",
+              "cmd": "show lldp neighbors detail",
+              "desc": "LLDP neighbors in detail"
+            },
+            {
+              "kind": "command",
+              "cmd": "show lldp local-info",
+              "desc": "What this switch advertises over LLDP"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip arp",
+              "desc": "ARP table"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "switching",
+      "name": "Switching",
+      "icon": "fortilink",
+      "color": "#5C7A2E",
+      "summary": "VLANs, trunks, spanning tree and MLAG",
+      "sections": [
+        {
+          "title": "Layer 2",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show vlan",
+              "desc": "VLANs and their ports"
+            },
+            {
+              "kind": "command",
+              "cmd": "show interfaces trunk",
+              "desc": "Trunk ports and allowed VLANs"
+            },
+            {
+              "kind": "command",
+              "cmd": "show interfaces switchport",
+              "desc": "Switchport mode and VLANs per port"
+            },
+            {
+              "kind": "command",
+              "cmd": "show spanning-tree",
+              "desc": "Spanning tree per instance"
+            },
+            {
+              "kind": "command",
+              "cmd": "show spanning-tree blockedports",
+              "desc": "Ports blocked by spanning tree"
+            },
+            {
+              "kind": "command",
+              "cmd": "show spanning-tree root",
+              "desc": "Root bridge per instance"
+            },
+            {
+              "kind": "command",
+              "cmd": "show spanning-tree topology status",
+              "desc": "Forwarding state per port and instance"
+            }
+          ]
+        },
+        {
+          "title": "MLAG",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show mlag",
+              "desc": "MLAG state and peer"
+            },
+            {
+              "kind": "command",
+              "cmd": "show mlag detail",
+              "desc": "MLAG state in detail"
+            },
+            {
+              "kind": "command",
+              "cmd": "show mlag config-sanity",
+              "desc": "Config differences with the MLAG peer"
+            },
+            {
+              "kind": "command",
+              "cmd": "show mlag interfaces",
+              "desc": "MLAG interfaces and their state"
+            },
+            {
+              "kind": "command",
+              "cmd": "show mlag interfaces detail",
+              "desc": "MLAG interfaces in detail"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "routing",
+      "name": "Routing",
+      "icon": "routing",
+      "color": "#B26A1E",
+      "summary": "Routing table, VRFs, BFD, VRRP and VARP",
+      "sections": [
+        {
+          "title": "Routing table",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show ip route",
+              "desc": "IPv4 routing table"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip route <ip>",
+              "desc": "Route lookup for a destination"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip route summary",
+              "desc": "Routes per protocol"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip route vrf <vrf>",
+              "desc": "Routing table of a VRF"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip route bgp",
+              "desc": "BGP routes"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip route connected",
+              "desc": "Connected routes"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip route static",
+              "desc": "Static routes"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip route host",
+              "desc": "Host routes"
+            },
+            {
+              "kind": "command",
+              "cmd": "show vrf",
+              "desc": "VRFs and their interfaces"
+            }
+          ]
+        },
+        {
+          "title": "BFD, VRRP & VARP",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show bfd peers",
+              "desc": "BFD sessions"
+            },
+            {
+              "kind": "command",
+              "cmd": "show bfd peers detail",
+              "desc": "BFD sessions in detail"
+            },
+            {
+              "kind": "command",
+              "cmd": "show vrrp brief",
+              "desc": "VRRP groups, one line each"
+            },
+            {
+              "kind": "command",
+              "cmd": "show vrrp",
+              "desc": "VRRP groups in detail"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip virtual-router",
+              "desc": "VARP virtual router addresses"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bgp",
+      "name": "BGP",
+      "icon": "bgp",
+      "color": "#3E6FC2",
+      "summary": "Peers, received and advertised routes",
+      "sections": [
+        {
+          "title": "Peers",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show ip bgp summary",
+              "desc": "IPv4 BGP neighbors and their state"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ipv6 bgp summary",
+              "desc": "IPv6 BGP neighbors and their state"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip bgp neighbors",
+              "desc": "Every BGP neighbor in detail"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip bgp neighbors <peer-ip>",
+              "desc": "One BGP neighbor in detail"
+            }
+          ]
+        },
+        {
+          "title": "Routes of a peer",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show ip bgp neighbors <peer-ip> received-routes",
+              "desc": "Routes received from the peer (needs rib-in pre-policy retain)"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip bgp neighbors <peer-ip> advertised-routes",
+              "desc": "Routes advertised to the peer"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip bgp neighbors <peer-ip> routes",
+              "desc": "Routes learned from the peer"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip bgp <prefix>",
+              "desc": "BGP entry for a prefix"
+            }
+          ]
+        },
+        {
+          "title": "Actions",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "clear ip bgp <peer-ip> soft",
+              "desc": "Soft reset of one neighbor",
+              "action": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ospf",
+      "name": "OSPF",
+      "icon": "ospf",
+      "color": "#6B53B8",
+      "summary": "OSPFv2 process, neighbors, interfaces and LSDB",
+      "sections": [
+        {
+          "title": "OSPFv2",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show ip ospf",
+              "desc": "OSPF process"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip ospf neighbor",
+              "desc": "OSPF neighbors"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip ospf interface brief",
+              "desc": "Interfaces running OSPF"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip ospf interface",
+              "desc": "OSPF interfaces in detail"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip ospf database database-summary",
+              "desc": "LSA counts per type"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip ospf border-routers",
+              "desc": "ABRs and ASBRs"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "vxlan",
+      "name": "VXLAN",
+      "icon": "vpn",
+      "color": "#1F7A55",
+      "summary": "VTEPs, VNIs and the VXLAN address table",
+      "sections": [
+        {
+          "title": "VXLAN",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show interfaces VXLAN 1",
+              "desc": "The VXLAN interface: source, VNIs and flood list"
+            },
+            {
+              "kind": "command",
+              "cmd": "show vxlan vtep",
+              "desc": "Remote VTEPs"
+            },
+            {
+              "kind": "command",
+              "cmd": "show vxlan vni",
+              "desc": "VNI to VLAN mapping"
+            },
+            {
+              "kind": "command",
+              "cmd": "show vxlan address-table",
+              "desc": "MAC addresses learned over VXLAN"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "security",
+      "name": "Security",
+      "icon": "security",
+      "color": "#A23B72",
+      "summary": "Access lists, route maps and prefix lists",
+      "sections": [
+        {
+          "title": "Filters",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show ip access-lists",
+              "desc": "IPv4 access lists and their counters"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip access-lists summary",
+              "desc": "IPv4 access lists, summary"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ipv6 access-lists",
+              "desc": "IPv6 access lists"
+            },
+            {
+              "kind": "command",
+              "cmd": "show route-map",
+              "desc": "Route maps"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip prefix-list",
+              "desc": "Prefix lists"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
