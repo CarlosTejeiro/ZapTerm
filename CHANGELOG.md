@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.3.0] - 2026-11-13
+
+### Added
+- **macOS command lists.** Local tabs on a Mac (zsh, the default shell, or
+  bash) now get their own lists instead of the Linux ones: System (host,
+  memory, disks, logins), Processes (ps, top, launchd jobs), Network
+  (interfaces, ARP/NDP, DNS resolvers, listening ports), Routing, Diagnostics
+  (ping, traceroute, reachability, DNS-SD, curl), Power (pmset, caffeinate)
+  and Capture (tcpdump, including Apple's all-interface capture with packet
+  metadata). 60 commands, each checked against the man page in Apple's
+  open-source releases. Like every list it is a JSON file you can copy and
+  edit in Settings → Command Lists.
+
 ## [1.2.0] - 2026-11-13
 
 ### Added

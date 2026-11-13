@@ -550,12 +550,11 @@
         .then((p) => setBarContext(p, sid))
         .catch(() => setBarContext(null, sid))
     } else if (pane && !pane.ssh && !pane.telnet) {
-      // Local shell tab (no saved row, not SSH/Telnet). On macOS/Linux it's a
-      // unix shell, so give the bar the Linux/bash catalog — useful local commands instead of
-      // every vendor's snippets. This is also what makes a local session count
-      // as "recognised" for hints.
-      // The lists follow the shell that actually started (PowerShell/cmd →
-      // Windows, bash/zsh/fish → Linux); before it's known, the host OS.
+      // Local shell tab (no saved row, not SSH/Telnet): give the bar the
+      // lists for the shell that actually started — PowerShell/cmd →
+      // Windows; bash/zsh/fish → macOS on a Mac, Linux elsewhere. Before the
+      // shell is known, the host OS decides. This is also what makes a local
+      // session count as "recognised" for hints.
       const runtimeId = paneToSession.get(pane.id)
       const localPlatform = platformForShell(runtimeId ? localShells[runtimeId] : null)
       setBarContext(localPlatform, null).catch(() => {})

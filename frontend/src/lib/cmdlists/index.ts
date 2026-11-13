@@ -11,6 +11,7 @@ import fortigate from './builtin/fortigate.json'
 import ciscoIos from './builtin/cisco_ios.json'
 import ciscoIosXr from './builtin/cisco_iosxr.json'
 import linux from './builtin/linux.json'
+import macos from './builtin/macos.json'
 import aristaEos from './builtin/arista_eos.json'
 import juniper from './builtin/juniper.json'
 import windows from './builtin/windows.json'
@@ -182,7 +183,7 @@ export function parseVendorLists(input: unknown, expectPlatform?: string): Parse
 /** The built-in lists, by platform (the hint detector's platform key). They
  *  ship as JSON in `builtin/` and are checked like a user file. */
 export const BUILTIN: Record<string, VendorLists> = Object.fromEntries(
-  [fortigate, ciscoIos, ciscoIosXr, linux, aristaEos, juniper, windows].map((raw) => {
+  [fortigate, ciscoIos, ciscoIosXr, linux, macos, aristaEos, juniper, windows].map((raw) => {
     const r = parseVendorLists(raw)
     if (!r.ok) throw new Error(`built-in command lists: ${r.error}`)
     return [r.platform, r.value]
