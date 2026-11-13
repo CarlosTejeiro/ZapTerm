@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.2.0] - 2026-11-13
+
+### Added
+- **★ Custom: your own commands on every platform.** A new button next to
+  Recent in the command bar opens a list that is the same for every session,
+  whatever the platform (FortiGate, Cisco, Linux, local shell…). Add a command
+  with "+ Add command", edit it (✎) or remove it (✕, asks first); click runs
+  it, Type writes it without Enter, and `<name>` parts are left for you to
+  fill in, like the built-in lists. Hover a Recent entry and press ☆ to keep
+  it in Custom. It is saved as `custom.json` in the command lists folder and
+  updates never change it. If you edit that file by hand and it has a
+  mistake, ZapTerm shows the error and does not overwrite it.
+
 ## [1.1.0] - 2026-11-13
 
 ### Added

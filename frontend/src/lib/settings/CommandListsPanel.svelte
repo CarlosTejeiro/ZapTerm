@@ -4,6 +4,7 @@
   import { deleteUserCmdlist, openCmdlistsDir, writeUserCmdlist } from '$lib/bridge/commands'
   import { BUILTIN, builtinFileText } from '$lib/cmdlists'
   import { loadUserLists, userLists } from '$lib/cmdlists/userLists.svelte'
+  import { CUSTOM_PLATFORM } from '$lib/cmdlists/custom'
 
   let status = $state('')
   let busy = $state(false)
@@ -11,7 +12,9 @@
   /** Every platform with a built-in list or a user file, built-in first. */
   const platforms = $derived([
     ...Object.keys(BUILTIN),
-    ...Object.keys({ ...userLists.lists, ...userLists.errors }).filter((p) => !(p in BUILTIN)),
+    ...Object.keys({ ...userLists.lists, ...userLists.errors }).filter(
+      (p) => !(p in BUILTIN) && p !== CUSTOM_PLATFORM,
+    ),
   ])
 
   function labelOf(platform: string): string {
@@ -82,6 +85,10 @@
       make your own copy and edit it with any text editor: ZapTerm then uses your copy instead of
       the built-in list, and <b>updates never change your copy</b>. Remove it to go back to the
       built-in list (and get its updates).
+    </p>
+    <p class="help">
+      Your own commands for every platform are in <b>★ Custom</b>, next to Recent in the bar (saved
+      as <code>custom.json</code> in the same folder).
     </p>
     <div class="actions">
       <button type="button" class="btn" onclick={openDir} disabled={busy}>Open lists folder</button>
