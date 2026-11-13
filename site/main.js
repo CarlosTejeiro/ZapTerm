@@ -85,3 +85,24 @@ fetch('https://api.github.com/repos/CarlosTejeiro/ZapTerm/releases/latest', {
   .catch(() => {
     /* offline or rate-limited: the static links to the releases page stay */
   })
+
+// Donate: copy a wallet address to the clipboard.
+document.querySelectorAll('[data-copy]').forEach((btn) => {
+  btn.addEventListener('click', async () => {
+    const label = btn.textContent
+    try {
+      await navigator.clipboard.writeText(btn.dataset.copy)
+      btn.textContent = 'Copied!'
+    } catch {
+      // No clipboard access (e.g. http): select the address for a manual copy.
+      const code = btn.parentElement.querySelector('[data-addr]')
+      getSelection().selectAllChildren(code)
+      btn.textContent = 'Selected — press Ctrl+C'
+    }
+    btn.classList.add('copied')
+    setTimeout(() => {
+      btn.textContent = label
+      btn.classList.remove('copied')
+    }, 1800)
+  })
+})
