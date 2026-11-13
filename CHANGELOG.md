@@ -8,6 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.1.0] - 2026-11-13
+
+### Added
+- **Command lists you can edit.** The lists under the terminal are now JSON
+  files (one per platform, with their metadata: label, lists, icons,
+  colours, sections, commands and recipes). Settings → Command Lists →
+  "Make my copy" writes your own copy to `<data folder>/cmdlists/`; edit it
+  with any text editor and press "Reload". **Your copy is used instead of the
+  built-in list and updates never change it**; "Use built-in" deletes it to
+  go back. A file with an error is ignored (the built-in list is used) and
+  Settings says exactly what is wrong. The folder has a README with the
+  format.
+
+### Changed
+- Juniper Debug and Linux Capture lists: removed the "Ctrl+C" entries (just
+  press Ctrl+C).
+
+### Fixed
+- A list with two identical commands or section titles no longer fails to
+  open.
+
 ## [1.0.3] - 2026-11-13
 
 ### Fixed

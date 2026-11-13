@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
+  BUILTIN,
+  builtinFileText,
   commandMode,
   commandParts,
   fillCommand,
   fillRecipe,
   itemMatches,
   listsForPlatform,
+  parseVendorLists,
   placeholderNames,
   typedPrefix,
 } from './index'
@@ -103,4 +106,84 @@ describe('command lists', () => {
       }
     },
   )
+
+  it('a user copy replaces the built-in list for its platform only', () => {
+    const mine = { label: 'Mine', stopDebug: [], lists: [] }
+    expect(listsForPlatform('fortigate', { fortigate: mine })).toBe(mine)
+    expect(listsForPlatform('linux', { fortigate: mine })).toBe(BUILTIN.linux)
+    expect(listsForPlatform('mikrotik', { mikrotik: mine })).toBe(mine)
+  })
+
+  it.each(Object.keys(BUILTIN))('%s: a fresh copy reads back as the built-in list', (platform) => {
+    const r = parseVendorLists(builtinFileText(platform)!, platform)
+    expect(r.ok && r.value).toEqual(BUILTIN[platform])
+  })
+
+  it('explains what is wrong in a file', () => {
+    const base = { format: 'zapterm-command-lists', version: 1, platform: 'linux', lists: [] }
+    const err = (v: unknown, p?: string) => {
+      const r = parseVendorLists(typeof v === 'string' ? v : JSON.stringify(v), p)
+      return r.ok ? '' : r.error
+    }
+    expect(err('{ nope')).toMatch(/not valid JSON/)
+    expect(err({ ...base, format: 'x' })).toMatch(/format/)
+    expect(err({ ...base, version: 2 })).toMatch(/version/)
+    expect(err(base, 'fortigate')).toMatch(/platform/)
+    const withItem = (item: unknown) => ({
+      ...base,
+      lists: [{ id: 'a', name: 'A', sections: [{ title: 'S', items: [item] }] }],
+    })
+    expect(err(withItem({ kind: 'command', cmd: '' }))).toBe(
+      'lists[0].sections[0].items[0].cmd is empty',
+    )
+    expect(err(withItem({ kind: 'command', cmd: 'a\nb' }))).toMatch(/one line/)
+    expect(err(withItem({ kind: 'thing' }))).toMatch(/kind/)
+    expect(err(withItem({ kind: 'recipe', name: 'r', fields: [], lines: ['x {{ip}}'] }))).toMatch(
+      /\{\{ip\}\} has no field/,
+    )
+    expect(
+      err(
+        withItem({
+          kind: 'recipe',
+          name: 'r',
+          fields: [
+            { key: 'a', label: 'A' },
+            { key: 'a', label: 'B' },
+          ],
+          lines: [],
+        }),
+      ),
+    ).toMatch(/same key/)
+    const twice = {
+      ...base,
+      lists: [
+        { id: 'a', name: 'A', sections: [] },
+        { id: 'a', name: 'B', sections: [] },
+      ],
+    }
+    expect(err(twice)).toMatch(/two lists/)
+  })
+
+  it('accepts a minimal file and falls back on unknown icons', () => {
+    const r = parseVendorLists({
+      format: 'zapterm-command-lists',
+      version: 1,
+      platform: 'mikrotik',
+      lists: [
+        {
+          id: 'sys',
+          name: 'System',
+          icon: 'rocket',
+          sections: [{ title: '', items: [{ kind: 'command', cmd: '/system resource print' }] }],
+        },
+      ],
+    })
+    expect(r.ok).toBe(true)
+    if (r.ok) {
+      expect(r.platform).toBe('mikrotik')
+      expect(r.value.label).toBe('mikrotik')
+      expect(r.value.lists[0]!.icon).toBe('system')
+      expect(r.value.stopDebug).toEqual([])
+    }
+  })
 })

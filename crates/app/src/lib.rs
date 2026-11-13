@@ -357,6 +357,10 @@ pub fn run() {
             commands::hints::clear_command_history,
             commands::hints::reload_hint_catalogs,
             commands::hints::hint_catalogs_dir,
+            commands::cmdlists::read_user_cmdlists,
+            commands::cmdlists::write_user_cmdlist,
+            commands::cmdlists::delete_user_cmdlist,
+            commands::cmdlists::open_cmdlists_dir,
             commands::hints::prompt_returned,
         ])
         .run(tauri::generate_context!())

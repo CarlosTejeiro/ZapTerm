@@ -69,6 +69,7 @@
   } from '$lib/bridge/commands'
   import type { ImportSummary } from '$lib/bridge/commands'
   import { loadHintsSettings } from '$lib/hints/store.svelte'
+  import { loadUserLists } from '$lib/cmdlists/userLists.svelte'
   import { broadcast, sessionRuntime, paneToSession } from '$lib/stores/sessionRuntime.svelte'
   import { localShells, platformForShell } from '$lib/stores/localShell.svelte'
   import { loadBindings, matchAction, type ShortcutAction } from '$lib/stores/keybindings.svelte'
@@ -726,6 +727,7 @@
     loadSettings()
     loadBindings()
     loadHintsSettings()
+    void loadUserLists()
   })
 
   // ── tab management ────────────────────────────────────────────────────────────

@@ -34,6 +34,7 @@
     type ListIcon,
     type RecipeItem,
   } from '$lib/cmdlists'
+  import { userLists } from '$lib/cmdlists/userLists.svelte'
   import type { PylonTheme } from '$lib/themes/index'
 
   interface Props {
@@ -41,7 +42,7 @@
   }
   let { theme }: Props = $props()
 
-  const vendor = $derived(listsForPlatform(barContext.platform))
+  const vendor = $derived(listsForPlatform(barContext.platform, userLists.lists))
 
   // ── Open panel ────────────────────────────────────────────────────────
   let openId = $state<string | null>(null)
@@ -628,9 +629,9 @@
           {#if flat.length === 0}
             <div class="empty">No command matches “{query}”.</div>
           {/if}
-          {#each filtered as section (section.title)}
+          {#each filtered as section, si (si)}
             <div class="section-title">{section.title}</div>
-            {#each section.items as item (item.kind === 'command' ? item.cmd : item.name)}
+            {#each section.items as item, ii (ii)}
               {@const idx = flat.indexOf(item)}
               <div
                 class="item-row"

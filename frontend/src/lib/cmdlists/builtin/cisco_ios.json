@@ -1,0 +1,633 @@
+{
+  "format": "zapterm-command-lists",
+  "version": 1,
+  "platform": "cisco_ios",
+  "notes": "Cisco IOS / IOS-XE command lists. Every command below was checked against Cisco's documentation — nothing was added from memory: • Command Reference, Cisco IOS XE 17.15.x (Catalyst 9300): Interface and Hardware, IP Addressing Services, Layer 2/3, Network Management, Security, Stack Manager and High Availability, System Management, Unicast Routing and VLAN chapters • Cisco IOS IP Routing: BGP Command Reference (show ip bgp … through Z) • IP Routing Configuration Guide, Cisco IOS XE 17.x: BGP 4 • Cisco IOS Security Command Reference (A to C; S to Z: show crypto …) • Cisco IOS First Hop Redundancy Protocols Command Reference • Embedded Packet Capture: Command Reference, Configuration Guide IOS XE 17, Catalyst 9000 Management Configuration Guide • Security and VPN Configuration Guide IOS XE 17.x: Crypto Conditional Debug Support • \"Understand Important Information on Debug Commands\" (undebug all, terminal monitor) • IP Addressing Services Configuration Guide 17.15 (DHCP snooping) Left out: commands that reload or erase the device, and ones not found in those documents (e.g. \"show processes cpu sorted\", \"show vrf\").",
+  "label": "Cisco IOS / IOS-XE",
+  "stopDebug": ["undebug all", "debug crypto condition reset"],
+  "lists": [
+    {
+      "id": "system",
+      "name": "System",
+      "icon": "system",
+      "color": "#5B4FC4",
+      "summary": "Version, resources, environment, licenses and logs",
+      "sections": [
+        {
+          "title": "Status",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show version",
+              "desc": "Software version, uptime and hardware"
+            },
+            {
+              "kind": "command",
+              "cmd": "show clock",
+              "desc": "Current time"
+            },
+            {
+              "kind": "command",
+              "cmd": "show inventory",
+              "desc": "Hardware inventory and serial numbers"
+            },
+            {
+              "kind": "command",
+              "cmd": "show running-config",
+              "desc": "Running configuration"
+            },
+            {
+              "kind": "command",
+              "cmd": "show logging",
+              "desc": "Logging settings and buffered messages"
+            },
+            {
+              "kind": "command",
+              "cmd": "show users",
+              "desc": "Users logged in"
+            }
+          ]
+        },
+        {
+          "title": "Resources",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show processes cpu platform sorted",
+              "desc": "CPU per process, sorted (platform)"
+            },
+            {
+              "kind": "command",
+              "cmd": "show processes memory sorted",
+              "desc": "Memory per process, sorted"
+            },
+            {
+              "kind": "command",
+              "cmd": "show platform resources",
+              "desc": "CPU, memory and resource health"
+            },
+            {
+              "kind": "command",
+              "cmd": "show environment all",
+              "desc": "Fans, temperature and power supplies"
+            }
+          ]
+        },
+        {
+          "title": "Redundancy & stack",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show redundancy",
+              "desc": "Redundancy state of the supervisors"
+            },
+            {
+              "kind": "command",
+              "cmd": "show switch",
+              "desc": "Stack members and roles"
+            }
+          ]
+        },
+        {
+          "title": "Licenses",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show license summary",
+              "desc": "Licenses in use and their status"
+            },
+            {
+              "kind": "command",
+              "cmd": "show license usage",
+              "desc": "License usage details"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "interfaces",
+      "name": "Interfaces",
+      "icon": "interfaces",
+      "color": "#2F7A8C",
+      "summary": "Interfaces, neighbors, ARP and MAC table",
+      "sections": [
+        {
+          "title": "Interfaces",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show ip interface brief",
+              "desc": "Interfaces, IP and status in one line each"
+            },
+            {
+              "kind": "command",
+              "cmd": "show interfaces status",
+              "desc": "Port status, VLAN, duplex and speed"
+            },
+            {
+              "kind": "command",
+              "cmd": "show interfaces <interface>",
+              "desc": "Counters and details of one interface"
+            },
+            {
+              "kind": "command",
+              "cmd": "show interfaces transceiver",
+              "desc": "Optical transceiver readings"
+            },
+            {
+              "kind": "command",
+              "cmd": "show etherchannel summary",
+              "desc": "Port-channels and their members"
+            }
+          ]
+        },
+        {
+          "title": "Neighbors",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show cdp neighbors",
+              "desc": "CDP neighbors"
+            },
+            {
+              "kind": "command",
+              "cmd": "show cdp neighbors detail",
+              "desc": "CDP neighbors in detail (IP, platform)"
+            },
+            {
+              "kind": "command",
+              "cmd": "show lldp neighbors",
+              "desc": "LLDP neighbors"
+            },
+            {
+              "kind": "command",
+              "cmd": "show lldp neighbors detail",
+              "desc": "LLDP neighbors in detail"
+            }
+          ]
+        },
+        {
+          "title": "ARP & MAC",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show ip arp",
+              "desc": "ARP table"
+            },
+            {
+              "kind": "command",
+              "cmd": "show mac address-table",
+              "desc": "MAC address table"
+            },
+            {
+              "kind": "command",
+              "cmd": "show mac address-table address <mac>",
+              "desc": "Where a MAC address is learned"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "switching",
+      "name": "Switching",
+      "icon": "fortilink",
+      "color": "#5C7A2E",
+      "summary": "VLANs, trunks and spanning tree",
+      "sections": [
+        {
+          "title": "Layer 2",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show vlan brief",
+              "desc": "VLANs and their ports"
+            },
+            {
+              "kind": "command",
+              "cmd": "show interfaces trunk",
+              "desc": "Active trunk ports and allowed VLANs"
+            },
+            {
+              "kind": "command",
+              "cmd": "show spanning-tree",
+              "desc": "Spanning tree per VLAN"
+            },
+            {
+              "kind": "command",
+              "cmd": "show spanning-tree summary",
+              "desc": "Spanning tree summary"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "routing",
+      "name": "Routing",
+      "icon": "routing",
+      "color": "#B26A1E",
+      "summary": "Routing table, CEF, VRFs, FHRP and BFD",
+      "sections": [
+        {
+          "title": "Routing table",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show ip route",
+              "desc": "IPv4 routing table"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip route <ip>",
+              "desc": "Route lookup for a destination"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip route summary",
+              "desc": "Routes per protocol"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip route vrf <vrf>",
+              "desc": "Routing table of a VRF"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip cef <ip>",
+              "desc": "CEF forwarding entry for a destination"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip protocols",
+              "desc": "Routing protocols running"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ipv6 route",
+              "desc": "IPv6 routing table"
+            }
+          ]
+        },
+        {
+          "title": "Tracking, FHRP & BFD",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show track",
+              "desc": "Tracked objects"
+            },
+            {
+              "kind": "command",
+              "cmd": "show standby brief",
+              "desc": "HSRP groups, one line each"
+            },
+            {
+              "kind": "command",
+              "cmd": "show vrrp brief",
+              "desc": "VRRP groups, one line each"
+            },
+            {
+              "kind": "command",
+              "cmd": "show bfd neighbors",
+              "desc": "BFD sessions"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bgp",
+      "name": "BGP",
+      "icon": "bgp",
+      "color": "#3E6FC2",
+      "summary": "Peers, received and advertised routes",
+      "sections": [
+        {
+          "title": "Peers",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show ip bgp summary",
+              "desc": "BGP neighbors and their state"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip bgp neighbors",
+              "desc": "Every BGP neighbor in detail"
+            }
+          ]
+        },
+        {
+          "title": "Routes of a peer",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show ip bgp neighbors <peer-ip> received-routes",
+              "desc": "Routes received from the peer"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip bgp neighbors <peer-ip> advertised-routes",
+              "desc": "Routes advertised to the peer"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip bgp neighbors <peer-ip> routes",
+              "desc": "Routes learned from the peer"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip bgp <prefix>",
+              "desc": "BGP entry for a prefix"
+            }
+          ]
+        },
+        {
+          "title": "Actions",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "clear ip bgp <peer-ip> soft",
+              "desc": "Soft reset of one neighbor",
+              "action": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ospf",
+      "name": "OSPF",
+      "icon": "ospf",
+      "color": "#6B53B8",
+      "summary": "Neighbors, interfaces and LSDB",
+      "sections": [
+        {
+          "title": "OSPF",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show ip ospf neighbor",
+              "desc": "OSPF neighbors"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip ospf neighbor detail",
+              "desc": "OSPF neighbors in detail"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip ospf interface brief",
+              "desc": "Interfaces running OSPF"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip ospf database",
+              "desc": "OSPF link-state database"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip ospf border-routers",
+              "desc": "ABRs and ASBRs"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ipv6 ospf neighbor",
+              "desc": "OSPFv3 neighbors (IPv6)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "vpn",
+      "name": "IPsec",
+      "icon": "vpn",
+      "color": "#1F7A55",
+      "summary": "Crypto sessions, IKE and IPsec SAs",
+      "sections": [
+        {
+          "title": "Sessions & SAs",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show crypto session",
+              "desc": "Crypto sessions, one per peer"
+            },
+            {
+              "kind": "command",
+              "cmd": "show crypto ikev2 sa",
+              "desc": "IKEv2 security associations"
+            },
+            {
+              "kind": "command",
+              "cmd": "show crypto ikev2 sa detail",
+              "desc": "IKEv2 SAs in detail"
+            },
+            {
+              "kind": "command",
+              "cmd": "show crypto isakmp sa",
+              "desc": "IKEv1 (ISAKMP) security associations"
+            },
+            {
+              "kind": "command",
+              "cmd": "show crypto ipsec sa",
+              "desc": "IPsec SAs and encaps/decaps counters"
+            },
+            {
+              "kind": "command",
+              "cmd": "show crypto ipsec sa peer <ip>",
+              "desc": "IPsec SAs of one peer"
+            },
+            {
+              "kind": "command",
+              "cmd": "show crypto map",
+              "desc": "Crypto maps"
+            }
+          ]
+        },
+        {
+          "title": "Actions",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "clear crypto session remote <ip>",
+              "desc": "Clear the IKE and IPsec SAs of one peer",
+              "action": true
+            },
+            {
+              "kind": "command",
+              "cmd": "clear crypto sa peer <ip>",
+              "desc": "Clear the IPsec SAs of one peer",
+              "action": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "security",
+      "name": "Security",
+      "icon": "security",
+      "color": "#A23B72",
+      "summary": "ACLs, AAA, 802.1X, port security, DHCP snooping and NAT",
+      "sections": [
+        {
+          "title": "Access lists & NAT",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show access-lists",
+              "desc": "Access lists and their hit counters"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip access-lists",
+              "desc": "IPv4 access lists"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip nat translations",
+              "desc": "NAT translations"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip nat statistics",
+              "desc": "NAT statistics"
+            }
+          ]
+        },
+        {
+          "title": "Access control",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "show aaa servers",
+              "desc": "AAA servers and their state"
+            },
+            {
+              "kind": "command",
+              "cmd": "show authentication sessions",
+              "desc": "Authentication sessions per port"
+            },
+            {
+              "kind": "command",
+              "cmd": "show dot1x all",
+              "desc": "802.1X state"
+            },
+            {
+              "kind": "command",
+              "cmd": "show port-security",
+              "desc": "Port security per interface"
+            },
+            {
+              "kind": "command",
+              "cmd": "show ip dhcp snooping binding",
+              "desc": "DHCP snooping binding table"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "debug",
+      "name": "Debug",
+      "icon": "debug",
+      "color": "#B23B3B",
+      "summary": "Packet capture and debugs — stop them when done",
+      "debug": true,
+      "sections": [
+        {
+          "title": "Packet capture (EPC)",
+          "items": [
+            {
+              "kind": "recipe",
+              "name": "Capture on an interface",
+              "desc": "Embedded Packet Capture \"ZAPTERM\", both directions, all IPv4",
+              "fields": [
+                {
+                  "key": "iface",
+                  "label": "Interface",
+                  "placeholder": "GigabitEthernet1/0/1"
+                }
+              ],
+              "lines": [
+                "monitor capture ZAPTERM interface {{iface}} both",
+                "monitor capture ZAPTERM match ipv4 any any",
+                "monitor capture ZAPTERM start"
+              ]
+            },
+            {
+              "kind": "command",
+              "cmd": "monitor capture ZAPTERM stop",
+              "desc": "Stop the capture"
+            },
+            {
+              "kind": "command",
+              "cmd": "show monitor capture ZAPTERM buffer dump",
+              "desc": "Show the captured packets"
+            },
+            {
+              "kind": "command",
+              "cmd": "monitor capture ZAPTERM export <location>",
+              "desc": "Export the capture as a PCAP file"
+            },
+            {
+              "kind": "command",
+              "cmd": "no monitor capture ZAPTERM",
+              "desc": "Delete the capture"
+            }
+          ]
+        },
+        {
+          "title": "Debugs",
+          "items": [
+            {
+              "kind": "recipe",
+              "name": "Crypto debug of a peer",
+              "desc": "IKE and IPsec debugs limited to one peer (conditional debug)",
+              "fields": [
+                {
+                  "key": "peer",
+                  "label": "Peer IP",
+                  "placeholder": "203.0.113.2"
+                }
+              ],
+              "lines": [
+                "terminal monitor",
+                "debug crypto condition peer ipv4 {{peer}}",
+                "debug crypto isakmp",
+                "debug crypto ipsec"
+              ]
+            },
+            {
+              "kind": "recipe",
+              "name": "BGP updates of a peer",
+              "desc": "BGP update messages exchanged with one neighbor",
+              "fields": [
+                {
+                  "key": "peer",
+                  "label": "Neighbor IP",
+                  "placeholder": "192.0.2.1"
+                }
+              ],
+              "lines": ["terminal monitor", "debug ip bgp {{peer}} updates"]
+            },
+            {
+              "kind": "command",
+              "cmd": "terminal monitor",
+              "desc": "Show debug output in this (SSH/Telnet) session"
+            },
+            {
+              "kind": "command",
+              "cmd": "terminal no monitor",
+              "desc": "Stop showing debug output here (debugs keep running)"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
