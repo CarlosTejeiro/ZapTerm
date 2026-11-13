@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.0.2] - 2026-11-13
+
+### Fixed
+- **The Linux .deb installs next to ZAPX.** The executable was still called
+  `app` (the internal crate name), so ZapTerm's package tried to overwrite
+  ZAPX's files with the same names (`app.png` icons…) and `apt` refused to
+  install it. The executable is now `zapterm`.
+
 ## [1.0.1] - 2026-11-13
 
 ### Fixed
