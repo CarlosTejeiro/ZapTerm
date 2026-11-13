@@ -274,3 +274,5 @@ h3 { font-size: clamp(24px, 2.6vw, 32px); line-height: 1.15; letter-spacing: -0.
 .copy.copied { color: var(--green); border-color: rgba(34,197,94,.5); }
 @media (max-width: 980px) { .coins { grid-template-columns: 1fr; } }
 @media (max-width: 480px) { .coin { flex-direction: column; align-items: flex-start; } }
+.net { margin: -4px 0 0; font-size: 13px; color: var(--muted); }
+.net b { color: var(--accent-2); font-weight: 600; }
