@@ -284,3 +284,19 @@ h3 { font-size: clamp(24px, 2.6vw, 32px); line-height: 1.15; letter-spacing: -0.
 .paypal-body p { margin: 0 0 16px; color: var(--muted); }
 .coins-title { font-size: 18px; color: var(--muted); margin: 0 0 16px; font-weight: 600; }
 @media (max-width: 640px) { .paypal { flex-direction: column; align-items: flex-start; } }
+
+/* ── Feedback ──────────────────────────────────────────────────────── */
+.feedback { padding: 96px 0 40px; }
+.fb-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.fb-card {
+  display: flex; flex-direction: column; gap: 8px; color: var(--text);
+  background: linear-gradient(180deg, var(--card), var(--bg-2));
+  border: 1px solid var(--line); border-radius: 18px; padding: 24px;
+  transition: border-color .2s, transform .2s;
+}
+.fb-card:hover { text-decoration: none; border-color: rgba(139,124,246,.5); transform: translateY(-2px); }
+.fb-icon { font-size: 26px; }
+.fb-card h3 { margin: 0; font-size: 20px; }
+.fb-card p { margin: 0; color: var(--muted); font-size: 15px; flex: 1; }
+.fb-go { color: var(--accent-2); font-weight: 600; font-size: 14px; margin-top: 6px; }
+@media (max-width: 980px) { .fb-grid { grid-template-columns: 1fr; } }
