@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.0.3] - 2026-11-13
+
+### Fixed
+- **Highlight rules work on serial consoles.** Output was highlighted piece by
+  piece as it arrived, and a serial console delivers a few bytes at a time, so
+  an IP address split across two reads was never matched and stayed white.
+  ZapTerm now highlights whole lines; an unfinished line (a prompt, the keys
+  you type) is shown after 25 ms if nothing else arrives.
+
+### Changed
+- FortiGate Debug list: removed the "Ctrl+C" entry (just press Ctrl+C).
+
 ## [1.0.2] - 2026-11-13
 
 ### Fixed
