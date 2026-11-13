@@ -1,0 +1,35 @@
+name: 💡 Suggestion
+title: '[suggestion] '
+description: Suggest a feature or an improvement for ZapTerm
+labels: ['enhancement']
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve ZapTerm! Please search the
+        [existing issues](https://github.com/CarlosTejeiro/ZapTerm/issues?q=is%3Aissue) first,
+        in case someone already suggested it.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would you like to do?
+      description: The task or problem this would help with.
+      placeholder: 'When I work on several FortiGates at once, I would like to...'
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: How could ZapTerm help?
+      description: What you have in mind — a new feature, a change, a command list for a vendor…
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else?
+      description: Vendor and OS version, screenshots, how other tools do it…
