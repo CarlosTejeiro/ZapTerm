@@ -321,6 +321,20 @@
           <span class="fb-go">View issues →</span>
         </a>
       </div>
+      <div class="contact" id="contact">
+        <div class="contact-text">
+          <h3>Prefer to write privately?</h3>
+          <p>Send a suggestion or a question straight to the developer. Your message is delivered by
+            Web3Forms, a form service; your email is only used to reply to you.</p>
+        </div>
+        <form class="contact-form" action="https://api.web3forms.com/submit" method="POST">
+          <input type="hidden" name="access_key" value="6bed0235-b976-4e93-ab55-06c57b31dd67">
+          <label>Name<input type="text" name="name" autocomplete="name" required></label>
+          <label>Email<input type="email" name="email" autocomplete="email" required></label>
+          <label>Message<textarea name="message" rows="5" required></textarea></label>
+          <button class="btn btn-primary" type="submit">Send message</button>
+        </form>
+      </div>
     </div>
   </section>
 
