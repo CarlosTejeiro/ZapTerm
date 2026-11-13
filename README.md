@@ -78,7 +78,8 @@ The little things that add up across a long day:
   for **12 platforms**, with automatic platform detection from the prompt.
 - **Snippets** — per-platform command snippets fired on `Ctrl+Shift+1..9`.
 - **Command lists per vendor** — grouped commands and recipes under the
-  terminal for the detected platform. They are JSON files: make your own copy
+  terminal for the detected platform (local tabs get the Windows, macOS or
+  Linux lists for their shell). They are JSON files: make your own copy
   in **Settings → Command Lists** and edit it; updates never change your copy.
 - **★ Custom commands** — your own command list, the same on every platform,
   next to Recent in the command bar (add, edit, remove, or ☆ a Recent entry).

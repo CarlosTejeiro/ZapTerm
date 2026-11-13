@@ -79,33 +79,39 @@ describe('command lists', () => {
     expect(listsForPlatform(null)).toBeNull()
   })
 
-  it.each(['fortigate', 'cisco_ios', 'cisco_iosxr', 'linux', 'arista_eos', 'juniper', 'windows'])(
-    '%s data is well formed',
-    (platform) => {
-      const vendor = listsForPlatform(platform)!
-      const ids = new Set<string>()
-      for (const list of vendor.lists) {
-        expect(ids.has(list.id)).toBe(false)
-        ids.add(list.id)
-        for (const section of list.sections) {
-          for (const item of section.items) {
-            if (item.kind === 'command') {
-              expect(item.cmd).not.toMatch(/\n/)
-              // Nothing that resets, formats, erases or reboots the device.
-              expect(item.cmd).not.toMatch(
-                /factoryreset|formatlogdisk|execute reboot|disk format|fsso refresh$|reset-uptime|test authserver|^reload|^erase|^format|write erase/,
-              )
-            } else {
-              const keys = new Set(item.fields.map((f) => f.key))
-              for (const line of item.lines) {
-                for (const m of line.matchAll(/\{\{(\w+)\}\}/g)) expect(keys.has(m[1]!)).toBe(true)
-              }
+  it.each([
+    'fortigate',
+    'cisco_ios',
+    'cisco_iosxr',
+    'linux',
+    'macos',
+    'arista_eos',
+    'juniper',
+    'windows',
+  ])('%s data is well formed', (platform) => {
+    const vendor = listsForPlatform(platform)!
+    const ids = new Set<string>()
+    for (const list of vendor.lists) {
+      expect(ids.has(list.id)).toBe(false)
+      ids.add(list.id)
+      for (const section of list.sections) {
+        for (const item of section.items) {
+          if (item.kind === 'command') {
+            expect(item.cmd).not.toMatch(/\n/)
+            // Nothing that resets, formats, erases or reboots the device.
+            expect(item.cmd).not.toMatch(
+              /factoryreset|formatlogdisk|execute reboot|disk format|fsso refresh$|reset-uptime|test authserver|^reload|^erase|^format|write erase/,
+            )
+          } else {
+            const keys = new Set(item.fields.map((f) => f.key))
+            for (const line of item.lines) {
+              for (const m of line.matchAll(/\{\{(\w+)\}\}/g)) expect(keys.has(m[1]!)).toBe(true)
             }
           }
         }
       }
-    },
-  )
+    }
+  })
 
   it('a user copy replaces the built-in list for its platform only', () => {
     const mine = { label: 'Mine', stopDebug: [], lists: [] }
