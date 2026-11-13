@@ -39,15 +39,15 @@ build() {
   else
     # Fallback: build the frontend then the Rust binary directly.
     ( cd frontend && pnpm run build )
-    cargo build --release --bin app
+    cargo build --release --bin zapterm
   fi
 }
 
 package() {
   cd "$srcdir/zapterm"
 
-  # Binary (the crate's bin target is named `app`).
-  install -Dm755 "target/release/app" "$pkgdir/usr/bin/${pkgname}"
+  # Binary (the crate's bin target is named `zapterm`).
+  install -Dm755 "target/release/zapterm" "$pkgdir/usr/bin/${pkgname}"
 
   # Icon (hicolor 128x128).
   install -Dm644 "crates/app/icons/128x128.png" \

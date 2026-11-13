@@ -11,7 +11,7 @@ rust-version.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [[bin]]
-name = "app"
+name = "zapterm"
 path = "src/main.rs"
 
 [build-dependencies]
