@@ -1,0 +1,160 @@
+name: Release
+
+# Triggered on tag pushes shaped like `v1.2.3`. Builds platform-specific
+# bundles (DMG/AppImage/deb on macOS+Linux, MSI/NSIS on Windows) plus the
+# Windows portable exe, and attaches them to a published Release on this repo.
+#
+# Signing secrets (optional until in-app updates are enabled):
+# - `TAURI_SIGNING_PRIVATE_KEY` / `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
+#
+# To cut a release:  git tag v0.7.0 && git push origin v0.7.0
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            target: aarch64-apple-darwin
+          - platform: macos-latest
+            target: x86_64-apple-darwin
+          - platform: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+          # Native arm64 Linux runner (free on public repos). Cross-compiling
+          # Tauri for ARM with webkit2gtk is painful, so build on real ARM.
+          - platform: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo registry & target
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: release-${{ matrix.target }}
+
+      - name: Install Linux build deps
+        if: startsWith(matrix.platform, 'ubuntu-22.04')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libxdo-dev \
+            libudev-dev \
+            libdbus-1-dev
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Build with Tauri
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          projectPath: crates/app
+          tagName: ${{ github.ref_name }}
+          releaseName: 'ZapTerm ${{ github.ref_name }}'
+          releaseBody: 'See CHANGELOG.md for details.'
+          # Publish straight away (not a draft). A draft isn't attached to the
+          # tag, so re-pushing a tag made tauri-action create duplicate empty
+          # drafts; a published release is found by tag and reused on re-run.
+          releaseDraft: false
+          prerelease: false
+          args: --target ${{ matrix.target }}
+
+      # Portable Windows build: the bare exe (frontend embedded) runs from
+      # any folder without installation. Requires the WebView2 runtime on
+      # the target machine (preinstalled on Win11 / updated Win10 — the
+      # installers bootstrap it, the portable exe does not). Drop a file
+      # named `portable` next to the exe to keep all data in `data/`.
+      - name: Upload portable exe (Windows)
+        if: matrix.platform == 'windows-latest' && startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $exe = Get-ChildItem "target/${{ matrix.target }}/release" -Filter *.exe -File |
+            Where-Object { $_.Name -notmatch 'setup' } | Select-Object -First 1
+          if (-not $exe) { throw "release exe not found" }
+          $version = "${{ github.ref_name }}".TrimStart("v")
+          $portable = "ZapTerm_${version}_x64_portable.exe"
+          Copy-Item $exe.FullName $portable
+          gh release upload "${{ github.ref_name }}" $portable --clobber
+
+  # Set the draft's body once all builds finish: the curated notes from
+  # docs/releases/<tag>.md (if present) followed by this version's CHANGELOG
+  # section, extracted verbatim from CHANGELOG.md. Either part may be absent.
+  release-notes:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compose release notes (docs/releases + CHANGELOG section)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          ver="${TAG#v}"
+          notes="docs/releases/${TAG}.md"
+          out="$(mktemp)"
+
+          # Curated notes first, if any.
+          if [ -f "$notes" ]; then
+            cat "$notes" >> "$out"
+          fi
+
+          # Extract the `## [ver]` block from CHANGELOG.md (up to the next `## [`).
+          changelog="$(awk -v ver="$ver" '
+            $0 ~ "^## \\[" ver "\\]" { flag=1; print; next }
+            /^## \[/ { flag=0 }
+            flag { print }
+          ' CHANGELOG.md)"
+
+          if [ -n "$changelog" ]; then
+            if [ -s "$out" ]; then printf '\n\n---\n\n' >> "$out"; fi
+            printf '## Changelog\n\n%s\n' "$changelog" >> "$out"
+          fi
+
+          if [ -s "$out" ]; then
+            gh release edit "${TAG}" --notes-file "$out"
+          else
+            echo "No notes file and no CHANGELOG section for ${ver} — keeping placeholder body."
+          fi

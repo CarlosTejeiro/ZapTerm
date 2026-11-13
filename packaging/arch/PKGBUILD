@@ -1,0 +1,68 @@
+# Maintainer: Carlos Tejeiro <cto074@gmail.com>
+#
+# Builds ZapTerm from source for Arch Linux. The repository is PRIVATE, so this
+# PKGBUILD clones it over SSH at the release tag — you need an SSH key with
+# read access to github.com/CarlosTejeiro/zapterm (the usual `git clone git@...`
+# must work for you). It is NOT publishable to the AUR as-is for that reason;
+# it is meant for your own / your collaborators' machines.
+#
+# Build & install:   makepkg -si
+# Bump version:      edit pkgver, then `makepkg -si` again.
+
+pkgname=zapterm
+pkgver=0.9.0
+pkgrel=1
+pkgdesc="Modern multi-protocol terminal for network engineers — SSH/Telnet/Serial with SFTP, tunnels, snippets and login automation"
+arch=('x86_64')
+url="https://github.com/CarlosTejeiro/zapterm"
+license=('LicenseRef-proprietary')
+depends=('webkit2gtk-4.1' 'gtk3' 'libayatana-appindicator' 'dbus')
+makedepends=('rust' 'cargo' 'nodejs' 'pnpm' 'pkgconf' 'librsvg' 'patchelf' 'git')
+options=('!lto')
+# Private repo over SSH, pinned to the release tag. #tag= keeps builds reproducible.
+source=("git+ssh://git@github.com/CarlosTejeiro/zapterm.git#tag=v${pkgver}")
+sha256sums=('SKIP')
+
+prepare() {
+  cd "$srcdir/zapterm/frontend"
+  pnpm install --frozen-lockfile
+}
+
+build() {
+  cd "$srcdir/zapterm"
+  # tauri-cli is vendored as a dev tool; run it through cargo so we don't
+  # depend on a globally installed binary.
+  export CARGO_TARGET_DIR="$srcdir/zapterm/target"
+  cargo install tauri-cli --version "^2" --locked --root "$srcdir/.cargo-tools" 2>/dev/null || true
+  if [ -x "$srcdir/.cargo-tools/bin/cargo-tauri" ]; then
+    "$srcdir/.cargo-tools/bin/cargo-tauri" build --no-bundle
+  else
+    # Fallback: build the frontend then the Rust binary directly.
+    ( cd frontend && pnpm run build )
+    cargo build --release --bin app
+  fi
+}
+
+package() {
+  cd "$srcdir/zapterm"
+
+  # Binary (the crate's bin target is named `app`).
+  install -Dm755 "target/release/app" "$pkgdir/usr/bin/${pkgname}"
+
+  # Icon (hicolor 128x128).
+  install -Dm644 "crates/app/icons/128x128.png" \
+    "$pkgdir/usr/share/icons/hicolor/128x128/apps/${pkgname}.png"
+
+  # Desktop entry.
+  install -Dm644 /dev/stdin "$pkgdir/usr/share/applications/${pkgname}.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=ZapTerm
+Comment=Multi-protocol terminal — SSH/Telnet/Serial
+Exec=${pkgname}
+Icon=${pkgname}
+Terminal=false
+Categories=Network;Development;System;
+StartupWMClass=ZapTerm
+EOF
+}

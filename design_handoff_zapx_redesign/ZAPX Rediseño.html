@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ZAPX — Rediseño de la ventana principal</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<style>
+  :root {
+    /* Parchment refinado — tokens del rediseño */
+    --zx-paper: #f7f4ed;
+    --zx-paper-15: #f3efe6;
+    --zx-paper-2: #efebdf;
+    --zx-ink: #2c2924;
+    --zx-ink-muted: #6c6354;
+    --zx-ink-dim: #a09684;
+    --zx-line: rgba(82, 68, 40, 0.16);
+    --zx-hover: rgba(82, 68, 40, 0.06);
+    --zx-accent: #564ca0;
+    --zx-accent-soft: color-mix(in srgb, var(--zx-accent) 55%, #ffffff);
+    --zx-ok: #3e8f60;
+    --zx-warn: #b88528;
+    --zx-err: #b13a3a;
+    --zx-radius: 7px;
+    --zx-ui: "Geist", "SF Pro Text", system-ui, sans-serif;
+    --zx-mono: "JetBrains Mono", ui-monospace, monospace;
+  }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  #root { height: 100%; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="zapx-shared.jsx"></script>
+<script type="text/babel" src="zapx-option-a.jsx"></script>
+<script type="text/babel" src="zapx-option-b.jsx"></script>
+<script type="text/babel" src="zapx-option-c.jsx"></script>
+
+<script type="text/babel">
+const { useEffect } = React;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accent": "#564ca0",
+  "radius": 7,
+  "fontUi": "Geist"
+}/*EDITMODE-END*/;
+
+function NotesCard({ title, items }) {
+  return (
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{
+        fontSize: 13, fontWeight: 700, marginBottom: 10, color: '#2c2924',
+        fontFamily: 'var(--zx-ui)',
+      }}>{title}</div>
+      <ul style={{ margin: 0, padding: '0 0 0 16px', display: 'flex', flexDirection: 'column', gap: 7 }}>
+        {items.map((it, i) => (
+          <li key={i} style={{ fontSize: 12.5, lineHeight: 1.5, color: '#6c6354', fontFamily: 'var(--zx-ui)' }}>{it}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function ImplementationNotes() {
+  const code = (s) => <code style={{ fontFamily: 'var(--zx-mono)', fontSize: 11, background: 'rgba(82,68,40,0.07)', borderRadius: 4, padding: '1px 5px' }}>{s}</code>;
+  return (
+    <div style={{
+      width: 1180, background: '#fdfcf9', padding: '28px 32px',
+      display: 'flex', flexDirection: 'column', gap: 20, fontFamily: 'var(--zx-ui)',
+    }}>
+      <div style={{ fontSize: 15, fontWeight: 700, color: '#2c2924' }}>Notas de implementación (Svelte)</div>
+      <div style={{ display: 'flex', gap: 32 }}>
+        <NotesCard title="Común a las tres" items={[
+          <span>Reemplazar los glifos de texto (✎ ✕ 📁 ▸ ─ □) por un set único de iconos SVG stroke 1.5px — un componente {code('Icon.svelte')} con paths nombrados.</span>,
+          <span>Subir {code('border')} de Parchment a {code('rgba(82,68,40,0.16)')} y separar {code('--zx-paper / -15 / -2')} como 3 niveles de superficie en {code('themes/index.ts')}.</span>,
+          <span>Estados activos: fondo {code('color-mix(accent 10%)')} + peso 500, sin {code('border-left')} de 2px (desplaza el contenido).</span>,
+          <span>Status bar: altura 28px, separadores {code('│')} con opacidad .25, números tabulares.</span>,
+        ]} />
+        <NotesCard title="A · Pulido (bajo riesgo)" items={[
+          <span>Solo CSS/markup en {code('Sidebar')}, {code('TabBar')}, {code('StatusBar')} — sin tocar layout ni estado.</span>,
+          <span>Terminal como tarjeta: {code('padding: 14px')} en el contenedor del xterm + {code('border-radius: 11px')} + sombra suave.</span>,
+          <span>Tab activa: card con borde + subrayado interior {code('inset 0 -2px 0 accent')}.</span>,
+        ]} />
+        <NotesCard title="B · Evolución (medio)" items={[
+          <span>Fusionar {code('TitleBar')} + {code('TabBar')} en una barra de 44px; menús → Command Palette ({code('⌘K')} visible).</span>,
+          <span>Nuevo rail de iconos (46px) que conmuta paneles del sidebar: hosts, snippets, logs, reglas.</span>,
+          <span>Filas de host con avatar de iniciales coloreado — el color ya existe en {code('SESSION_COLORS')}.</span>,
+        ]} />
+        <NotesCard title="C · Audaz (alto)" items={[
+          <span>Bloques de comando: requiere segmentar el stream del PTY por prompt en {code('core-highlight')} o en el front con regex del prompt.</span>,
+          <span>Composer separado del xterm: input propio con ghost text (ya existe {code('hints/GhostText.svelte')}) y chips de snippets.</span>,
+          <span>Dock de hosts reemplaza el árbol — mantener el árbol como panel invocable para no perder carpetas.</span>,
+        ]} />
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+
+  useEffect(() => {
+    const r = document.documentElement.style;
+    r.setProperty('--zx-accent', t.accent);
+    r.setProperty('--zx-radius', t.radius + 'px');
+    r.setProperty('--zx-ui', `"${t.fontUi}", "SF Pro Text", system-ui, sans-serif`);
+  }, [t.accent, t.radius, t.fontUi]);
+
+  return (
+    <div style={{ height: '100%' }}>
+      <DesignCanvas>
+        <DCSection id="main" title="ZAPX · Ventana principal" subtitle="Tres direcciones sobre el tema Parchment — 1440×900">
+          <DCArtboard id="opt-a" label="A · Pulido — misma estructura, mejor ejecución" width={1440} height={900}>
+            <OptA />
+          </DCArtboard>
+          <DCArtboard id="opt-b" label="B · Evolución — chrome unificado, rail + hosts" width={1440} height={900}>
+            <OptB />
+          </DCArtboard>
+          <DCArtboard id="opt-c" label="C · Audaz — bloques de comando + composer" width={1440} height={900}>
+            <OptC />
+          </DCArtboard>
+        </DCSection>
+        <DCSection id="notes" title="Handoff" subtitle="Qué cambiar en el código para cada dirección">
+          <DCArtboard id="impl-notes" label="Notas de implementación" width={1180} height={420}>
+            <ImplementationNotes />
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+
+      <TweaksPanel>
+        <TweakSection label="Tokens" />
+        <TweakColor label="Acento" value={t.accent}
+          options={['#564ca0', '#3e7f7e', '#a8552f', '#566e3a']}
+          onChange={(v) => setTweak('accent', v)} />
+        <TweakSlider label="Radio de esquinas" value={t.radius} min={3} max={12} unit="px"
+          onChange={(v) => setTweak('radius', v)} />
+        <TweakRadio label="Fuente UI" value={t.fontUi}
+          options={['Geist', 'system-ui']}
+          onChange={(v) => setTweak('fontUi', v)} />
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

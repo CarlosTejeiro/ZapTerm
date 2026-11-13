@@ -1,0 +1,12 @@
+# MD013 — line length: disabled (long table rows are acceptable)
+MD013: false
+
+# MD033 — inline HTML: disabled (used in some docs for badges/icons)
+MD033: false
+
+# MD041 — first line must be a top-level heading: enabled
+MD041: true
+
+# MD024 — no duplicate headings: allow siblings in different sections
+MD024:
+  siblings_only: true

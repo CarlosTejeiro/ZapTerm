@@ -1,0 +1,68 @@
+name: Portable exe
+
+# Rebuilds just the bare Windows executable and attaches it to an EXISTING
+# release (draft or published) — useful when the portable asset needs
+# regenerating without redoing the whole release.
+#
+# Trigger: push a tag named `portable-<release-tag>`, e.g.
+#   git tag portable-v0.3.0 && git push origin portable-v0.3.0
+# attaches `ZapTerm_1.0.0_x64_portable.exe` to release `v0.3.0`. Delete the
+# helper tag afterwards; it carries no meaning beyond the trigger.
+
+on:
+  push:
+    tags:
+      - 'portable-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  portable:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache cargo registry & target
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: release-x86_64-pc-windows-msvc
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Build exe (no bundle)
+        working-directory: crates/app
+        run: pnpm dlx @tauri-apps/cli@^2 build --no-bundle --target x86_64-pc-windows-msvc
+
+      - name: Upload to release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $target = "${{ github.ref_name }}" -replace '^portable-',''
+          $version = $target.TrimStart("v")
+          $exe = Get-ChildItem "target/x86_64-pc-windows-msvc/release" -Filter *.exe -File |
+            Where-Object { $_.Name -notmatch 'setup' } | Select-Object -First 1
+          if (-not $exe) { throw "release exe not found" }
+          $portable = "ZapTerm_${version}_x64_portable.exe"
+          Copy-Item $exe.FullName $portable
+          gh release upload $target $portable --clobber

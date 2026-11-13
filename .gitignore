@@ -1,0 +1,45 @@
+# Rust build artefacts
+/target/
+Cargo.lock~
+
+# Node / frontend
+node_modules/
+frontend/dist/
+frontend/.svelte-kit/
+.pnpm-store/
+
+# Tauri bundle outputs
+src-tauri/target/
+crates/app/target/
+
+# Secrets — never commit
+.env
+.env.*
+*.key
+*.pem
+*.p12
+*.pfx
+
+# OS artefacts
+.DS_Store
+Thumbs.db
+desktop.ini
+*:Zone.Identifier
+
+# Internal design/planning docs — not for the public repo
+docs/internal/
+
+# Editor state (personal configs belong in global gitignore, not here)
+.idea/
+*.iml
+*.swp
+*.swo
+
+# Build logs
+*.log
+
+# npm lockfile — pnpm-lock.yaml is canonical in this repo
+frontend/package-lock.json
+
+# Local scratch / sensitive samples (never commit)
+temp/

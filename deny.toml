@@ -1,0 +1,89 @@
+[graph]
+targets = []
+
+# ---------------------------------------------------------------------------
+# Licenses — third-party code must be permissive (plus MPL-2.0, see below).
+# ZapTerm's own crates are GPL-3.0-or-later; they are never published
+# (`publish = false`, inherited by every workspace member) and are skipped via
+# `private`, so this allow-list applies to dependencies only.
+# ---------------------------------------------------------------------------
+[licenses]
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "CC0-1.0",
+    "Zlib",
+    # Boost — permissive. clipboard-win, error-code (Windows clipboard).
+    "BSL-1.0",
+    # Permissive data license — webpki-root-certs (Mozilla root store).
+    "CDLA-Permissive-2.0",
+    # File-level weak copyleft, GPL-compatible; imposes nothing on ZapTerm beyond
+    # keeping those files' own notices. serialport (direct dependency), Servo's
+    # cssparser / selectors / dtoa-short (via Tauri), option-ext (via dirs).
+    # Listed in THIRD-PARTY-NOTICES.md.
+    "MPL-2.0",
+]
+confidence-threshold = 0.8
+# Don't license-check our own workspace crates — they're `publish = false`
+# and licensed GPL-3.0-or-later, which this allow-list (for dependencies)
+# intentionally does not include.
+private = { ignore = true }
+
+# ---------------------------------------------------------------------------
+# Security advisories — deny all; every exception below carries its reason.
+# Re-run `cargo deny check` before removing one; CI runs it on every PR.
+# ---------------------------------------------------------------------------
+[advisories]
+version = 2
+ignore = [
+    # rsa: Marvin timing side-channel. No patched release exists (upstream keeps
+    # `patched = []` deliberately). Reached only through russh-keys for RSA key
+    # auth, where the private-key operation runs locally on the user's machine —
+    # an attacker would have to time our own decryption.
+    { id = "RUSTSEC-2023-0071", reason = "no upstream fix; client-side RSA key operations only" },
+    # Unmaintained (not vulnerable), build-time only: proc-macro-error via
+    # glib-macros — the GTK 0.18 bindings have no alternative.
+    { id = "RUSTSEC-2024-0370", reason = "build-time proc macro via glib-macros (GTK bindings)" },
+    # Unmaintained (not vulnerable): `serial` via portable-pty 0.8 (local PTY).
+    { id = "RUSTSEC-2017-0008", reason = "transitive via portable-pty 0.8; revisit on portable-pty 0.9" },
+    # Unmaintained (not vulnerable): unic-* via urlpattern (Tauri's URL scopes).
+    { id = "RUSTSEC-2025-0081", reason = "unic-* via urlpattern (Tauri); no alternative" },
+    { id = "RUSTSEC-2025-0075", reason = "unic-* via urlpattern (Tauri); no alternative" },
+    { id = "RUSTSEC-2025-0080", reason = "unic-* via urlpattern (Tauri); no alternative" },
+    { id = "RUSTSEC-2025-0100", reason = "unic-* via urlpattern (Tauri); no alternative" },
+    { id = "RUSTSEC-2025-0098", reason = "unic-* via urlpattern (Tauri); no alternative" },
+    # zip 4.6.1 extraction flaws (SUID bits, symlinks escaping the destination).
+    # Fixed in zip 9, but even tauri-plugin-updater 2.14 still pins zip 4.x.
+    # Only the updater extracts archives, and it is never invoked: disabled in
+    # tauri.conf.json (`plugins.updater.active = false`) and not imported by
+    # the frontend. Drop these once the updater moves to zip >= 9.
+    { id = "RUSTSEC-2026-0367", reason = "zip via tauri-plugin-updater, which is disabled; no updater release on zip 9 yet" },
+    { id = "RUSTSEC-2026-0368", reason = "zip via tauri-plugin-updater, which is disabled; no updater release on zip 9 yet" },
+    { id = "RUSTSEC-2026-0369", reason = "zip via tauri-plugin-updater, which is disabled; no updater release on zip 9 yet" },
+    # Same: symlink entry with a huge declared size aborts extract() (DoS).
+    { id = "RUSTSEC-2026-0429", reason = "zip via tauri-plugin-updater, which is disabled; no updater release on zip 9 yet" },
+    # Unmaintained (not vulnerable): pin-utils via nix 0.25 via portable-pty 0.8.
+    { id = "RUSTSEC-2026-0441", reason = "transitive via portable-pty 0.8 (nix 0.25); revisit on portable-pty 0.9" },
+]
+
+# ---------------------------------------------------------------------------
+# Banned crates
+# ---------------------------------------------------------------------------
+[bans]
+multiple-versions = "warn"
+wildcards         = "deny"
+# Our crates depend on each other by `path` without a version; cargo-deny counts
+# those as wildcards. They are private workspace members, so allow exactly that.
+allow-wildcard-paths = true
+
+# ---------------------------------------------------------------------------
+# Sources — only crates.io and our own workspace
+# ---------------------------------------------------------------------------
+[sources]
+unknown-registry = "deny"
+unknown-git      = "deny"

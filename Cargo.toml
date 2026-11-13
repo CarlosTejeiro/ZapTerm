@@ -1,0 +1,98 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/app",
+    "crates/core-config",
+    "crates/core-highlight",
+    "crates/core-hints",
+    "crates/core-logging",
+    "crates/core-persistence",
+    "crates/core-session",
+    "crates/core-terminal",
+    "crates/core-transport",
+    "crates/core-vault",
+    "xtask",
+]
+
+[workspace.package]
+edition    = "2021"
+version    = "0.0.1"
+authors    = ["Carlos Tejeiro and ZapTerm contributors"]
+# Free software under the GNU GPL v3 (or later) — see LICENSE.
+license    = "GPL-3.0-or-later"
+publish    = false
+repository = "https://github.com/CarlosTejeiro/zapterm"
+rust-version = "1.89"
+
+# ---------------------------------------------------------------------------
+# Workspace-level dependency pins.
+# Each crate opts in with `dep = { workspace = true }`.
+# Versions are pinned to a major; Cargo.lock tracks the exact minor/patch.
+# ---------------------------------------------------------------------------
+[workspace.dependencies]
+# Async runtime — tokio is the only runtime; never mix (style guide §2)
+tokio   = { version = "1", features = ["full"] }
+futures = "0.3"
+
+# Error handling — thiserror in libs, anyhow only in app layer (style guide §2)
+thiserror = "2"
+anyhow    = "1"
+
+# Serialization
+serde      = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Structured logging
+tracing            = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Credential zeroing — mandatory for secret-holding types (style guide §4)
+zeroize = { version = "1", features = ["derive"] }
+
+# Async traits — needed until AFIT is fully object-safe in stable Rust
+
+# Bloque 1 — local PTY and terminal emulation
+portable-pty = "0.8"
+vte          = "0.13"
+uuid         = { version = "1", features = ["v4"] }
+
+# Bloque 2 — SSH transport
+# `ring` (not the default aws-lc-rs) so no cmake/nasm C build joins the
+# release matrix — it is also the backend rustls already uses here. `des`
+# keeps `3des-cbc` for legacy network gear (unconditional in older russh).
+# russh-keys was merged into russh (`russh::keys`) from 0.50.
+russh      = { version = "0.65", default-features = false, features = ["flate2", "ring", "rsa", "des"] }
+russh-sftp = "2.1"
+home       = "0.5"
+
+# Bloque 3 — persistence + vault
+rusqlite = { version = "0.41", features = ["bundled"] }
+# OS backends must be named explicitly: without them keyring 3 falls back to
+# an in-memory mock store that keeps nothing.
+keyring  = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust"] }
+
+# Bloque 4 — serial transport
+serialport  = "4"
+tokio-serial = "5"
+
+# Bloque 5 — keyword highlighting
+regex = "1"
+
+# Bloque 6 — session logging
+chrono = { version = "0.4", features = ["serde"] }
+
+# File-system watcher — used by app to auto-reload the user-overridable
+# hint catalogs without a button press.
+notify = "8"
+
+# Raw libc bindings — used by `core-transport` to query TCP MSS via
+# `getsockopt(TCP_INFO)` on Linux and `TCP_MAXSEG` on macOS.
+libc = "0.2"
+
+# Windows-only: raw FFI bindings for `WSAIoctl(SIO_TCP_INFO)`, which is
+# the only API that exposes negotiated MSS on Windows.
+windows-sys = { version = "0.59", features = [
+    "Win32_Foundation",
+    "Win32_Networking_WinSock",
+    "Win32_System_IO",
+] }

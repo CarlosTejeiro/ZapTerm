@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ZAPX — Marca y temas (sobre Opción A)</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<style>
+  :root {
+    /* Parchment refinado — tokens base */
+    --zx-paper: #f7f4ed;
+    --zx-paper-15: #f3efe6;
+    --zx-paper-2: #efebdf;
+    --zx-ink: #2c2924;
+    --zx-ink-muted: #6c6354;
+    --zx-ink-dim: #a09684;
+    --zx-line: rgba(82, 68, 40, 0.16);
+    --zx-hover: rgba(82, 68, 40, 0.06);
+    --zx-accent: #564ca0;
+    --zx-accent-2: #b3793a;
+    --zx-accent-soft: #a59ddd;
+    --zx-ok: #3e8f60;
+    --zx-warn: #b88528;
+    --zx-err: #b13a3a;
+    --zx-radius: 7px;
+    --zx-ui: "Geist", "SF Pro Text", system-ui, sans-serif;
+    --zx-mono: "JetBrains Mono", ui-monospace, monospace;
+  }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  #root { height: 100%; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="zapx-shared.jsx"></script>
+<script type="text/babel" src="zapx-option-a.jsx"></script>
+<script type="text/babel" src="zapx-themes.jsx"></script>
+
+<script type="text/babel">
+const { useEffect } = React;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "mark": "tile",
+  "radius": 7
+}/*EDITMODE-END*/;
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const Mark = MARKS[t.mark] || ZapxMark;
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--zx-radius', t.radius + 'px');
+  }, [t.radius]);
+
+  return (
+    <div style={{ height: '100%' }}>
+      <DesignCanvas>
+        <DCSection id="brand" title="Marca ZAPX" subtitle="El icono elegido (Tweaks → Marca) se aplica a todos los temas de abajo">
+          <DCArtboard id="brand-board" label="Propuestas de icono" width={1180} height={300}>
+            <BrandBoard />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="themes" title="Temas" subtitle="Opción A · Pulido en cinco temas — chrome y terminal armonizados">
+          <DCArtboard id="th-parchment" label="Parchment — claro cálido (actual refinado)" width={1440} height={900}>
+            <ThemeScope theme="parchment"><OptA Mark={Mark} /></ThemeScope>
+          </DCArtboard>
+          <DCArtboard id="th-oxide" label="Oxide — oscuro cálido · cobre" width={1440} height={900}>
+            <ThemeScope theme="oxide"><OptA Mark={Mark} /></ThemeScope>
+          </DCArtboard>
+          <DCArtboard id="th-fjord" label="Fjord — oscuro frío · hielo" width={1440} height={900}>
+            <ThemeScope theme="fjord"><OptA Mark={Mark} /></ThemeScope>
+          </DCArtboard>
+          <DCArtboard id="th-nocturne" label="Nocturne — oscuro violeta · periwinkle" width={1440} height={900}>
+            <ThemeScope theme="nocturne"><OptA Mark={Mark} /></ThemeScope>
+          </DCArtboard>
+          <DCArtboard id="th-phosphor" label="Phosphor — verde sobre negro · CRT clásico" width={1440} height={900}>
+            <ThemeScope theme="phosphor"><OptA Mark={Mark} /></ThemeScope>
+          </DCArtboard>
+          <DCArtboard id="th-amber" label="Amber — ámbar sobre negro · CRT clásico" width={1440} height={900}>
+            <ThemeScope theme="amber"><OptA Mark={Mark} /></ThemeScope>
+          </DCArtboard>
+          <DCArtboard id="th-porcelain" label="Porcelain — claro frío · índigo acero" width={1440} height={900}>
+            <ThemeScope theme="porcelain"><OptA Mark={Mark} /></ThemeScope>
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+
+      <TweaksPanel>
+        <TweakSection label="Marca" />
+        <TweakSelect label="Icono" value={t.mark}
+          options={[
+            { value: 'actual', label: 'Actual (X una tinta)' },
+            { value: 'duotone', label: '1 · X bitono' },
+            { value: 'tile', label: '2 · Tile' },
+            { value: 'prompt', label: '3 · Prompt' },
+          ]}
+          onChange={(v) => setTweak('mark', v)} />
+        <TweakSection label="Forma" />
+        <TweakSlider label="Radio de esquinas" value={t.radius} min={3} max={12} unit="px"
+          onChange={(v) => setTweak('radius', v)} />
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

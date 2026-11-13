@@ -1,0 +1,21 @@
+[package]
+name             = "core-vault"
+edition.workspace    = true
+version.workspace    = true
+license.workspace    = true
+publish.workspace    = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+thiserror = { workspace = true }
+zeroize   = { workspace = true }
+keyring   = { workspace = true }
+aes-gcm   = "0.10"
+sha2      = "0.10"
+rand      = "0.8"
+# Passphrase-based sealing of backup bundles (Argon2id KDF).
+argon2    = { version = "0.6", default-features = false, features = ["alloc"] }
+# Passphrases are NFC-normalised so "ñ" typed as one or two code points
+# (macOS vs Windows input) derives the same key.
+unicode-normalization = "0.1"

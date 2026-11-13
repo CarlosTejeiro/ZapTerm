@@ -1,0 +1,15 @@
+[package]
+name             = "core-hints"
+edition.workspace    = true
+version.workspace    = true
+license.workspace    = true
+publish.workspace    = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+thiserror        = { workspace = true }
+serde            = { workspace = true }
+serde_json       = { workspace = true }
+regex            = { workspace = true }
+core-persistence = { path = "../core-persistence" }

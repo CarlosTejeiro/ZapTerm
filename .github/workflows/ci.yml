@@ -1,0 +1,183 @@
+name: CI
+
+# Quality gate: runs on every push and pull request that isn't a release tag.
+# Guards correctness — frontend lint/type-check/tests and Rust fmt/clippy/tests —
+# plus two things that used to be checked only at tag time or not at all:
+#   · `build`: the app actually bundles (same tauri-action + project path as
+#     release.yml, minus the release upload), so a broken bundle surfaces on the
+#     PR instead of on the tag push;
+#   · `deny`: cargo-deny (RustSec advisories, license allow-list, banned crates,
+#     registry sources — everything deny.toml describes).
+# Keep it green before tagging a release.
+
+on:
+  push:
+    branches:
+      - main
+      - 'claude/**'
+  pull_request:
+  workflow_dispatch:
+
+# Cancel superseded runs on the same ref so a flurry of pushes doesn't queue up.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend (lint · type-check · test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Format check
+        working-directory: frontend
+        run: pnpm format:check
+
+      - name: Lint
+        working-directory: frontend
+        run: pnpm lint
+
+      - name: Type-check
+        working-directory: frontend
+        run: pnpm type-check
+
+      - name: Unit tests
+        working-directory: frontend
+        run: pnpm test
+
+  rust:
+    name: Rust (fmt · clippy · test)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo registry & target
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ci
+
+      # Same set the release build needs: the `app` crate links against
+      # WebKitGTK/GTK (Tauri) and `core-transport` against libudev (serial),
+      # so a workspace-wide clippy/test won't compile without them.
+      - name: Install Linux build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libxdo-dev \
+            libudev-dev \
+            libdbus-1-dev
+
+      - name: Format check
+        run: cargo fmt --all --check
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Tests
+        run: cargo test --workspace
+
+      # End-to-end SSH against a real OpenSSH server on the runner: host-key
+      # trust flow, every auth method, ProxyJump, -L/-R forwards and SFTP.
+      # The test is a no-op without ZAPTERM_SSH_TEST_PORT, which the script sets.
+      - name: Start test sshd
+        run: bash scripts/ci/ssh-test-server.sh
+
+      - name: SSH integration test
+        run: cargo test -p core-transport --test ssh_integration -- --nocapture
+
+  deny:
+    name: Supply chain (cargo deny)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # deny.toml has always configured advisories (deny), the permissive
+      # license allow-list, bans and sources — but nothing ran it. The official
+      # action ships a prebuilt cargo-deny, so this job takes seconds and needs
+      # no toolchain or system libraries.
+      - name: cargo deny check
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check
+
+  build:
+    name: App bundle (tauri build · Linux)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      # Release profile like the real release, so the cache is separate from
+      # the debug-profile clippy/test cache above.
+      - name: Cache cargo registry & target
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: build-linux
+
+      - name: Install Linux build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libxdo-dev \
+            libudev-dev \
+            libdbus-1-dev
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      # Same action, project path and target flag as release.yml, but with no
+      # tagName/releaseName: tauri-action then only builds — it never creates
+      # or touches a GitHub Release. Frontend build + Rust release build +
+      # deb/AppImage bundling all run here, on every PR.
+      - name: Build with Tauri (no release)
+        uses: tauri-apps/tauri-action@v0
+        with:
+          projectPath: crates/app
+          args: --target x86_64-unknown-linux-gnu

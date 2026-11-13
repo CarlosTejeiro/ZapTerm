@@ -1,0 +1,130 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* ---------------------------------------------------------------------------
+ * Global design tokens.
+ *
+ * The `--zx-*` color/font tokens below are FALLBACKS mirroring the default
+ * theme (Parchment). At runtime App.svelte overrides them on the document root
+ * with the active theme's values — so dialogs/overlays that render outside the
+ * prop-threaded layout tree stay theme-aware via `var(--zx-…)`. Keeping the
+ * fallbacks here means no flash of unthemed chrome on first paint, and graceful
+ * degradation if a token is ever missing.
+ *
+ * The spacing scale (base-8) and focus ring are static and only defined here.
+ * ------------------------------------------------------------------------- */
+:root {
+  /* Color/font fallbacks — mirror `parchment` in src/lib/themes/index.ts. */
+  --zx-app-bg: #f7f4ed;
+  --zx-body-bg: #f7f4ed;
+  --zx-surface: #efebdf;
+  --zx-surface-2: #efebdf;
+  --zx-text: #2c2924;
+  --zx-text-muted: #6c6354;
+  --zx-text-dim: #887d69;
+  --zx-accent: #564ca0;
+  --zx-accent-2: #b3793a;
+  --zx-on-accent: #faf8f3;
+  --zx-border: rgba(82, 68, 40, 0.16);
+  --zx-radius: 7px;
+  --zx-hover-bg: rgba(82, 68, 40, 0.06);
+  --zx-active-bg: color-mix(in srgb, #564ca0 10%, transparent);
+  --zx-active-border: #564ca0;
+  --zx-ok: #3b885b;
+  --zx-warn: #a77924;
+  --zx-err: #b13a3a;
+  --zx-font-ui: 'Geist Variable', 'Geist', 'SF Pro Text', system-ui, sans-serif;
+  --zx-font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  --zx-shadow: 0 24px 70px rgba(0, 0, 0, 0.15);
+  --zx-term-bg: #20212b;
+  --zx-term-fg: #d6d8e0;
+  --zx-term-dim: #70748e;
+  --zx-term-ok: #5fb784;
+  --zx-term-warn: #d8a85e;
+  --zx-term-err: #e07474;
+
+  /* Spacing scale (base-8). */
+  --zx-space-1: 4px;
+  --zx-space-2: 8px;
+  --zx-space-3: 12px;
+  --zx-space-4: 16px;
+  --zx-space-5: 24px;
+  --zx-space-6: 32px;
+
+  /* Focus ring derived from the active accent. */
+  --zx-ring: 0 0 0 2px color-mix(in srgb, var(--zx-accent) 45%, transparent);
+}
+
+/* One consistent keyboard-focus ring for interactive controls. `:where()`
+ * keeps specificity at 0 so component styles can still override. Mouse clicks
+ * don't trigger `:focus-visible`, so this only shows for keyboard users. */
+:where(button, input, select, textarea, a, [tabindex]):focus-visible {
+  outline: none;
+  box-shadow: var(--zx-ring);
+}
+
+/* Native form controls follow the active accent instead of the browser's
+ * default blue, so checkboxes/radios/ranges match the theme everywhere
+ * (settings + every dialog) without per-component overrides. */
+input[type='checkbox'],
+input[type='radio'],
+input[type='range'] {
+  accent-color: var(--zx-accent);
+}
+
+/* Native <select> popups take the theme's colors too. Without these (and the
+ * root `color-scheme` App.svelte sets from the theme) a dark theme's options
+ * could render blank: light text on the light default popup. */
+select option,
+select optgroup {
+  background-color: var(--zx-surface-2);
+  color: var(--zx-text);
+}
+
+/* Respect users who ask for reduced motion — neutralize transitions/animations
+ * (fly/scale/fade dialog transitions, glow pulses) without removing final
+ * states. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+#app {
+  height: 100%;
+}
+
+@keyframes pylon-cursor-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Cursor glow — themes with glows: true set data-glow on the pylon shell.
+   Static drop-shadow only: this used to animate the `filter` on an infinite
+   loop, which forces WebKitGTK to re-blur every frame forever (a constant
+   repaint that pins CPU on Linux). A static glow repaints only when the cursor
+   moves or blinks. */
+.pylon-shell[data-glow='true'] :global(.xterm-cursor-layer) {
+  filter: drop-shadow(0 0 6px var(--cursor-glow, rgba(244, 114, 182, 0.55)));
+}

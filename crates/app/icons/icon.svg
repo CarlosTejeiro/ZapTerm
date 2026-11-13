@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!--
+    ZapTerm app icon — «Tile»: a single lightning bolt knocked out of a rounded
+    accent tile (matches the in-app MarkTile brand component, scaled 60×
+    from its 16px geometry). Accent = Parchment theme accent #564ca0; the
+    bolt is cut in the paper colour #f7f4ed. No filters — the silhouette
+    must survive 16px rasterisation.
+  -->
+  <defs>
+    <linearGradient id="tile" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#6157b3"/>
+      <stop offset="100%" stop-color="#48408c"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded tile (same corner ratio as the 16px mark: rx 4.2/15). -->
+  <rect x="32" y="32" width="960" height="960" rx="269" fill="url(#tile)"/>
+  <rect x="34" y="34" width="956" height="956" rx="267" fill="none"
+        stroke="rgba(255,255,255,0.14)" stroke-width="4"/>
+
+  <!-- Bolt — MarkTile path scaled ×60 (16 → 960 box) and offset by the margin. -->
+  <path
+    transform="translate(32 32) scale(60)"
+    d="M 9.1 2.6 L 5 8.6 H 7.6 L 6.6 13.4 L 11.4 6.8 H 8.6 Z"
+    fill="#f7f4ed"/>
+</svg>

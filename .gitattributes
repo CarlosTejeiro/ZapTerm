@@ -1,0 +1,32 @@
+# Default: normalise line endings to LF on commit
+* text=auto eol=lf
+
+# Rust and TOML — text
+*.rs    text eol=lf
+*.toml  text eol=lf
+
+# Web — text
+*.ts    text eol=lf
+*.js    text eol=lf
+*.svelte text eol=lf
+*.css   text eol=lf
+*.html  text eol=lf
+*.json  text eol=lf
+*.yaml  text eol=lf
+*.yml   text eol=lf
+*.md    text eol=lf
+
+# Binary — never diff, never mangle
+*.png   binary
+*.jpg   binary
+*.ico   binary
+*.icns  binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.otf   binary
+*.zip   binary
+*.gz    binary
+*.msi   binary
+*.exe   binary
+*.dll   binary

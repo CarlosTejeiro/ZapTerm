@@ -1,0 +1,52 @@
+[package]
+name             = "app"
+edition.workspace    = true
+version.workspace    = true
+license.workspace    = true
+publish.workspace    = true
+repository.workspace = true
+rust-version.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "app"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri              = { version = "2", features = [] }
+tauri-plugin-clipboard-manager = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-window-state = "2"
+serde              = { workspace = true }
+serde_json         = { workspace = true }
+thiserror          = { workspace = true }
+anyhow             = { workspace = true }
+tracing            = { workspace = true }
+tracing-subscriber = { workspace = true }
+tokio              = { workspace = true }
+uuid               = { workspace = true }
+core-transport     = { path = "../core-transport" }
+core-persistence   = { path = "../core-persistence" }
+core-vault         = { path = "../core-vault" }
+core-highlight     = { path = "../core-highlight" }
+core-hints         = { path = "../core-hints" }
+core-logging       = { path = "../core-logging" }
+window-vibrancy    = "0.6"
+chrono             = { workspace = true }
+notify             = { workspace = true }
+regex              = { workspace = true }
+zeroize            = { workspace = true }
+sha2               = "0.10"
+# Device name stamped into encrypted backups (already in the tree via tauri).
+gethostname        = "1"
+
+[target.'cfg(windows)'.dependencies]
+# Read PuTTY sessions straight from HKCU when importing on Windows. The
+# cross-platform `.reg`-export parser needs no dependency and is tested.
+winreg = "0.52"
