@@ -34,6 +34,7 @@
     onImportPutty?: () => void
     onImportMobaXterm?: () => void
     onImportSecureCrt?: () => void
+    onBulkAdd?: () => void
     onCommandList?: () => void
     onTunnelsManager?: () => void
     themeName?: string
@@ -57,6 +58,7 @@
     onImportPutty,
     onImportMobaXterm,
     onImportSecureCrt,
+    onBulkAdd,
     onCommandList,
     onTunnelsManager,
     themeName = 'parchment',
@@ -108,6 +110,13 @@
         label: 'Import from SecureCRT…',
         action: () => {
           onImportSecureCrt?.()
+          openMenu = null
+        },
+      },
+      {
+        label: 'Add devices in bulk…',
+        action: () => {
+          onBulkAdd?.()
           openMenu = null
         },
       },

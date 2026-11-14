@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [Unreleased] — automation (branch `claude/automation`, not on main yet)
+
+### Added
+- **Add devices in bulk** (File menu and command palette). Paste one device
+  per line (`host`, `host:port`, `name host`, `name host port`) or open a CSV
+  file whose first line names the columns (name, host, port, protocol,
+  username, folder, tags, notes, credential, jump_host — commas, semicolons
+  or tabs). Defaults fill what the list leaves out; folders are created from
+  a `DC/Madrid` path; the credential is a vault entry and the jump host a
+  saved SSH session, both by name, so no password is ever in the list. A
+  preview marks every row New, Exists or Error; devices already in the
+  inventory are skipped and nothing is added while any row has an error.
+
 ## [1.5.3] - 2026-11-14
 
 ### Changed

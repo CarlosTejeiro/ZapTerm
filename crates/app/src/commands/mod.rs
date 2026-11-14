@@ -1,4 +1,5 @@
 pub mod backup;
+pub mod bulk;
 pub mod cmdlists;
 pub mod data_dir;
 pub mod folders;
