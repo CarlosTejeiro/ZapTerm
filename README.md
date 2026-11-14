@@ -83,8 +83,10 @@ The little things that add up across a long day:
   in **Settings → Command Lists** and edit it; updates never change your copy.
 - **★ Custom commands** — your own command list, the same on every platform,
   next to Recent in the command bar (add, edit, remove, or ☆ a Recent entry).
-- **Keyword highlighting** — per-rule regex in true-color ANSI, with
-  user-overridable vendor catalogs (Cisco, Juniper, Fortinet, Palo Alto, F5…).
+- **Keyword highlighting** — per-rule regex in true-color ANSI, on every
+  terminal (local, SSH, Telnet, serial). Built-in rules colour IPs, MACs,
+  usage percentages by level, sizes, dates, times, URLs, paths and good/bad
+  status words; edit them or add your own, and export/import them as JSON.
 - **Triggers** — per-session regex/literal matches on output that notify you,
   auto-send a reply, or ring the bell.
 - **In-terminal search** (`Ctrl+F`) with match count, highlight-all and
