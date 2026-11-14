@@ -18,3 +18,6 @@ cd site && python3 -m http.server 8000
   (`faq.js`). Add a question as a `<details id="…">` in its topic: the id is
   its shareable link (`faq.html#id`) and the search picks it up on its own.
   The home page shows a few of them and a search box that opens this page.
+- `automation.html` — Python scripts and notebooks, with the code of two
+  example scripts (`version_audit.py`, `push_template.py` with `ntp.j2` and
+  `devices.csv`) exactly as they were run for the screenshots (`img/auto-*`).
