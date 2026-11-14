@@ -1,10 +1,9 @@
-//! Snippet CRUD commands. Snippets are short named text blocks the frontend
-//! can dispatch to the focused session via the existing `send_input` command.
-//!
-//! A snippet may be **global** (visible in every session) or scoped to a
-//! single **platform** key (matching `core_hints::Platform::as_str`).
-//! The bottom button bar filters by the focused session's platform; the
-//! manage dialog lists everything.
+//! Commands on the `snippets` table, which today stores **macros** (rows
+//! with `steps_json`). Plain snippets — named text blocks with a Snippets
+//! dialog, a 1–9 bar and per-platform defaults — were retired in 1.5.0: the
+//! ones the user wrote are moved once to the ★ Custom command list (see
+//! [`list_user_plain_snippets`]); the rows stay so backups and sync keep
+//! working with older versions.
 
 use serde::{Deserialize, Serialize};
 use tauri::State;
@@ -24,25 +23,24 @@ pub async fn list_snippets(state: State<'_, AppState>) -> Result<Vec<Snippet>, A
         .map_err(|e| AppError::Internal(e.to_string()))
 }
 
-/// Subset visible to a session of `platform` — globals (NULL) plus matches.
-/// On first call for a never-seen platform we seed a curated default set so
-/// the bar isn't empty out of the box.
+/// Plain snippets (no macro steps) the user wrote, leaving out the curated
+/// defaults older versions seeded per platform. The frontend moves these to
+/// the ★ Custom command list once, when it first starts without snippets.
 #[tauri::command]
-pub async fn list_snippets_for_platform(
+pub async fn list_user_plain_snippets(
     state: State<'_, AppState>,
-    platform: String,
 ) -> Result<Vec<Snippet>, AppError> {
-    // Skip seeding when the session has no recognised platform (Generic).
-    if !platform.is_empty() && platform != "generic" {
-        if let Err(e) = seed_platform_defaults(&state.db, &platform) {
-            // Non-fatal: the bar still lists what the user already has.
-            tracing::warn!("seeding default snippets for {platform} failed: {e}");
-        }
-    }
-    state
-        .db
-        .list_snippets_for_platform(&platform)
-        .map_err(|e| AppError::Internal(e.to_string()))
+    user_plain_snippets(&state.db).map_err(|e| AppError::Internal(e.to_string()))
+}
+
+fn user_plain_snippets(db: &Database) -> Result<Vec<Snippet>, core_persistence::Error> {
+    Ok(db
+        .list_snippets()?
+        .into_iter()
+        .filter(|s| s.steps_json.is_none())
+        .filter(|s| !s.content.trim().is_empty())
+        .filter(|s| !is_seeded_default(s.platform.as_deref(), &s.content))
+        .collect())
 }
 
 #[tauri::command]
@@ -359,53 +357,33 @@ pub async fn import_macros(
     apply_macro_import(&state.db, &file)
 }
 
-/// Settings key recording how many default batches (see
-/// [`default_snippet_batches`]) have been seeded for `platform`.
-fn defaults_version_key(platform: &str) -> String {
-    format!("snippets.defaults_version.{platform}")
+/// The five rows migration 007 created; migration 012 tagged them
+/// `cisco_ios` (a user may have cleared the platform since).
+const MIGRATION_007_SEEDS: [&str; 5] = [
+    "show interface description\n",
+    "show ip bgp summary\n",
+    "show running-config\n",
+    "configure terminal\n",
+    "write memory\n",
+];
+
+/// Whether `content` is one of the default snippets older versions created
+/// by themselves (as opposed to one the user wrote).
+fn is_seeded_default(platform: Option<&str>, content: &str) -> bool {
+    if matches!(platform, None | Some("cisco_ios")) && MIGRATION_007_SEEDS.contains(&content) {
+        return true;
+    }
+    platform.is_some_and(|p| {
+        default_snippet_batches(p)
+            .iter()
+            .flatten()
+            .any(|(_, c)| *c == content)
+    })
 }
 
-/// Seed the curated defaults for `platform`, one batch at a time.
-///
-/// A fresh platform (no snippets, no recorded version) gets every batch. An
-/// install that already holds snippets for the platform but predates
-/// versioning is treated as having seeded batch 1 — the only one that existed
-/// — so an upgrade adds just the newer batches. Already-seeded batches are
-/// never replayed, so a default the user deleted doesn't come back; and a
-/// default whose content the user already has on this platform is skipped.
-fn seed_platform_defaults(db: &Database, platform: &str) -> Result<(), core_persistence::Error> {
-    let batches = default_snippet_batches(platform);
-    if batches.is_empty() {
-        return Ok(());
-    }
-    let key = defaults_version_key(platform);
-    let seeded = match db.get_setting(&key)?.and_then(|v| v.parse::<usize>().ok()) {
-        Some(v) => v,
-        None if db.snippets_exist_for_platform(platform)? => 1,
-        None => 0,
-    };
-    if seeded >= batches.len() {
-        return Ok(());
-    }
-    let existing: Vec<String> = db
-        .list_snippets_for_platform(platform)?
-        .into_iter()
-        .filter(|s| s.platform.as_deref() == Some(platform))
-        .map(|s| s.content)
-        .collect();
-    for (name, content) in batches[seeded..].iter().flat_map(|b| b.iter()) {
-        if !existing.iter().any(|c| c == content) {
-            db.create_snippet(name, content, Some(platform), None)?;
-        }
-    }
-    db.set_setting(&key, &batches.len().to_string())
-}
-
-/// Curated default snippets per platform, as successive batches: index 0 is
-/// the original set, each later entry holds only the defaults added in that
-/// release. Append a new batch to ship more defaults to existing installs;
-/// never edit an earlier one (installs that already seeded it won't see the
-/// change). Empty for platforms without curated defaults.
+/// The default snippets older versions seeded per platform, as the batches
+/// they shipped in. No longer created; kept only so
+/// [`user_plain_snippets`] can tell them from the user's own.
 fn default_snippet_batches(platform: &str) -> Vec<Vec<(&'static str, &'static str)>> {
     let mut batches = vec![default_snippets_for(platform)];
     // 0.24: more FortiGate / FortiManager operations. Every command was
@@ -601,86 +579,43 @@ mod tests {
         (Database::open(&path).expect("open temp db"), path)
     }
 
-    fn platform_contents(db: &Database, platform: &str) -> Vec<String> {
-        db.list_snippets()
-            .unwrap()
-            .into_iter()
-            .filter(|s| s.platform.as_deref() == Some(platform))
-            .map(|s| s.content)
-            .collect()
-    }
-
-    /// A never-seen platform gets every batch, and seeding twice is a no-op.
+    /// The user's own plain snippets are listed for the move to ★ Custom;
+    /// macros, empty rows and the defaults older versions seeded are not.
     #[test]
-    fn seed_fresh_platform_gets_all_batches_once() {
-        let (db, path) = temp_db("seed-fresh");
-        seed_platform_defaults(&db, "fortigate").unwrap();
-        let total: usize = default_snippet_batches("fortigate")
-            .iter()
-            .map(|b| b.len())
-            .sum();
-        assert_eq!(platform_contents(&db, "fortigate").len(), total);
-        assert!(platform_contents(&db, "fortigate").contains(&"get system ha status\n".to_string()));
-        assert_eq!(
-            db.get_setting(&defaults_version_key("fortigate"))
-                .unwrap()
-                .as_deref(),
-            Some("2")
-        );
-
-        seed_platform_defaults(&db, "fortigate").unwrap();
-        assert_eq!(platform_contents(&db, "fortigate").len(), total);
-        let _ = std::fs::remove_file(path);
-    }
-
-    /// An install from before versioning (batch-1 defaults present, no version
-    /// key) receives only the new batch, and a batch-1 default the user deleted
-    /// is not resurrected.
-    #[test]
-    fn seed_upgrade_adds_only_new_batch_and_respects_deletions() {
-        let (db, path) = temp_db("seed-upgrade");
-        // Simulate the pre-0.24 seeding: batch 1 only, no version key.
-        for (name, content) in default_snippets_for("fortigate") {
+    fn user_plain_snippets_leave_out_macros_and_seeded_defaults() {
+        let (db, path) = temp_db("user-plain");
+        // What older versions seeded for FortiGate, both batches.
+        for (name, content) in default_snippet_batches("fortigate").iter().flatten() {
             db.create_snippet(name, content, Some("fortigate"), None)
                 .unwrap();
         }
-        // The user deleted one of the original defaults.
-        let deleted = db
-            .list_snippets()
-            .unwrap()
-            .into_iter()
-            .find(|s| s.content == "execute backup config flash\n")
+        let mine = db
+            .create_snippet(
+                "vpn",
+                "diagnose vpn tunnel list name {{tunnel}}\n",
+                Some("fortigate"),
+                None,
+            )
             .unwrap();
-        db.delete_snippet(deleted.id).unwrap();
+        // Same text as a FortiGate default, but global: the user wrote it.
+        db.create_snippet("status", "get system status\n", None, None)
+            .unwrap();
+        // A migration-007 seed whose platform the user cleared: still a seed.
+        db.create_snippet("wr", "write memory\n", None, None)
+            .unwrap();
+        db.create_snippet("empty", "  ", None, None).unwrap();
+        let m = db.create_snippet("login", "", None, None).unwrap();
+        db.set_snippet_steps(m, Some(r#"[{"kind":"send","send":"a\r"}]"#))
+            .unwrap();
 
-        seed_platform_defaults(&db, "fortigate").unwrap();
-        let contents = platform_contents(&db, "fortigate");
-        assert!(!contents.contains(&"execute backup config flash\n".to_string()));
-        for (_, content) in &default_snippet_batches("fortigate")[1] {
-            assert!(
-                contents.contains(&content.to_string()),
-                "missing {content:?}"
-            );
-        }
-        // No duplicates of batch-1 entries.
-        let n = contents
-            .iter()
-            .filter(|c| *c == "get system status\n")
-            .count();
-        assert_eq!(n, 1);
-        let _ = std::fs::remove_file(path);
-    }
-
-    /// A platform without a newer batch is unaffected beyond the version key.
-    #[test]
-    fn seed_single_batch_platform_unchanged() {
-        let (db, path) = temp_db("seed-linux");
-        seed_platform_defaults(&db, "linux").unwrap();
-        let first = platform_contents(&db, "linux").len();
-        assert_eq!(first, default_snippets_for("linux").len());
-        seed_platform_defaults(&db, "linux").unwrap();
-        assert_eq!(platform_contents(&db, "linux").len(), first);
-        assert!(default_snippet_batches("generic").is_empty());
+        let got = user_plain_snippets(&db).unwrap();
+        let names: Vec<&str> = got.iter().map(|s| s.name.as_str()).collect();
+        assert_eq!(names.len(), 2, "{names:?}");
+        assert!(got.iter().any(|s| s.id == mine));
+        assert!(names.contains(&"status"));
+        assert!(is_seeded_default(Some("linux"), "df -h\n"));
+        assert!(!is_seeded_default(Some("generic"), "df -h\n"));
+        assert!(!is_seeded_default(None, "df -h\n"));
         let _ = std::fs::remove_file(path);
     }
 

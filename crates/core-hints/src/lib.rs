@@ -5,7 +5,7 @@
 //!
 //! 1. Per-session command history (persisted, frecency-scored).
 //! 2. Built-in command catalogs for common platforms (Linux, Cisco IOS, …).
-//! 3. User-defined snippets.
+//! 3. Learned sequences (what usually follows the previous command).
 //!
 //! The engine never persists commands that look like they contain
 //! credentials — see [`is_sensitive`].
@@ -129,7 +129,6 @@ pub enum HintSource {
     Catalog {
         platform: Platform,
     },
-    Snippet,
     /// A command the user usually runs right after the previous one (learned
     /// per platform). Surfaced/boosted by the sequence learner.
     Sequence,
@@ -140,7 +139,8 @@ pub struct Hint {
     pub text: String,
     pub source: HintSource,
     pub score: f32,
-    /// User-facing label (only present for snippets).
+    /// Optional user-facing label shown next to the text (none of the
+    /// current sources sets one).
     pub label: Option<String>,
 }
 
@@ -219,7 +219,7 @@ impl<'a> HintEngine<'a> {
     }
 
     /// Return top-scoring suggestions for `prefix`. Combines all three
-    /// sources, dedupes by exact command text (snippet > history > catalog),
+    /// sources, dedupes by exact command text (keeping the best score),
     /// and trims to `limit` entries.
     pub fn suggest(
         &self,
@@ -234,24 +234,9 @@ impl<'a> HintEngine<'a> {
         }
         let prefix_lower = prefix.to_ascii_lowercase();
 
-        // --- 1. Snippets (highest priority) ---
-        // Snippets are global and managed by the dedicated dialog; we pull
-        // them from the same table so the popup and the dialog stay in sync.
         let mut candidates: Vec<Hint> = Vec::new();
-        let snippets = self.db.list_snippet_contents_by_prefix(prefix, 32)?;
-        for (name, content) in snippets {
-            // Strip a trailing newline that the snippets-dialog seeds add
-            // for one-click execution; the popup compares against typed text.
-            let text = content.trim_end_matches('\n').to_string();
-            candidates.push(Hint {
-                text,
-                source: HintSource::Snippet,
-                score: 100.0 + (prefix.len() as f32),
-                label: Some(name),
-            });
-        }
 
-        // --- 2. History (frecency-scored) ---
+        // --- 1. History (frecency-scored) ---
         // Pull a generous slice; we will rescore in-memory.
         let history = self.db.history_by_prefix(session_id, prefix, 64)?;
         let now = std::time::SystemTime::now()
@@ -302,7 +287,7 @@ impl<'a> HintEngine<'a> {
                             text: next,
                             source: HintSource::Sequence,
                             // Base above plain history (~50–70) so a learned
-                            // continuation leads, but below snippets (100).
+                            // continuation leads.
                             score: 70.0 + boost,
                             label: None,
                         }),
