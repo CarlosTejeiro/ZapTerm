@@ -22,7 +22,6 @@
     onNewSession?: () => void
     onQuickConnect?: () => void
     onSettings?: () => void
-    onSnippets?: () => void
     onRunScript?: () => void
     onScriptExamples?: () => void
     onNotebook?: () => void
@@ -46,7 +45,6 @@
     onNewSession,
     onQuickConnect,
     onSettings,
-    onSnippets,
     onRunScript,
     onScriptExamples,
     onNotebook,
@@ -143,13 +141,6 @@
       },
     ],
     Tools: [
-      {
-        label: 'Snippets…',
-        action: () => {
-          onSnippets?.()
-          openMenu = null
-        },
-      },
       {
         label: 'Run Python script…',
         action: () => {

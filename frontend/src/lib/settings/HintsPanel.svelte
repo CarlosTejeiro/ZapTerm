@@ -155,14 +155,6 @@
   </section>
 
   <section>
-    <h3>Snippets</h3>
-    <p class="hint-help">
-      Snippets you create from the Snippets dialog also show up as priority suggestions in the popup
-      (⭐ badge).
-    </p>
-  </section>
-
-  <section>
     <h3>Custom catalogs</h3>
     <p class="hint-help">
       Replace the built-in commands with your own lists: drop a

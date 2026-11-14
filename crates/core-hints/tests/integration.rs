@@ -76,24 +76,6 @@ fn catalog_fills_when_history_empty() {
 }
 
 #[test]
-fn snippet_outranks_history() {
-    let db = open_tmp_db();
-    // main's snippets table is (name, content) — global, not session-scoped.
-    db.create_snippet("list", "ls -lah --color", None, None)
-        .unwrap();
-    let engine = HintEngine::new(&db);
-    engine.record(None, "ls -la").unwrap();
-    engine.record(None, "ls -la").unwrap(); // bump freq
-
-    let hints = engine
-        .suggest(None, Platform::Generic, "ls", 5, None)
-        .unwrap();
-    assert!(matches!(hints[0].source, HintSource::Snippet));
-    assert_eq!(hints[0].text, "ls -lah --color");
-    assert_eq!(hints[0].label.as_deref(), Some("list"));
-}
-
-#[test]
 fn dedupe_keeps_higher_source() {
     let db = open_tmp_db();
     let engine = HintEngine::new(&db);

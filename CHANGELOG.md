@@ -8,6 +8,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.5.0] - 2026-11-14
+
+### Removed
+- **Snippets.** The Snippets dialog (Tools menu, command palette,
+  `Ctrl+Shift+S`), the `Ctrl+Shift+1..9` quick-fire keys, the snippets
+  ZapTerm created by itself for each platform and the snippet suggestions in
+  the hints popup are gone: the command lists and ★ Custom do that job.
+  **Macros are not affected** (sidebar, shortcuts, run on connect, export).
+
+### Changed
+- **Your snippets move to ★ Custom**, once, the first time 1.5.0 starts
+  (only the ones you wrote, not the ones ZapTerm created). A one-line
+  snippet becomes a command; one without a trailing Enter keeps waiting for
+  you to finish it; one with several lines or `{{variables}}` becomes a
+  recipe whose form asks for the variables. If `custom.json` has an error,
+  nothing is overwritten and the move waits for the next start. The old
+  rows stay in the database, so backups and sync with older versions keep
+  working.
+
 ## [1.4.0] - 2026-11-14
 
 ### Added

@@ -12,7 +12,6 @@ export const SHORTCUT_ACTIONS = [
   { id: 'split-h', label: 'Split horizontally', default: 'Ctrl+Shift+H' },
   { id: 'split-v', label: 'Split vertically', default: 'Ctrl+Shift+K' },
   { id: 'multi-exec', label: 'Toggle MultiExec broadcast', default: 'Ctrl+Shift+M' },
-  { id: 'snippets', label: 'Open snippets', default: 'Ctrl+Shift+S' },
   { id: 'quick-connect', label: 'Quick connect (ad-hoc)', default: 'Ctrl+Shift+N' },
 ] as const
 
