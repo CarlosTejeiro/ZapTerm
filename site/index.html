@@ -21,6 +21,7 @@
       <a href="#features">Features</a>
       <a href="#vendors">Vendors</a>
       <a href="#themes">Themes</a>
+      <a href="#faq">FAQ</a>
       <a href="#download">Download</a>
       <a href="#feedback">Feedback</a>
       <a href="#donate">Donate</a>
@@ -38,7 +39,7 @@
   <section class="hero">
     <div class="glow glow-a"></div><div class="glow glow-b"></div>
     <div class="wrap hero-inner">
-      <p class="eyebrow"><span class="dot"></span> Version 1.0 · free &amp; open source</p>
+      <p class="eyebrow"><span class="dot"></span> Latest <span data-version>v1.5.2</span> · free &amp; open source</p>
       <h1>The terminal built for<br><span class="grad">network engineers</span></h1>
       <p class="lede">SSH, Telnet and Serial in one fast app. Command lists for every vendor you touch,
         hints as you type, split panes, broadcast to many devices, a credential vault and
@@ -52,7 +53,7 @@
     <div class="wrap">
       <figure class="window hero-shot">
         <div class="window-bar"><i></i><i></i><i></i></div>
-        <img src="img/hero.webp" width="1920" height="1200" alt="ZapTerm with four device tabs open: a Cisco router's interface list and syslog highlighted in color, the session sidebar with folders and tags, and the Cisco command lists at the bottom." data-zoom>
+        <img src="img/hero.webp" width="1920" height="1200" alt="ZapTerm with four tabs open: a Cisco router's interface list and syslog highlighted in color (up in green, down in red, IP addresses, dates and severities), the session sidebar with folders and tags, and the Cisco command lists at the bottom with Custom and Recent at the right." data-zoom>
       </figure>
     </div>
   </section>
@@ -63,7 +64,7 @@
       <p>Command lists and hints that know your gear</p>
       <ul class="chips">
         <li>Cisco IOS / IOS-XE</li><li>Cisco IOS XR</li><li>Arista EOS</li><li>Juniper Junos</li>
-        <li>FortiGate</li><li>Linux</li><li>Windows PowerShell</li><li>Palo Alto</li>
+        <li>FortiGate</li><li>Linux</li><li>macOS</li><li>Windows PowerShell</li><li>Palo Alto</li>
         <li>MikroTik</li><li>F5 BIG-IP</li><li>Check Point</li><li>Aruba</li><li>HP Comware</li>
         <li>FortiManager</li><li>Brocade FOS</li>
       </ul>
@@ -89,11 +90,16 @@
             Click to run, or press <b>Type</b> to put the command at the prompt and finish it yourself.
             Placeholders like <code>&lt;interface&gt;</code> are left for you to fill in.</p>
           <ul class="ticks">
-            <li>Lists for Cisco IOS &amp; IOS XR, Arista, Junos, FortiGate, Linux and PowerShell</li>
+            <li>Lists for Cisco IOS &amp; IOS XR, Arista, Junos, FortiGate, Linux, macOS and PowerShell</li>
+            <li>Every list is a JSON file: make your own copy and edit it — updates never overwrite it</li>
+            <li><b>★ Custom</b>: your own commands, the same on every platform, next to Recent</li>
             <li>Filter any list as you type</li>
           </ul>
         </div>
-        <figure class="shot"><img src="img/lists-popup.webp" width="1220" height="1280" alt="The Interfaces command list for Cisco IOS: show ip interface brief, show interfaces status, CDP and LLDP neighbors, each with a short description and a Type button." data-zoom></figure>
+        <div class="shot-stack">
+          <figure class="shot"><img src="img/lists-popup.webp" width="1220" height="1280" alt="The Interfaces command list for Cisco IOS: show ip interface brief, show interfaces status, CDP and LLDP neighbors, each with a short description and a Type button." data-zoom></figure>
+          <figure class="shot"><img src="img/cmdlists-settings.webp" width="1346" height="1330" alt="Settings, Command Lists: one row per platform (FortiGate, Cisco IOS, IOS XR, Linux, macOS, Arista, Junos, PowerShell) with its command count and a Make my copy link." data-zoom></figure>
+        </div>
       </article>
 
       <article class="feature flip">
@@ -128,10 +134,16 @@
           <span class="tag">Highlighting</span>
           <h3>Output that reads itself</h3>
           <p><span class="hl-g">up</span> in green, <span class="hl-r">down</span> in red, IP addresses, MACs,
-            VLANs and syslog severities picked out at a glance. Every rule is a regex you can edit,
-            test on sample output, and export or import as JSON to share with your team.</p>
+            syslog severities, dates and times picked out at a glance — on SSH, Telnet, serial and local
+            tabs alike. Usage percentages change colour as they fill up, sizes like <code>15Gi</code> or
+            <code>10Gbps</code> stand out, and words such as <i>errors</i>, <i>timeout</i> or
+            <i>Established</i> say how things are going. Every rule is a regex you can edit, and export or
+            import as JSON to share with your team.</p>
         </div>
-        <figure class="shot"><img src="img/highlight.webp" width="1360" height="1540" alt="Settings, Highlight Rules: a list of regex rules for syslog errors, interface up and down, IPv4 and IPv6 addresses, MACs and VLANs, with a form to add a new rule." data-zoom></figure>
+        <div class="shot-stack">
+          <figure class="shot"><img src="img/highlight.webp" width="1820" height="1020" alt="A Cisco router's show ip interface brief and show logging: up in green, down in red, IP addresses in blue, syslog mnemonics in red, dates and times in orange, Warning in yellow and Success in green." data-zoom></figure>
+          <figure class="shot"><img src="img/highlight-df.webp" width="1580" height="480" alt="macOS df -h output: usage percentages in green, yellow and red by level, sizes like 460Gi and 1.1G in pink, and paths in teal." data-zoom></figure>
+        </div>
       </article>
 
       <article class="feature">
@@ -240,6 +252,7 @@
         <div class="card"><h4>Port forwarding</h4><p>Local, remote and SOCKS5 dynamic tunnels, saved per session.</p></div>
         <div class="card"><h4>Portable mode</h4><p>A Windows portable <code>.exe</code> that keeps all its data beside it — on a USB stick, if you like.</p></div>
         <div class="card"><h4>Rock-solid links</h4><p>SSH keepalives, auto-reconnect on drop and anti-idle strings for picky servers.</p></div>
+        <div class="card"><h4>Bring your sessions</h4><p>Import from <code>~/.ssh/config</code>, PuTTY, MobaXterm and SecureCRT — folders, jump hosts, keys and tunnels included.</p></div>
         <div class="card"><h4>Keyboard first</h4><p>Every action has a shortcut, and every shortcut can be changed.</p></div>
       </div>
     </div>
@@ -256,6 +269,77 @@
           untouched. ZAPX backups, exports and scripts (<code>import zapx</code>) keep working.</p>
       </div>
       <a class="btn btn-ghost" href="https://github.com/CarlosTejeiro/ZapTerm/blob/main/CHANGELOG.md">Read the 1.0 changelog</a>
+    </div>
+  </section>
+
+  <!-- ── FAQ ──────────────────────────────────────────────────────────── -->
+  <section id="faq" class="faq">
+    <div class="wrap">
+      <header class="section-head">
+        <p class="kicker">Q&amp;A</p>
+        <h2>Questions people ask</h2>
+        <p>Answers describe the latest version, <b data-version>v1.5.2</b>, and are updated with every release.</p>
+      </header>
+      <div class="faq-list">
+        <details>
+          <summary>Where are my passwords stored, and how safe are they?</summary>
+          <p>In your operating system's keyring — Windows Credential Manager, macOS Keychain or the Linux
+            Secret Service — so they are protected by your OS account like any other app's secrets. When the
+            keyring isn't available, and on the Windows portable build, ZapTerm keeps an AES-256-GCM encrypted
+            copy in its database instead, with a key created for that install. Passwords never appear in the
+            interface, in session exports or in logs: sessions and macros refer to them by name and the
+            backend types them for you.</p>
+          <p>There is no separate master password: whoever can use your OS account can use your saved
+            credentials, just as with the keyring itself. With the portable build the key travels with the
+            folder, so keep that folder (or USB stick) safe.</p>
+        </details>
+        <details>
+          <summary>Can I manage reusable credentials?</summary>
+          <p>Yes. The credential vault holds named credentials (user and password) that you can add, edit and
+            delete. Sessions, login scripts and macros point at a vault entry, so changing a password there
+            changes it everywhere it's used.</p>
+        </details>
+        <details>
+          <summary>What happens to my credentials in backups and sync?</summary>
+          <p>The encrypted backup — and the sync folder, which uses the same format — includes credentials,
+            sealed with a passphrase you choose: the passphrase is stretched with Argon2id (memory-hard, which
+            makes guessing it offline expensive) into an AES-256-GCM key, and the file's header is
+            authenticated so it can't be tampered with. Your cloud provider only ever sees ciphertext. The
+            plain JSON session export never contains passwords.</p>
+        </details>
+        <details>
+          <summary>Can I push configuration to many devices at once?</summary>
+          <p>Over SSH and Telnet, yes: broadcast types into a whole group of sessions at once, and Python
+            scripts can open sessions, send commands and check the output across as many devices as you
+            like — starting in Dry run (nothing sent), then Read-only, then Run.</p>
+        </details>
+        <details>
+          <summary>Does ZapTerm support NETCONF or RESTCONF?</summary>
+          <p>Not built in: ZapTerm is a terminal (SSH, Telnet, serial). Scripts run on your own Python 3,
+            though, so a script can use libraries you install yourself, such as <code>ncclient</code> for
+            NETCONF or <code>requests</code> for RESTCONF, next to ZapTerm's own module for the terminal
+            sessions.</p>
+        </details>
+        <details>
+          <summary>Does it send any data anywhere?</summary>
+          <p>No. There is no account, no telemetry and no automatic update check: the app only connects to the
+            devices you open. (This website asks GitHub for the latest release to point the download buttons
+            at it.)</p>
+        </details>
+        <details>
+          <summary>Can I bring my sessions from another tool?</summary>
+          <p>Yes: <code>~/.ssh/config</code>, PuTTY (registry or <code>.reg</code> export), MobaXterm
+            (<code>MobaXterm.ini</code> or <code>.mxtsessions</code>) and SecureCRT (its
+            <code>Sessions</code> folder), with folders, jump hosts, keys and tunnels where the source has
+            them. ZAPX data is imported on first run.</p>
+        </details>
+        <details>
+          <summary>Can I change the built-in command lists?</summary>
+          <p>Yes. In Settings → Command Lists, "Make my copy" writes that platform's list as a JSON file you
+            can edit with any text editor; ZapTerm uses your copy from then on and updates never change it.
+            For commands you use everywhere, add them to ★ Custom in the bar.</p>
+        </details>
+      </div>
     </div>
   </section>
 
