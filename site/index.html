@@ -21,7 +21,8 @@
       <a href="#features">Features</a>
       <a href="#vendors">Vendors</a>
       <a href="#themes">Themes</a>
-      <a href="#faq">FAQ</a>
+      <a href="automation.html">Automation</a>
+      <a href="faq.html">Q&amp;A</a>
       <a href="#download">Download</a>
       <a href="#feedback">Feedback</a>
       <a href="#donate">Donate</a>
@@ -181,6 +182,7 @@
             report results. Every run starts in <b>Dry run</b> — nothing is sent, every action is listed —
             then <b>Read-only</b> (display commands only) and finally <b>Run</b>. Notebooks in VS Code or
             JupyterLab can connect too.</p>
+          <p><a href="automation.html">See how it works, with examples →</a></p>
         </div>
         <div class="shot-stack">
           <figure class="shot"><img src="img/script-run.webp" width="990" height="580" alt="The Run script dialog for hello.py with Dry run, Read-only and Run modes." data-zoom></figure>
@@ -281,64 +283,30 @@
         <p>Answers describe the latest version, <b data-version>v1.5.2</b>, and are updated with every release.</p>
       </header>
       <div class="faq-list">
-        <details>
+        <form class="faq-search" action="faq.html" method="get" role="search">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <input type="search" name="q" placeholder="Search all questions…" aria-label="Search all questions" autocomplete="off">
+        </form>
+        <details id="passwords">
           <summary>Where are my passwords stored, and how safe are they?</summary>
-          <p>In your operating system's keyring — Windows Credential Manager, macOS Keychain or the Linux
-            Secret Service — so they are protected by your OS account like any other app's secrets. When the
-            keyring isn't available, and on the Windows portable build, ZapTerm keeps an AES-256-GCM encrypted
-            copy in its database instead, with a key created for that install. Passwords never appear in the
-            interface, in session exports or in logs: sessions and macros refer to them by name and the
-            backend types them for you.</p>
-          <p>There is no separate master password: whoever can use your OS account can use your saved
-            credentials, just as with the keyring itself. With the portable build the key travels with the
-            folder, so keep that folder (or USB stick) safe.</p>
+          <p>In your operating system's keyring — Windows Credential Manager, macOS Keychain or the Linux Secret Service — so they are protected by your OS account like any other app's secrets. When the keyring isn't available, and on the Windows portable build, ZapTerm keeps an AES-256-GCM encrypted copy in its database instead, with a key created for that install. Passwords never appear in the interface, in session exports or in logs: sessions and macros refer to them by name and the backend types them for you.</p>
+          <p>There is no separate master password: whoever can use your OS account can use your saved credentials, just as with the keyring itself. With the portable build the key travels with the folder, so keep that folder (or USB stick) safe.</p>
         </details>
-        <details>
-          <summary>Can I manage reusable credentials?</summary>
-          <p>Yes. The credential vault holds named credentials (user and password) that you can add, edit and
-            delete. Sessions, login scripts and macros point at a vault entry, so changing a password there
-            changes it everywhere it's used.</p>
-        </details>
-        <details>
-          <summary>What happens to my credentials in backups and sync?</summary>
-          <p>The encrypted backup — and the sync folder, which uses the same format — includes credentials,
-            sealed with a passphrase you choose: the passphrase is stretched with Argon2id (memory-hard, which
-            makes guessing it offline expensive) into an AES-256-GCM key, and the file's header is
-            authenticated so it can't be tampered with. Your cloud provider only ever sees ciphertext. The
-            plain JSON session export never contains passwords.</p>
-        </details>
-        <details>
+        <details id="push-config">
           <summary>Can I push configuration to many devices at once?</summary>
-          <p>Over SSH and Telnet, yes: broadcast types into a whole group of sessions at once, and Python
-            scripts can open sessions, send commands and check the output across as many devices as you
-            like — starting in Dry run (nothing sent), then Read-only, then Run.</p>
+          <p>Over SSH and Telnet, yes: broadcast types into a whole group of sessions at once; Tools → Send command list… sends a list of commands line by line to the open sessions you pick; and Python scripts can open sessions, send commands and check the output across as many devices as you like — starting in Dry run (nothing sent), then Read-only, then Run.</p>
         </details>
-        <details>
-          <summary>Does ZapTerm support NETCONF or RESTCONF?</summary>
-          <p>Not built in: ZapTerm is a terminal (SSH, Telnet, serial). Scripts run on your own Python 3,
-            though, so a script can use libraries you install yourself, such as <code>ncclient</code> for
-            NETCONF or <code>requests</code> for RESTCONF, next to ZapTerm's own module for the terminal
-            sessions.</p>
-        </details>
-        <details>
+        <details id="privacy">
           <summary>Does it send any data anywhere?</summary>
-          <p>No. There is no account, no telemetry and no automatic update check: the app only connects to the
-            devices you open. (This website asks GitHub for the latest release to point the download buttons
-            at it.)</p>
+          <p>No. There is no account, no telemetry and no automatic update check: the app only connects to the devices you open. (This website asks GitHub for the latest release to point the download buttons at it.)</p>
         </details>
-        <details>
+        <details id="import">
           <summary>Can I bring my sessions from another tool?</summary>
-          <p>Yes: <code>~/.ssh/config</code>, PuTTY (registry or <code>.reg</code> export), MobaXterm
-            (<code>MobaXterm.ini</code> or <code>.mxtsessions</code>) and SecureCRT (its
-            <code>Sessions</code> folder), with folders, jump hosts, keys and tunnels where the source has
-            them. ZAPX data is imported on first run.</p>
+          <p>Yes: <code>~/.ssh/config</code>, PuTTY (registry or <code>.reg</code> export), MobaXterm (<code>MobaXterm.ini</code> or <code>.mxtsessions</code>) and SecureCRT (its <code>Sessions</code> folder), with folders, jump hosts, keys and tunnels where the source has them. ZAPX data is imported on first run.</p>
         </details>
-        <details>
-          <summary>Can I change the built-in command lists?</summary>
-          <p>Yes. In Settings → Command Lists, "Make my copy" writes that platform's list as a JSON file you
-            can edit with any text editor; ZapTerm uses your copy from then on and updates never change it.
-            For commands you use everywhere, add them to ★ Custom in the bar.</p>
-        </details>
+        <div class="faq-more">
+          <a class="btn btn-ghost" href="faq.html">All questions and answers</a>
+        </div>
       </div>
     </div>
   </section>

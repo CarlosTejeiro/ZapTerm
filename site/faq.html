@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Q&amp;A — ZapTerm</title>
+  <meta name="description" content="Questions and answers about ZapTerm, the free terminal for network engineers: credentials and security, connections, command lists, automation with Python, privacy and updates.">
+  <meta name="theme-color" content="#0b0d14">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="index.html"><img src="icon.svg" alt="" width="28" height="28"><span>ZapTerm</span></a>
+    <nav class="nav-links" aria-label="Sections">
+      <a href="index.html#features">Features</a>
+      <a href="index.html#vendors">Vendors</a>
+      <a href="automation.html">Automation</a>
+      <a href="faq.html" aria-current="page">Q&amp;A</a>
+      <a href="index.html#download">Download</a>
+      <a href="index.html#feedback">Feedback</a>
+      <a href="index.html#donate">Donate</a>
+    </nav>
+    <a class="btn btn-ghost btn-sm" href="https://github.com/CarlosTejeiro/ZapTerm">
+      <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub
+    </a>
+  </div>
+</header>
+
+<main id="top" class="faq-page">
+  <div class="wrap">
+    <header class="section-head">
+      <p class="kicker">Q&amp;A</p>
+      <h1>Questions people ask</h1>
+      <p>Answers describe the latest version, <b data-version>v1.5.2</b>, and are updated with every release.</p>
+    </header>
+
+    <div class="faq-tools">
+      <label class="faq-search">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <input type="search" placeholder="Search the questions and answers…" aria-label="Search the questions and answers" autocomplete="off" data-faq-search>
+      </label>
+      <div class="faq-chips" role="group" aria-label="Topics">
+        <button type="button" data-cat="" aria-pressed="true">All</button>
+        <button type="button" data-cat="security">Security &amp; credentials</button>
+        <button type="button" data-cat="connecting">Connecting &amp; sessions</button>
+        <button type="button" data-cat="lists">Command lists, hints &amp; highlighting</button>
+        <button type="button" data-cat="automation">Automation</button>
+        <button type="button" data-cat="about">Privacy, updates &amp; licence</button>
+      </div>
+      <p class="faq-count" aria-live="polite" data-faq-count>26 questions</p>
+    </div>
+
+    <div class="faq-list">
+      <section class="faq-group" data-group="security">
+        <h2>Security &amp; credentials</h2>
+        <details id="passwords">
+          <summary>Where are my passwords stored, and how safe are they?</summary>
+          <p>In your operating system's keyring — Windows Credential Manager, macOS Keychain or the Linux Secret Service — so they are protected by your OS account like any other app's secrets. When the keyring isn't available, and on the Windows portable build, ZapTerm keeps an AES-256-GCM encrypted copy in its database instead, with a key created for that install. Passwords never appear in the interface, in session exports or in logs: sessions and macros refer to them by name and the backend types them for you.</p>
+          <p>There is no separate master password: whoever can use your OS account can use your saved credentials, just as with the keyring itself. With the portable build the key travels with the folder, so keep that folder (or USB stick) safe.</p>
+        </details>
+        <details id="vault">
+          <summary>Can I manage reusable credentials?</summary>
+          <p>Yes. The credential vault holds named credentials (user and password) that you can add, edit and delete. Sessions, login scripts and macros point at a vault entry, so changing a password there changes it everywhere it's used.</p>
+        </details>
+        <details id="backups">
+          <summary>What happens to my credentials in backups and sync?</summary>
+          <p>The encrypted backup — and the sync folder, which uses the same format — includes credentials, sealed with a passphrase you choose: the passphrase is stretched with Argon2id (memory-hard, which makes guessing it offline expensive) into an AES-256-GCM key, and the file's header is authenticated so it can't be tampered with. Your cloud provider only ever sees ciphertext. The plain JSON session export never contains passwords.</p>
+        </details>
+        <details id="export-secrets">
+          <summary>Does a session export contain anything secret?</summary>
+          <p>Passwords are never exported. Login scripts are exported as they are, though, so a <code>send</code> step where you typed a secret yourself travels with the file — ZapTerm warns you about this before exporting. Use vault references in login scripts to keep secrets out of exports.</p>
+        </details>
+        <details id="host-keys">
+          <summary>How does ZapTerm check SSH host keys?</summary>
+          <p>On the first connection it shows the server's SHA-256 fingerprint for you to approve. The key is then pinned in <code>known_hosts</code>, and a different key on a later connection is flagged instead of accepted silently.</p>
+        </details>
+        <details id="logs">
+          <summary>Do session logs record passwords?</summary>
+          <p>Session logs record what the terminal receives. Devices don't echo a password you type at a password prompt, so it doesn't appear in the log; anything a device does print (a configuration shown in clear text, for example) is recorded like any other output.</p>
+        </details>
+      </section>
+      <section class="faq-group" data-group="connecting">
+        <h2>Connecting &amp; sessions</h2>
+        <details id="protocols">
+          <summary>Which kinds of connection does ZapTerm support?</summary>
+          <p>SSH, Telnet, serial consoles and local shells (on Windows also PowerShell, Command Prompt and WSL distributions). Saved sessions can be organised in folders, tagged and searched; Quick Connect opens a host without saving anything.</p>
+        </details>
+        <details id="ssh-auth">
+          <summary>Which SSH authentication methods work?</summary>
+          <p>Password, public key, the SSH agent and keyboard-interactive, which covers most two-factor prompts. The password can come from the credential vault so it is never typed or shown.</p>
+        </details>
+        <details id="jump-hosts">
+          <summary>Can I go through a jump host?</summary>
+          <p>Yes. A session can be routed through another saved session, like ProxyJump.</p>
+        </details>
+        <details id="forwarding">
+          <summary>Does it do port forwarding and SFTP?</summary>
+          <p>Yes, over SSH: local (<code>-L</code>), remote (<code>-R</code>) and dynamic SOCKS5 (<code>-D</code>) forwards, which can start automatically when the session connects, and an SFTP browser to upload, download and edit remote files with your own editor.</p>
+        </details>
+        <details id="import">
+          <summary>Can I bring my sessions from another tool?</summary>
+          <p>Yes: <code>~/.ssh/config</code>, PuTTY (registry or <code>.reg</code> export), MobaXterm (<code>MobaXterm.ini</code> or <code>.mxtsessions</code>) and SecureCRT (its <code>Sessions</code> folder), with folders, jump hosts, keys and tunnels where the source has them. ZAPX data is imported on first run.</p>
+        </details>
+        <details id="many-at-once">
+          <summary>Can I work on several devices side by side?</summary>
+          <p>Yes. Split a tab into panes as many times as you like, open a group of hosts as a grid, and broadcast what you type to all of them. Compare shows their output together so differences stand out.</p>
+        </details>
+      </section>
+      <section class="faq-group" data-group="lists">
+        <h2>Command lists, hints &amp; highlighting</h2>
+        <details id="cmdlists">
+          <summary>Which vendors have command lists?</summary>
+          <p>FortiGate, Cisco IOS / IOS XE, Cisco IOS XR, Arista EOS, Juniper Junos, Linux, macOS and Windows. The bar under the terminal shows the lists for the platform ZapTerm detected on that tab, plus ★ Custom (your own commands, on every platform) and Recent.</p>
+        </details>
+        <details id="edit-lists">
+          <summary>Can I change the built-in command lists?</summary>
+          <p>Yes. In Settings → Command Lists, "Make my copy" writes that platform's list as a JSON file you can edit with any text editor; ZapTerm uses your copy from then on and updates never change it. For commands you use everywhere, add them to ★ Custom in the bar.</p>
+        </details>
+        <details id="hints">
+          <summary>Where do the suggestions while I type come from?</summary>
+          <p>From your own command history and from per-vendor catalogs. The platform is detected from the device's banner and prompt, so the suggestions match the device you are on. Accept a suggestion with → or End, or open the list with Ctrl+Space.</p>
+        </details>
+        <details id="highlight">
+          <summary>Can I change what gets highlighted?</summary>
+          <p>Yes. Settings → Highlight Rules lists every rule (a word or a regular expression, a colour, bold or underline); you can add, edit and delete them, and export or import them as a JSON file (importing skips rules you already have). The defaults colour interface states, IP addresses, usage percentages, sizes, dates, URLs and good or bad status words.</p>
+        </details>
+      </section>
+      <section class="faq-group" data-group="automation">
+        <h2>Automation</h2>
+        <details id="push-config">
+          <summary>Can I push configuration to many devices at once?</summary>
+          <p>Over SSH and Telnet, yes: broadcast types into a whole group of sessions at once; Tools → Send command list… sends a list of commands line by line to the open sessions you pick; and Python scripts can open sessions, send commands and check the output across as many devices as you like — starting in Dry run (nothing sent), then Read-only, then Run.</p>
+        </details>
+        <details id="python-needed">
+          <summary>What do I need to run Python scripts?</summary>
+          <p>Python 3.9 or newer on the same computer. ZapTerm runs your script with it and puts its own <code>zapterm</code> module on the path, so a script needs nothing else; you can still use any library you have installed.</p>
+        </details>
+        <details id="script-passwords">
+          <summary>Can a script read my passwords?</summary>
+          <p>No. A script can ask ZapTerm to type a vault credential into a session (<code>send_secret</code>), but the password itself never reaches the script.</p>
+        </details>
+        <details id="modes">
+          <summary>What are Dry run and Read-only?</summary>
+          <p>Two safe ways to try a script. In Dry run nothing is sent or opened: every action is listed as "would …". In Read-only, sessions are opened and display commands (<code>get</code> and <code>show</code> by default) run for real, while anything else is skipped and logged. ZapTerm enforces both, not the script.</p>
+        </details>
+        <details id="notebooks">
+          <summary>Can I use a Jupyter notebook or VS Code?</summary>
+          <p>Yes. Turn on Tools → Allow notebook connection…, then <code>import zapterm</code> and <code>zapterm.connect()</code> from a notebook or a Python prompt you started yourself. Every call is carried out on a real ZapTerm tab, so you see it happen.</p>
+        </details>
+        <details id="netconf">
+          <summary>Does ZapTerm support NETCONF or RESTCONF?</summary>
+          <p>Not built in: ZapTerm is a terminal (SSH, Telnet, serial). Scripts run on your own Python 3, though, so a script can use libraries you install yourself, such as <code>ncclient</code> for NETCONF or <code>requests</code> for RESTCONF, next to ZapTerm's own module for the terminal sessions.</p>
+        </details>
+      </section>
+      <section class="faq-group" data-group="about">
+        <h2>Privacy, updates &amp; licence</h2>
+        <details id="privacy">
+          <summary>Does it send any data anywhere?</summary>
+          <p>No. There is no account, no telemetry and no automatic update check: the app only connects to the devices you open. (This website asks GitHub for the latest release to point the download buttons at it.)</p>
+        </details>
+        <details id="updates">
+          <summary>How do I update ZapTerm?</summary>
+          <p>Help → Check for updates… shows the version you have and opens the releases page, where you download the new version. Nothing is checked or downloaded in the background.</p>
+        </details>
+        <details id="licence">
+          <summary>Is it really free?</summary>
+          <p>Yes. ZapTerm is free software under the GPL-3.0-or-later licence: no paid edition, no account and no limits. The source is on GitHub.</p>
+        </details>
+        <details id="zapx">
+          <summary>What happened to ZAPX?</summary>
+          <p>ZapTerm continues ZAPX, which is frozen at version 0.42.1. ZAPX data is imported on first run, so you can carry on where you left off.</p>
+        </details>
+      </section>
+      <p class="faq-empty" hidden data-faq-empty>No question matches that yet. Ask it in
+        <a href="https://github.com/CarlosTejeiro/ZapTerm/issues">GitHub issues</a> or with the
+        <a href="index.html#feedback">feedback form</a> — the answer may end up here.</p>
+    </div>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <span class="brand"><img src="icon.svg" alt="" width="20" height="20"> ZapTerm</span>
+    <span>Free software · <a href="https://github.com/CarlosTejeiro/ZapTerm/blob/main/LICENSE">GPL-3.0-or-later</a></span>
+    <span><a href="https://github.com/CarlosTejeiro/ZapTerm">GitHub</a> · <a href="https://github.com/CarlosTejeiro/ZapTerm/issues">Issues</a> · <a href="index.html#donate">Donate</a> · <a href="https://github.com/CarlosTejeiro/ZapTerm/tree/main/docs/user-guide">User guide</a></span>
+  </div>
+</footer>
+
+<script src="main.js" defer></script>
+<script src="faq.js" defer></script>
+</body>
+</html>

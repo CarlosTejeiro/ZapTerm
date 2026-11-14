@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Automation — ZapTerm</title>
+  <meta name="description" content="Automate network devices with Python from ZapTerm: scripts that run on many devices with Dry run and Read-only modes, Jinja2 templates, and Jupyter or VS Code notebooks driving real terminal tabs.">
+  <meta name="theme-color" content="#0b0d14">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="index.html"><img src="icon.svg" alt="" width="28" height="28"><span>ZapTerm</span></a>
+    <nav class="nav-links" aria-label="Sections">
+      <a href="index.html#features">Features</a>
+      <a href="index.html#vendors">Vendors</a>
+      <a href="automation.html" aria-current="page">Automation</a>
+      <a href="faq.html">Q&amp;A</a>
+      <a href="index.html#download">Download</a>
+      <a href="index.html#feedback">Feedback</a>
+      <a href="index.html#donate">Donate</a>
+    </nav>
+    <a class="btn btn-ghost btn-sm" href="https://github.com/CarlosTejeiro/ZapTerm">
+      <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub
+    </a>
+  </div>
+</header>
+
+<main id="top" class="auto-page">
+  <section class="auto-hero">
+    <div class="glow glow-a"></div><div class="glow glow-b"></div>
+    <div class="wrap">
+      <p class="kicker">Automation</p>
+      <h1>Python drives the devices.<br><span class="grad">You watch every command.</span></h1>
+      <p class="lede">ZapTerm runs your Python scripts and notebooks against the sessions you already
+        have. Every command is typed in a real terminal tab, through the same jump hosts, vault passwords
+        and login scripts as when you connect by hand — so nothing happens out of sight.</p>
+      <nav class="auto-toc" aria-label="On this page">
+        <a href="#how">How it works</a><a href="#run">Run a script</a><a href="#audit">Example: audit</a>
+        <a href="#template">Example: Jinja2 template</a><a href="#notebooks">Notebooks</a><a href="#api">API</a>
+      </nav>
+    </div>
+  </section>
+
+  <section id="how" class="auto-section">
+    <div class="wrap">
+      <h2>How it works</h2>
+      <div class="auto-flow" aria-label="Your script asks ZapTerm to run a command; ZapTerm types it in a terminal tab connected to the device and returns the output.">
+        <div class="auto-box"><b>Your script or notebook</b><code>out = sw.run("show version")</code><span>decides what to do</span></div>
+        <div class="auto-arrow" aria-hidden="true">⇄</div>
+        <div class="auto-box accent"><b>ZapTerm</b><code>a real tab you can see</code><span>connects, types, reads the output</span></div>
+        <div class="auto-arrow" aria-hidden="true">⇄</div>
+        <div class="auto-box"><b>Devices</b><code>Cisco · Arista · Junos · FortiGate…</code><span>SSH, Telnet or serial</span></div>
+      </div>
+      <div class="auto-points">
+        <div><h3>The script decides, ZapTerm does</h3><p>Your code never opens a connection itself. It asks ZapTerm
+          to run a command and gets the text back; you see it happen in the tab and can take over at any moment.</p></div>
+        <div><h3>Connections stay ZapTerm's job</h3><p>A script opens saved sessions by name. Jump hosts, vault
+          passwords, login scripts and host keys are handled as for any session you open yourself.</p></div>
+        <div><h3>Passwords never reach your code</h3><p><code>send_secret("Name.Password")</code> asks ZapTerm to
+          type a vault credential into the session. The script can't read it.</p></div>
+      </div>
+      <p class="auto-note"><b>What you need:</b> Python 3.9 or newer on the same computer. ZapTerm puts its
+        <code>zapterm</code> module on the path when it runs your script, so nothing else is required — and you can
+        use any library you have installed, such as Jinja2, pandas or ncclient.</p>
+    </div>
+  </section>
+
+  <section id="run" class="auto-section">
+    <div class="wrap">
+      <h2>Run a script in three steps of trust</h2>
+      <p class="auto-lede">Tools → Run Python script… picks a <code>.py</code> file; Tools → Script examples… opens
+        the folder with the examples that come with ZapTerm.</p>
+      <div class="auto-two">
+      <figure class="window auto-shot">
+        <div class="window-bar"><i></i><i></i><i></i></div>
+        <img src="img/auto-tools-menu.webp" width="860" height="420" alt="The Tools menu with Run Python script, Script examples, Allow notebook connection, Send command list, Active tunnels and Settings." loading="lazy" data-zoom>
+      </figure>
+      <figure class="window auto-shot">
+        <div class="window-bar"><i></i><i></i><i></i></div>
+        <img src="img/auto-run-dialog.webp" width="980" height="700" alt="The Run script dialog for version_audit.py with three modes: Dry run, Read-only (sending only commands that start with get or show) and Run, plus the Python interpreter to use." loading="lazy" data-zoom>
+      </figure>
+      </div>
+      <div class="auto-modes">
+        <div><span class="mode dry">Dry run</span><p>Nothing is sent or opened. Every action is listed as
+          "would open…", "would run…", so you see exactly what the script would type on each device.</p></div>
+        <div><span class="mode ro">Read-only</span><p>Sessions are opened and commands starting with <code>get</code> or
+          <code>show</code> (you can change the list) run for real; anything else is skipped and logged. The script works
+          on real output without changing a device.</p></div>
+        <div><span class="mode real">Run</span><p>Every command is sent. After a dry or read-only run the panel offers
+          <b>Run for real</b>, with the same script.</p></div>
+      </div>
+      <p class="auto-note">ZapTerm enforces the mode, not the script: in Dry run and Read-only, a command the mode doesn't
+        allow never reaches the device, whatever the code does. The <b>Python</b> field picks the interpreter, for example
+        a virtual environment with your own libraries.</p>
+    </div>
+  </section>
+
+  <section id="audit" class="auto-section">
+    <div class="wrap">
+      <h2>Example: software versions across vendors</h2>
+      <p class="auto-lede">Four saved sessions, four vendors. ZapTerm detects each device's platform, so the script
+        picks the right command and pattern for it and adds a row to the summary table with <code>report()</code>.</p>
+      <pre class="auto-code"><code>&quot;&quot;&quot;Software version of every device in a list, whatever the vendor.
+
+Run it from Tools -&gt; Run Python script... in Read-only mode: it only sends
+`show` / `get` commands, so a real run changes nothing either.
+&quot;&quot;&quot;
+
+import re
+
+import zapterm
+
+DEVICES = [&quot;core-rtr-01&quot;, &quot;spine-01&quot;, &quot;edge-mx-01&quot;, &quot;fw-hq-01&quot;]  # saved sessions
+CLOSE_TABS = False  # keep each device&#x27;s tab open to look at it afterwards
+
+# Which command shows the version, and how to find it, per detected platform.
+VERSION = {
+    &quot;cisco_ios&quot;: (&quot;show version&quot;, r&quot;Version ([\w.()]+)&quot;),
+    &quot;arista_eos&quot;: (&quot;show version&quot;, r&quot;Software image version: (\S+)&quot;),
+    &quot;juniper&quot;: (&quot;show version&quot;, r&quot;Junos: (\S+)&quot;),
+    &quot;fortigate&quot;: (&quot;get system status&quot;, r&quot;Version: (.+)&quot;),
+}
+
+for name in DEVICES:
+    try:
+        s = zapterm.open(name)
+        command, pattern = VERSION.get(s.platform, (&quot;show version&quot;, r&quot;[Vv]ersion:? (\S+)&quot;))
+        out = s.run(command)
+        found = re.search(pattern, out)
+        if zapterm.dry_run:
+            zapterm.report(name, &quot;DRY RUN&quot;, f&quot;would run: {command}&quot;)
+        elif found:
+            zapterm.report(name, &quot;OK&quot;, f&quot;{s.platform or &#x27;unknown&#x27;} · {found.group(1).strip()}&quot;)
+        else:
+            zapterm.report(name, &quot;NO VERSION&quot;, f&quot;nothing matched in `{command}`&quot;)
+        if CLOSE_TABS:
+            s.close()
+    except zapterm.Error as e:  # a device that fails doesn&#x27;t stop the others
+        zapterm.report(name, &quot;FAILED&quot;, str(e))</code></pre>
+      <figure class="window auto-shot">
+        <div class="window-bar"><i></i><i></i><i></i></div>
+        <img src="img/auto-script-readonly.webp" width="1920" height="1200" alt="ZapTerm after running version_audit.py read-only: a tab per device, the FortiGate's get system status output, and the script panel with a row per device: core-rtr-01 cisco_ios 17.12.3, spine-01 arista_eos 4.32.2F, edge-mx-01 juniper 23.4R2.13, fw-hq-01 fortigate v7.4.5." loading="lazy" data-zoom>
+        <figcaption>Read-only run: each device's tab stays open and the panel shows the summary and the log.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section id="template" class="auto-section">
+    <div class="wrap">
+      <h2>Example: a Jinja2 template on a set of devices</h2>
+      <p class="auto-lede">One row per device in a CSV file, one template, rendered per device and typed line by line.
+        Jinja2 isn't part of ZapTerm: install it in the Python you run the script with (<code>pip install jinja2</code>).</p>
+      <div class="auto-two code">
+        <div><p class="auto-file">ntp.j2</p><pre class="auto-code"><code>configure terminal
+ntp server {{ ntp_primary }} prefer
+ntp server {{ ntp_secondary }}
+{% for vlan in vlans.split() -%}
+interface Vlan{{ vlan }}
+ ip helper-address {{ dhcp_relay }}
+{% endfor -%}
+end</code></pre></div>
+        <div><p class="auto-file">devices.csv</p><pre class="auto-code"><code>device,ntp_primary,ntp_secondary,dhcp_relay,vlans
+core-rtr-01,10.10.0.123,10.20.0.123,10.10.5.10,10 20
+spine-01,10.10.0.123,10.20.0.123,10.10.5.10,30</code></pre></div>
+      </div>
+      <p class="auto-file">push_template.py</p>
+      <pre class="auto-code"><code>&quot;&quot;&quot;Render a Jinja2 template per device from a CSV file and send it.
+
+devices.csv has one row per device (the `device` column is the saved
+session&#x27;s name) and one column per template variable. ntp.j2 is the template.
+
+Needs Jinja2 in the Python ZapTerm uses:  pip install jinja2
+Always start with Dry run: it lists, per device, exactly what would be typed.
+&quot;&quot;&quot;
+
+import csv
+from pathlib import Path
+
+from jinja2 import Environment, FileSystemLoader, StrictUndefined
+
+import zapterm
+
+HERE = Path(__file__).parent
+env = Environment(loader=FileSystemLoader(HERE), undefined=StrictUndefined)
+template = env.get_template(&quot;ntp.j2&quot;)
+
+with open(HERE / &quot;devices.csv&quot;, newline=&quot;&quot;) as f:
+    rows = list(csv.DictReader(f))
+
+if not zapterm.confirm(f&quot;Send ntp.j2 to {len(rows)} device(s)?&quot;):
+    raise SystemExit(&quot;Cancelled.&quot;)
+
+for row in rows:
+    name = row[&quot;device&quot;]
+    lines = [l for l in template.render(**row).splitlines() if l.strip()]
+    try:
+        s = zapterm.open(name)
+        for line in lines:
+            out = s.run(line)
+            if out.lstrip().startswith(&quot;%&quot;):  # Cisco-style error
+                raise zapterm.Error(f&quot;{line!r}: {out.strip()}&quot;)
+        zapterm.report(name, &quot;DRY RUN&quot; if zapterm.dry_run else &quot;OK&quot;, f&quot;{len(lines)} lines&quot;)
+        s.close()
+    except zapterm.Error as e:
+        zapterm.report(name, &quot;FAILED&quot;, str(e))</code></pre>
+      <figure class="window auto-shot">
+        <div class="window-bar"><i></i><i></i><i></i></div>
+        <img src="img/auto-script-dryrun.webp" width="1920" height="1200" alt="The script panel after a dry run of push_template.py: core-rtr-01 DRY RUN 8 lines, spine-01 DRY RUN 6 lines, and the log listing every rendered line it would run on each device." loading="lazy" data-zoom>
+        <figcaption>Dry run: the rendered configuration for every device, before anything is sent.</figcaption>
+      </figure>
+      <p class="auto-note">A device that answers a line with a Cisco-style error (output starting with <code>%</code>) stops there and is reported as FAILED; the others carry on.
+        Check the rendered lines in Dry run, the device state in Read-only, then send it.</p>
+    </div>
+  </section>
+
+  <section id="notebooks" class="auto-section">
+    <div class="wrap">
+      <h2>Notebooks: explore first, script later</h2>
+      <p class="auto-lede">A script runs top to bottom. While you write one you want the opposite: run one command,
+        look at what the device really prints, write the parsing against it, try again. A Jupyter notebook in
+        JupyterLab or VS Code does that, driving ZapTerm's tabs with the same <code>zapterm</code> module.</p>
+      <ol class="auto-steps">
+        <li><b>Tools → Allow notebook connection…</b> The panel shows the two lines a notebook needs; Copy puts them on the
+          clipboard. It is local to your computer, off by default, and turns itself off after 60 minutes without
+          notebook calls.</li>
+        <li><b>In the notebook,</b> <code>import zapterm</code> and <code>zapterm.connect()</code>. Then
+          <code>zapterm.tab("name")</code> for an open tab or <code>zapterm.open("saved session")</code>.</li>
+        <li><b>Run cells.</b> Each <code>run()</code> is typed in the tab and its output comes back to the cell. Variables
+          stay between cells, so you re-run only the parsing you are fixing.</li>
+      </ol>
+      <figure class="window auto-shot narrow">
+        <div class="window-bar"><i></i><i></i><i></i></div>
+        <img src="img/auto-notebook-panel.webp" width="1130" height="665" alt="The Notebook connection panel: waiting for a notebook, Read-only ticked, and the sys.path and import lines to paste into the notebook." loading="lazy" data-zoom>
+      </figure>
+      <div class="auto-two tall">
+      <figure class="window auto-shot">
+        <div class="window-bar"><i></i><i></i><i></i></div>
+        <img src="img/auto-notebook-jupyterlab.webp" width="1440" height="1200" alt="A JupyterLab notebook: connect to ZapTerm, list its tabs, run show ip interface brief on core-rtr-01 and parse the interfaces that are down: Vlan1, TwentyFiveGigE1/0/3, HundredGigE1/0/26." loading="lazy" data-zoom>
+        <figcaption>The notebook…</figcaption>
+      </figure>
+      <figure class="window auto-shot">
+        <div class="window-bar"><i></i><i></i><i></i></div>
+        <img src="img/auto-notebook-zapterm.webp" width="1920" height="1200" alt="ZapTerm at the same time: the core-rtr-01 tab shows show ip interface brief typed by the notebook, and the panel says Notebook connected, read-only." loading="lazy" data-zoom>
+        <figcaption>…and ZapTerm at the same moment.</figcaption>
+      </figure>
+      </div>
+      <p class="auto-note">A notebook starts <b>read-only</b>: only <code>get</code> and <code>show</code> reach the device.
+        Untick Read-only in the panel only when you mean to change something — bigger changes belong in a script you've
+        dry-run. When the cells work, copy them into a <code>.py</code> file, loop over <code>zapterm.sessions(folder)</code>
+        and add <code>report()</code> lines.</p>
+    </div>
+  </section>
+
+  <section id="api" class="auto-section">
+    <div class="wrap">
+      <h2>The <code>zapterm</code> module at a glance</h2>
+      <div class="auto-api">
+        <table>
+          <thead><tr><th>Call</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><code>zapterm.session()</code></td><td>The tab that was focused when the script started.</td></tr>
+            <tr><td><code>zapterm.open(name)</code></td><td>Open a saved session in a new tab and wait until it is connected.</td></tr>
+            <tr><td><code>zapterm.tab(name)</code> / <code>tabs()</code></td><td>A tab already open, by name / all open tabs.</td></tr>
+            <tr><td><code>zapterm.sessions(folder)</code></td><td>Names of the saved sessions, or only those in a folder and its sub-folders.</td></tr>
+            <tr><td><code>s.run(cmd, timeout=30)</code></td><td>Type a command, wait for the prompt, return the output.</td></tr>
+            <tr><td><code>s.send(text)</code> / <code>s.expect(pattern)</code></td><td>Type without waiting / wait for a text or regex to appear.</td></tr>
+            <tr><td><code>s.send_secret("Name.Password")</code></td><td>Type a vault credential; the script never sees it.</td></tr>
+            <tr><td><code>s.poll(cmd, until, every, max)</code></td><td>Repeat a command until a condition holds or time runs out.</td></tr>
+            <tr><td><code>s.platform</code> / <code>s.close()</code></td><td>Detected platform (<code>"cisco_ios"</code>, <code>"fortigate"</code>…) / close the tab.</td></tr>
+            <tr><td><code>zapterm.report(target, status, detail)</code></td><td>Add a row to the summary table.</td></tr>
+            <tr><td><code>zapterm.confirm(msg)</code> / <code>log(…)</code> / <code>sleep(s)</code></td><td>Ask yes/no in ZapTerm / write to the panel / wait (skipped in Dry run).</td></tr>
+            <tr><td><code>zapterm.dry_run</code> / <code>read_only</code></td><td>True when the script runs in that mode.</td></tr>
+            <tr><td><code>zapterm.connect()</code></td><td>From a notebook or a Python prompt: connect to the running ZapTerm.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="faq-more">
+        <a class="btn btn-ghost" href="https://github.com/CarlosTejeiro/ZapTerm/blob/main/docs/user-guide/scripting.md">Full scripting reference</a>
+        <a class="btn btn-ghost" href="https://github.com/CarlosTejeiro/ZapTerm/tree/main/docs/user-guide/automation">Step-by-step guide</a>
+        <a class="btn btn-ghost" href="faq.html?q=python">Automation questions</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <span class="brand"><img src="icon.svg" alt="" width="20" height="20"> ZapTerm</span>
+    <span>Free software · <a href="https://github.com/CarlosTejeiro/ZapTerm/blob/main/LICENSE">GPL-3.0-or-later</a></span>
+    <span><a href="https://github.com/CarlosTejeiro/ZapTerm">GitHub</a> · <a href="https://github.com/CarlosTejeiro/ZapTerm/issues">Issues</a> · <a href="index.html#donate">Donate</a> · <a href="https://github.com/CarlosTejeiro/ZapTerm/tree/main/docs/user-guide">User guide</a></span>
+  </div>
+  <p class="wrap fine">Screenshots show simulated lab devices; host names and addresses are fictional.</p>
+</footer>
+
+<div class="lightbox" hidden><img alt=""></div>
+<script src="main.js" defer></script>
+</body>
+</html>
