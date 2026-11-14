@@ -1503,47 +1503,6 @@ impl Database {
         Ok(rows.collect::<Result<Vec<_>, _>>()?)
     }
 
-    /// Same as [`list_snippets`] but filtered to snippets visible from a
-    /// session of `platform` — globals (NULL) plus matches. Globals first,
-    /// then platform-specific.
-    pub fn list_snippets_for_platform(&self, platform: &str) -> Result<Vec<Snippet>, Error> {
-        let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare(
-            "SELECT id, name, content, sort_order, created_at, platform, color, steps_json, folder, position, shortcut
-             FROM snippets
-             WHERE platform IS NULL OR platform = ?1
-             ORDER BY (platform IS NULL) DESC, sort_order, name",
-        )?;
-        let rows = stmt.query_map(rusqlite::params![platform], |row| {
-            Ok(Snippet {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                content: row.get(2)?,
-                sort_order: row.get(3)?,
-                created_at: row.get(4)?,
-                platform: row.get(5)?,
-                color: row.get(6)?,
-                steps_json: row.get(7)?,
-                folder: row.get(8)?,
-                position: row.get(9)?,
-                shortcut: row.get(10)?,
-            })
-        })?;
-        Ok(rows.collect::<Result<Vec<_>, _>>()?)
-    }
-
-    /// True iff there is at least one snippet tagged with `platform`. Used
-    /// by the app layer to gate first-time-seen seeding of platform defaults.
-    pub fn snippets_exist_for_platform(&self, platform: &str) -> Result<bool, Error> {
-        let conn = self.conn.lock().unwrap();
-        let n: i64 = conn.query_row(
-            "SELECT COUNT(*) FROM snippets WHERE platform = ?1",
-            rusqlite::params![platform],
-            |r| r.get(0),
-        )?;
-        Ok(n > 0)
-    }
-
     pub fn create_snippet(
         &self,
         name: &str,
@@ -1878,27 +1837,6 @@ impl Database {
         )?;
         let rows = stmt.query_map(rusqlite::params![platform, prev, limit as i64], |row| {
             Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)?))
-        })?;
-        Ok(rows.collect::<Result<Vec<_>, _>>()?)
-    }
-
-    /// Read global snippets (managed by the dedicated snippets dialog).
-    /// The hint engine surfaces these in the popup alongside history.
-    pub fn list_snippet_contents_by_prefix(
-        &self,
-        prefix: &str,
-        limit: usize,
-    ) -> Result<Vec<(String, String)>, Error> {
-        let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare(
-            "SELECT name, content FROM snippets
-              WHERE content LIKE ?1 || '%' ESCAPE '\\'
-              ORDER BY sort_order, name
-              LIMIT ?2",
-        )?;
-        let escaped = escape_like(prefix);
-        let rows = stmt.query_map(rusqlite::params![escaped, limit as i64], |row| {
-            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
         })?;
         Ok(rows.collect::<Result<Vec<_>, _>>()?)
     }
@@ -2267,17 +2205,6 @@ mod tests {
         assert_eq!(get(&db), None);
         db.set_snippet_shortcut(id, Some("Ctrl+Alt+P")).unwrap();
         assert_eq!(get(&db).as_deref(), Some("Ctrl+Alt+P"));
-        // Also visible through the platform-filtered listing.
-        let listed = db.list_snippets_for_platform("fortigate").unwrap();
-        assert_eq!(
-            listed
-                .iter()
-                .find(|s| s.id == id)
-                .unwrap()
-                .shortcut
-                .as_deref(),
-            Some("Ctrl+Alt+P")
-        );
         // Blank clears.
         db.set_snippet_shortcut(id, Some("  ")).unwrap();
         assert_eq!(get(&db), None);

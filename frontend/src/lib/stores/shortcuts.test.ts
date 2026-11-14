@@ -87,7 +87,7 @@ describe('default bindings are all reachable', () => {
     expect(match(key('Tab', { code: 'Tab', ctrl: true, shift: true }))).toBe('prev-tab')
     expect(match(key(',', { code: 'Comma', ctrl: true }))).toBe('settings')
     expect(match(key('M', { code: 'KeyM', ctrl: true, shift: true }))).toBe('multi-exec')
-    expect(match(key('S', { code: 'KeyS', ctrl: true, shift: true }))).toBe('snippets')
+    expect(match(key('S', { code: 'KeyS', ctrl: true, shift: true }))).toBeNull()
     expect(match(key('N', { code: 'KeyN', ctrl: true, shift: true }))).toBe('quick-connect')
   })
 

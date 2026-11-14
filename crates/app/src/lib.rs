@@ -250,7 +250,7 @@ pub fn run() {
             commands::sftp::sftp_cancel_transfer,
             commands::sftp::sftp_edit_file,
             commands::snippets::list_snippets,
-            commands::snippets::list_snippets_for_platform,
+            commands::snippets::list_user_plain_snippets,
             commands::snippets::list_recent_command_snippets,
             commands::snippets::create_snippet,
             commands::snippets::update_snippet,

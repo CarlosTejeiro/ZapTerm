@@ -76,7 +76,6 @@ The little things that add up across a long day:
 
 - **Command hints** — autocomplete from your own history plus vendor catalogs
   for **12 platforms**, with automatic platform detection from the prompt.
-- **Snippets** — per-platform command snippets fired on `Ctrl+Shift+1..9`.
 - **Command lists per vendor** — grouped commands and recipes under the
   terminal for the detected platform (local tabs get the Windows, macOS or
   Linux lists for their shell). They are JSON files: make your own copy
@@ -132,7 +131,7 @@ The little things that add up across a long day:
   other devices' changes are offered for merging, conflicts are yours to
   settle. No provider account, no server: the provider only sees ciphertext.
 - **Export / import** — one JSON file with your sessions, folders, groups,
-  snippets and highlight rules (never passwords, never the vault). Import is
+  macros and highlight rules (never passwords, never the vault). Import is
   idempotent, so it's safe for migration and team sharing.
 - **Import from what you already use** — `~/.ssh/config`, PuTTY, MobaXterm and
   SecureCRT.
@@ -153,8 +152,6 @@ All customizable in **Settings → Shortcuts**. Defaults:
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | Next / previous tab |
 | `Ctrl+Shift+H` / `Ctrl+Shift+K` | Split pane horizontally / vertically |
 | `Ctrl+Shift+M` | Toggle multi-exec broadcast |
-| `Ctrl+Shift+S` | Snippets |
-| `Ctrl+Shift+1..9` | Fire snippet 1..9 |
 | `Ctrl+F` | In-terminal search — match count, highlight-all, case/word/regex (`Enter` / `Shift+Enter` to step) |
 | `Ctrl+,` | Settings |
 | `Escape` | Close search / close dialog |
@@ -181,7 +178,7 @@ or right-click the app → **Open** → **Open** on first launch.
 
 `ZapTerm_x64_portable.exe` runs from any folder without installation (it needs
 the WebView2 runtime, preinstalled on Windows 11 and updated Windows 10).
-To make it fully self-contained — sessions, settings, snippet catalogs and
+To make it fully self-contained — sessions, settings, command lists, hint catalogs and
 logs travelling with the exe — create an empty file named `portable` next to
 it; everything is then kept in a `data/` folder beside the executable. In
 portable mode credentials are stored AES-256-GCM-encrypted in the database
@@ -228,7 +225,7 @@ zapterm/
 │   ├── core-persistence/  # SQLite via rusqlite — sessions, rules, logs, settings
 │   ├── core-vault/        # OS keyring + AES-256-GCM portable fallback
 │   ├── core-highlight/    # Regex keyword highlighting, ANSI injection
-│   ├── core-hints/        # Command suggestions: history, vendor catalogs, snippets
+│   ├── core-hints/        # Command suggestions: history, vendor catalogs, sequences
 │   ├── core-terminal/     # VT100/xterm escape-sequence parser
 │   ├── core-logging/      # Session log writer with 50 MB rotation
 │   ├── core-session/      # Session lifecycle types

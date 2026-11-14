@@ -36,7 +36,6 @@
   import ResizeHandles from '$lib/pylon/ResizeHandles.svelte'
   import SettingsModal from '$lib/settings/SettingsModal.svelte'
   import KeyboardInteractiveDialog from '$lib/terminal/KeyboardInteractiveDialog.svelte'
-  import SnippetsDialog from '$lib/sessions/SnippetsDialog.svelte'
   import ScriptPanel from '$lib/scripting/ScriptPanel.svelte'
   import ScriptStartDialog from '$lib/scripting/ScriptStartDialog.svelte'
   import {
@@ -49,8 +48,6 @@
   import CommandPalette from '$lib/palette/CommandPalette.svelte'
   import type { PaletteItem } from '$lib/palette/CommandPalette.svelte'
   import Toasts from '$lib/ui/Toasts.svelte'
-  import VariablesDialog from '$lib/snippets/VariablesDialog.svelte'
-  import { resolveSnippet } from '$lib/snippets/variables.svelte'
   import { showToast } from '$lib/ui/toast-store.svelte'
   import PromptDialog from '$lib/ui/PromptDialog.svelte'
   import {
@@ -70,6 +67,7 @@
   import type { ImportSummary } from '$lib/bridge/commands'
   import { loadHintsSettings } from '$lib/hints/store.svelte'
   import { loadUserLists } from '$lib/cmdlists/userLists.svelte'
+  import { moveSnippetsToCustom } from '$lib/cmdlists/moveSnippets'
   import { broadcast, sessionRuntime, paneToSession } from '$lib/stores/sessionRuntime.svelte'
   import { localShells, platformForShell } from '$lib/stores/localShell.svelte'
   import { loadBindings, matchAction, type ShortcutAction } from '$lib/stores/keybindings.svelte'
@@ -83,21 +81,12 @@
     createFolder,
     renameFolder,
     deleteFolder,
-    sendInputText,
     openLogsDir,
   } from '$lib/bridge/commands'
+  import { claimBroadcastScope, releaseBroadcastScope } from '$lib/stores/sessionRuntime.svelte'
   import {
-    getFocusedSessionId,
-    broadcastTargets,
-    focusSession,
-    claimBroadcastScope,
-    releaseBroadcastScope,
-  } from '$lib/stores/sessionRuntime.svelte'
-  import {
-    visibleSnippets,
     snippets,
     loadSnippets,
-    loadVisibleSnippets,
     setBarContext,
     matchSnippetShortcut,
   } from '$lib/stores/snippets.svelte'
@@ -305,7 +294,6 @@
   let showNewSession = $state(false)
   let showQuickConnect = $state(false)
   let showSettings = $state(false)
-  let showSnippets = $state(false)
   let showGroups = $state(false)
   let showCommandList = $state(false)
   let showTunnelsManager = $state(false)
@@ -357,7 +345,7 @@
   )
 
   async function refreshSnippets() {
-    await Promise.all([loadSnippets(), loadVisibleSnippets()])
+    await loadSnippets()
   }
 
   async function saveMacro(v: {
@@ -727,6 +715,16 @@
     loadBindings()
     loadHintsSettings()
     void loadUserLists()
+      .then(moveSnippetsToCustom)
+      .then((n) => {
+        if (n > 0)
+          showToast({
+            kind: 'info',
+            title: `${n} snippet${n > 1 ? 's' : ''} moved to ★ Custom`,
+            detail: 'Snippets are gone; your own commands now live in ★ Custom, next to Recent.',
+          })
+      })
+      .catch((e) => console.error('moving snippets to Custom', e))
   })
 
   // ── tab management ────────────────────────────────────────────────────────────
@@ -1106,9 +1104,6 @@
       case 'settings':
         showSettings = true
         break
-      case 'snippets':
-        showSnippets = true
-        break
       case 'split-h':
         handleSplit(focusedPaneId, 'h')
         break
@@ -1326,60 +1321,20 @@
     focusedPaneId = pane.id
   }
 
-  /// Fire the i-th snippet (0-indexed) at the focused session. Used by the
-  /// Ctrl+Shift+1..9 quick-launch shortcut wired in TerminalTab. We address
-  /// `visibleSnippets` (what the bar currently shows for this session)
-  /// rather than the global list — so the [N] pill on screen matches the
-  /// key the user pressed.
-  async function fireSnippetByIndex(idx: number) {
-    const s = visibleSnippets[idx]
-    if (s) await fireSnippet(s)
-  }
-
-  /// Fire a snippet or macro by id — the target of its own keyboard shortcut.
-  /// Looks in the FULL list: macros live in the sidebar, not the 9-slot bar.
+  /// Run a macro by id — the target of its own keyboard shortcut.
   async function fireSnippetById(id: number) {
-    const s = snippets.find((x) => x.id === id)
-    if (s) await fireSnippet(s)
-  }
-
-  /// Send one snippet to the focused session (and the broadcast group). A
-  /// macro runs its expect/send/wait steps — vault references are written by
-  /// the backend, so a password never passes through the UI.
-  async function fireSnippet(s: Snippet) {
-    if (s.steps_json) {
-      await runMacroOnFocused(s)
-      return
-    }
-    const focused = getFocusedSessionId()
-    if (!focused) return
-    // Resolve any {{variables}} (prompts the user) before sending.
-    const text = await resolveSnippet(s.content)
-    if (text === null) return
-    await sendInputText(focused, text).catch(console.error)
-    // Variable prompts steal focus; restore it so the user can keep typing
-    // after a snippet that carries no trailing newline.
-    focusSession(focused)
-    if (broadcast.enabled) {
-      for (const id of broadcastTargets(focused)) {
-        await sendInputText(id, text).catch(() => {})
-      }
-    }
+    const s = snippets.find((x) => x.id === id && x.steps_json)
+    if (s) await runMacroOnFocused(s)
   }
 
   /// xterm forwards `(action, e)` here when its custom key handler matches a
   /// binding. `action` is the [`ShortcutAction`] id (typed as string for the
-  /// existing callback signature). The `snippet:N` namespace is handled here
-  /// to avoid widening the typed action union.
+  /// existing callback signature). The `snippet-id:N` namespace (a macro's
+  /// own shortcut) is handled here to avoid widening the typed action union.
   function handleGlobalShortcut(action: string, _e: KeyboardEvent) {
     if (action.startsWith('snippet-id:')) {
       const id = parseInt(action.slice('snippet-id:'.length), 10)
       if (!Number.isNaN(id)) fireSnippetById(id)
-      return
-    }
-    if (action.startsWith('snippet:')) {
-      const idx = parseInt(action.slice('snippet:'.length), 10)
-      if (!Number.isNaN(idx)) fireSnippetByIndex(idx)
       return
     }
     dispatchAction(action as ShortcutAction)
@@ -1440,13 +1395,6 @@
       run: () => {
         scriptExamplesDir(true).catch(() => {})
       },
-    },
-    {
-      id: 'act-snippets',
-      label: 'Open Snippets',
-      icon: 'book' as const,
-      section: 'Actions' as const,
-      run: () => (showSnippets = true),
     },
     {
       id: 'act-groups',
@@ -1637,7 +1585,7 @@
       const bound = matchSnippetShortcut(e)
       if (!bound) return
       e.preventDefault()
-      fireSnippet(bound)
+      void runMacroOnFocused(bound)
     }
     document.addEventListener('keydown', onKeydown)
 
@@ -1801,7 +1749,6 @@
     onNewSession={() => (showNewSession = true)}
     onQuickConnect={() => (showQuickConnect = true)}
     onSettings={() => (showSettings = true)}
-    onSnippets={() => (showSnippets = true)}
     onRunScript={chooseScript}
     onScriptExamples={() => scriptExamplesDir(true).catch(() => {})}
     onNotebook={() => void openNotebookConnection()}
@@ -2115,10 +2062,6 @@
 
 <KeyboardInteractiveDialog />
 
-{#if showSnippets}
-  <SnippetsDialog onClose={() => (showSnippets = false)} />
-{/if}
-
 {#if scriptPending}
   {@const path = scriptPending}
   <ScriptStartDialog
@@ -2193,7 +2136,6 @@
 {/if}
 
 <Toasts />
-<VariablesDialog />
 
 {#if showAbout}
   <div

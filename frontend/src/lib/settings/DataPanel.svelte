@@ -81,8 +81,8 @@
     <h3>Data folder</h3>
     <p class="hint">
       Where ZapTerm keeps the sessions database (<code>zapterm.db</code>), session logs and the
-      snippet/hint catalogs. Handy for moving it to a synced folder (Drive, OneDrive) or a network
-      share.
+      command lists and hint catalogs. Handy for moving it to a synced folder (Drive, OneDrive) or a
+      network share.
     </p>
 
     {#if !info}
