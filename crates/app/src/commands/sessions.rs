@@ -458,16 +458,47 @@ fn start_local_pty(
         let _ = killer.kill();
     });
 
+    // Output goes through the same path as SSH/Telnet/serial: highlight
+    // rules (whole lines), session logging and the byte counter.
+    let rx_total = Arc::new(std::sync::atomic::AtomicU64::new(0));
+    let emit_app = app.clone();
+    let emit_sid = session_id.clone();
+    let on_data = make_on_data(
+        session_id.clone(),
+        Arc::clone(&state.loggers),
+        Arc::clone(&state.highlighter),
+        empty_login_slot(),
+        empty_trigger_slot(),
+        Arc::clone(&rx_total),
+        None,
+        None,
+        move |data| {
+            let _ = emit_app.emit(
+                "terminal-data",
+                TerminalDataPayload {
+                    session_id: emit_sid.clone(),
+                    data,
+                },
+            );
+        },
+    );
+
     // Reader loop runs on a blocking thread (PTY reads are synchronous).
     let sid = session_id.clone();
     let app_handle = app.clone();
     tokio::task::spawn_blocking(move || {
-        reader_loop(reader, pty, resize_rx, sid, app_handle, closed_by_app);
+        reader_loop(
+            reader,
+            pty,
+            resize_rx,
+            sid,
+            app_handle,
+            closed_by_app,
+            on_data,
+        );
     });
 
-    // Local PTY doesn't route through make_on_data, so we don't track
-    // throughput for it yet. The StatusBar will simply show 0 B/s.
-    let rx_total = Arc::new(std::sync::atomic::AtomicU64::new(0));
+    // No throughput readout for local tabs yet: the StatusBar shows 0 B/s.
     let stats_task: Option<tokio::task::JoinHandle<()>> = None;
 
     state.sessions.lock().unwrap().insert(
@@ -920,6 +951,7 @@ fn reader_loop(
     session_id: String,
     app: AppHandle,
     closed_by_app: Arc<std::sync::atomic::AtomicBool>,
+    on_data: impl Fn(Vec<u8>),
 ) {
     let mut buf = vec![0u8; 4096];
 
@@ -936,15 +968,7 @@ fn reader_loop(
 
         match reader.read(&mut buf) {
             Ok(0) => break,
-            Ok(n) => {
-                let payload = TerminalDataPayload {
-                    session_id: session_id.clone(),
-                    data: buf[..n].to_vec(),
-                };
-                if app.emit("terminal-data", payload).is_err() {
-                    break;
-                }
-            }
+            Ok(n) => on_data(buf[..n].to_vec()),
             Err(e) => {
                 tracing::debug!(session_id, "PTY read error: {e}");
                 break;
