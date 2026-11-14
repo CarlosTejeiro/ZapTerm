@@ -24,6 +24,9 @@ export interface CommandItem {
   desc: string
   /** Changes state on the device (flush, clear…): asks before sending. */
   action?: boolean
+  /** Can load the device (a real-time debug, a capture): shown as a warning
+   *  and confirmed before sending. Says why, citing the vendor. */
+  caution?: string
   /** Raw keys sent instead of `cmd` (e.g. "\x03" for Ctrl+C); `cmd` is then
    *  only the label. */
   keys?: string
@@ -43,6 +46,8 @@ export interface RecipeItem {
   fields: RecipeField[]
   /** Sent one by one; `{{key}}` takes the field's value. */
   lines: string[]
+  /** As for commands: a warning confirmed before the lines are sent. */
+  caution?: string
 }
 
 export type ListItem = CommandItem | RecipeItem

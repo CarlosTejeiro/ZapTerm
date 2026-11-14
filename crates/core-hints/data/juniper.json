@@ -63,7 +63,6 @@
   "exit",
   "quit",
   "request system reboot",
-  "request system halt",
   "request system snapshot",
   "request support information",
   "monitor traffic interface",

@@ -270,3 +270,36 @@ fn sequence_learning_boosts_usual_next_command() {
     let none = db.next_commands_after("generic", "a", 5).unwrap();
     assert!(none.is_empty(), "generic transitions must be dropped");
 }
+
+/// The bundled catalogs never suggest commands that are irreversible or need
+/// someone on site to undo (factory reset, format, halt…), nor captures and
+/// debugs without a bound.
+#[test]
+fn catalogs_suggest_nothing_destructive() {
+    let never = [
+        "factoryreset",
+        "formatlogdisk",
+        "log delete-all",
+        "format flash:",
+        "request system halt",
+        "execute shutdown",
+        "request shutdown system",
+        "/system shutdown",
+        "clear ip bgp *",
+        "clear ip route *",
+        "rm -rf",
+        "diagnose ips debug enable all",
+    ];
+    for p in catalog::all_platforms() {
+        for cmd in catalog::for_platform(*p).iter() {
+            for bad in never {
+                assert!(!cmd.contains(bad), "{p:?}: {cmd}");
+            }
+            if cmd.starts_with("diagnose sniffer packet") && cmd.contains('\'') {
+                let count = cmd.split_whitespace().rev().nth(1);
+                assert_ne!(count, Some("0"), "{p:?}: unbounded sniffer {cmd}");
+                assert!(cmd.ends_with(" l"), "{p:?}: sniffer without a count: {cmd}");
+            }
+        }
+    }
+}

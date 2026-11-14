@@ -201,7 +201,6 @@
   "dir",
   "more",
   "fixdisk",
-  "format flash:",
   "boot-loader",
   "schedule reboot at",
   "schedule reboot delay",

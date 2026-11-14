@@ -2,7 +2,7 @@
   "format": "zapterm-command-lists",
   "version": 1,
   "platform": "cisco_ios",
-  "notes": "Cisco IOS / IOS-XE command lists. Every command below was checked against Cisco's documentation — nothing was added from memory: • Command Reference, Cisco IOS XE 17.15.x (Catalyst 9300): Interface and Hardware, IP Addressing Services, Layer 2/3, Network Management, Security, Stack Manager and High Availability, System Management, Unicast Routing and VLAN chapters • Cisco IOS IP Routing: BGP Command Reference (show ip bgp … through Z) • IP Routing Configuration Guide, Cisco IOS XE 17.x: BGP 4 • Cisco IOS Security Command Reference (A to C; S to Z: show crypto …) • Cisco IOS First Hop Redundancy Protocols Command Reference • Embedded Packet Capture: Command Reference, Configuration Guide IOS XE 17, Catalyst 9000 Management Configuration Guide • Security and VPN Configuration Guide IOS XE 17.x: Crypto Conditional Debug Support • \"Understand Important Information on Debug Commands\" (undebug all, terminal monitor) • IP Addressing Services Configuration Guide 17.15 (DHCP snooping) Left out: commands that reload or erase the device, and ones not found in those documents (e.g. \"show processes cpu sorted\", \"show vrf\").",
+  "notes": "Cisco IOS / IOS-XE command lists. Every command below was checked against Cisco's documentation — nothing was added from memory: • Command Reference, Cisco IOS XE 17.15.x (Catalyst 9300): Interface and Hardware, IP Addressing Services, Layer 2/3, Network Management, Security, Stack Manager and High Availability, System Management, Unicast Routing and VLAN chapters • Cisco IOS IP Routing: BGP Command Reference (show ip bgp … through Z) • IP Routing Configuration Guide, Cisco IOS XE 17.x: BGP 4 • Cisco IOS Security Command Reference (A to C; S to Z: show crypto …) • Cisco IOS First Hop Redundancy Protocols Command Reference • Embedded Packet Capture: Command Reference, Configuration Guide IOS XE 17, Catalyst 9000 Management Configuration Guide • Security and VPN Configuration Guide IOS XE 17.x: Crypto Conditional Debug Support • \"Understand Important Information on Debug Commands\" (undebug all, terminal monitor) • IP Addressing Services Configuration Guide 17.15 (DHCP snooping) Left out: commands that reload or erase the device, and ones not found in those documents (e.g. \"show processes cpu sorted\", \"show vrf\"). Safety review: the EPC capture stops by itself (monitor capture … limit duration <s> packets 1000, per the EPC command reference, whose default is no limit) and the debugs carry a caution quoting Cisco’s “Important Information on Debug Commands” (“Enabling debugging can disrupt router operation, especially when the network is under heavy load”).",
   "label": "Cisco IOS / IOS-XE",
   "stopDebug": ["undebug all", "debug crypto condition reset"],
   "lists": [
@@ -545,19 +545,26 @@
             {
               "kind": "recipe",
               "name": "Capture on an interface",
-              "desc": "Embedded Packet Capture \"ZAPTERM\", both directions, all IPv4",
+              "desc": "Embedded Packet Capture \"ZAPTERM\", both directions, all IPv4, limited in time and packets",
               "fields": [
                 {
                   "key": "iface",
                   "label": "Interface",
                   "placeholder": "GigabitEthernet1/0/1"
+                },
+                {
+                  "key": "seconds",
+                  "label": "Stop after (seconds)",
+                  "default": "60"
                 }
               ],
               "lines": [
                 "monitor capture ZAPTERM interface {{iface}} both",
                 "monitor capture ZAPTERM match ipv4 any any",
+                "monitor capture ZAPTERM limit duration {{seconds}} packets 1000",
                 "monitor capture ZAPTERM start"
-              ]
+              ],
+              "caution": "Cisco: Embedded Packet Capture “consumes CPU and memory resources”. This capture stops by itself after the seconds you set or 1000 packets; stop and delete it when done."
             },
             {
               "kind": "command",
@@ -600,7 +607,8 @@
                 "debug crypto condition peer ipv4 {{peer}}",
                 "debug crypto isakmp",
                 "debug crypto ipsec"
-              ]
+              ],
+              "caution": "Cisco: “Enabling debugging can disrupt router operation, especially when the network is under heavy load.” Check show processes cpu first, never debug to the console, and press Stop debug (undebug all) when done."
             },
             {
               "kind": "recipe",
@@ -613,7 +621,8 @@
                   "placeholder": "192.0.2.1"
                 }
               ],
-              "lines": ["terminal monitor", "debug ip bgp {{peer}} updates"]
+              "lines": ["terminal monitor", "debug ip bgp {{peer}} updates"],
+              "caution": "Cisco: “Enabling debugging can disrupt router operation, especially when the network is under heavy load.” Check show processes cpu first, never debug to the console, and press Stop debug (undebug all) when done."
             },
             {
               "kind": "command",

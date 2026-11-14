@@ -283,6 +283,14 @@
     }
   }
 
+  /// A command or recipe that can load the device: say why and ask first.
+  async function confirmCaution(caution: string, text: string): Promise<boolean> {
+    return ask(`${caution}\n\n${text}\n\nSend it?`, {
+      title: 'This can load the device',
+      kind: 'warning',
+    })
+  }
+
   async function confirmAction(text: string): Promise<boolean> {
     return ask(`This changes state on the device:\n\n${text}\n\nSend it?`, {
       title: 'Confirm command',
@@ -344,6 +352,7 @@
       return
     }
     if (item.action && !typeOnly && !(await confirmAction(item.cmd))) return
+    if (item.caution && !typeOnly && !(await confirmCaution(item.caution, item.cmd))) return
     close()
     await send([item.cmd], typeOnly)
   }
@@ -362,6 +371,10 @@
     const isAction = form.kind === 'command' && form.item.action
     const isDebugRecipe = form.kind === 'recipe' && !!openList?.debug
     if (isAction && !typeOnly && !(await confirmAction(lines.join('\n')))) return
+    // A recipe "typed without Enter" still sends all lines but the last.
+    const caution = form.item.caution
+    const sendsSomething = !typeOnly || (form.kind === 'recipe' && lines.length > 1)
+    if (caution && sendsSomething && !(await confirmCaution(caution, lines.join('\n')))) return
     close()
     const ok = await send(lines, typeOnly)
     if (ok && isDebugRecipe && !typeOnly) {
@@ -847,6 +860,9 @@
                       <span class="item-name">{item.name}</span>
                     {/if}
                     <span class="spacer"></span>
+                    {#if item.caution}
+                      <span class="tag tag-caution" title={item.caution}>⚠ load</span>
+                    {/if}
                     {#if item.kind === 'recipe'}
                       <span class="tag tag-recipe"
                         >{item.lines.length} {item.lines.length === 1 ? 'line' : 'lines'}</span
@@ -1350,6 +1366,11 @@
   .tag-type {
     color: #9a5a1a;
     background: color-mix(in srgb, #e6a35a 18%, transparent);
+  }
+  .tag-caution {
+    color: #a16207;
+    background: color-mix(in srgb, #eab308 20%, transparent);
+    cursor: help;
   }
   .tag-action {
     color: #b23b3b;

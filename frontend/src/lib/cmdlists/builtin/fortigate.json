@@ -2,7 +2,7 @@
   "format": "zapterm-command-lists",
   "version": 1,
   "platform": "fortigate",
-  "notes": "FortiGate (FortiOS 7.6) command lists. Every command below was checked against Fortinet's FortiOS 7.6 documentation — nothing was added from memory: • CLI troubleshooting cheat sheet (7.6.0) docs.fortinet.com/document/fortigate/7.6.0/cli-troubleshooting-cheat-sheet/420966 • Administration guide 7.6.6: \"Debugging the packet flow\" (54688), \"IPsec related diagnose commands\" (44240), \"Performing a sniffer trace or packet capture\" (680228: \"To stop the sniffer, type CTRL+C\"), \"Routing concepts\" (139692), \"Using a session table\" (562859), \"How the FortiGate firmware license works\" (7.6.4, 299518) • CLI reference 7.6.6: diagnose vpn ike (309172113), diagnose sys (235530229), diagnose ip router bgp (869760727) / ospf (929006518) Left out on purpose: commands that reset, format or reboot the device (factoryreset, formatlogdisk, execute reboot…), ones the docs warn can cause an outage (execute fsso refresh, diagnose sys ha reset-uptime), ones that put a password on the command line (diagnose test authserver), and ones whose 7.6 argument syntax the docs don't spell out.",
+  "notes": "FortiGate (FortiOS 7.6) command lists. Every command below was checked against Fortinet's FortiOS 7.6 documentation — nothing was added from memory: • CLI troubleshooting cheat sheet (7.6.0) docs.fortinet.com/document/fortigate/7.6.0/cli-troubleshooting-cheat-sheet/420966 • Administration guide 7.6.6: \"Debugging the packet flow\" (54688), \"IPsec related diagnose commands\" (44240), \"Performing a sniffer trace or packet capture\" (680228: \"To stop the sniffer, type CTRL+C\"), \"Routing concepts\" (139692), \"Using a session table\" (562859), \"How the FortiGate firmware license works\" (7.6.4, 299518) • CLI reference 7.6.6: diagnose vpn ike (309172113), diagnose sys (235530229), diagnose ip router bgp (869760727) / ospf (929006518) Left out on purpose: commands that reset, format or reboot the device (factoryreset, formatlogdisk, execute reboot…), ones the docs warn can cause an outage (execute fsso refresh, diagnose sys ha reset-uptime), ones that put a password on the command line (diagnose test authserver), and ones whose 7.6 argument syntax the docs don't spell out. Safety review: every real-time debug and the packet sniffer carry a caution that is confirmed before sending, quoting the FortiGate CLI troubleshooting cheat sheet (“Real-time debugging is a CPU intensive task”; IPS debugs “with proper filters can result in high CPU usage”) and the sniffer reference (“Packet capture can be very resource intensive”; no count runs until Ctrl+C).",
   "label": "FortiGate · FortiOS 7.6",
   "stopDebug": ["diagnose debug disable", "diagnose debug reset"],
   "stopKeys": "\u0003",
@@ -950,7 +950,8 @@
                 "diagnose debug console timestamp enable",
                 "diagnose debug enable",
                 "diagnose debug flow trace start {{count}}"
-              ]
+              ],
+              "caution": "Fortinet: “Real-time debugging is a CPU intensive task. Use it with caution.” On a busy unit check get system performance status first, and press Stop debug as soon as you have the output."
             },
             {
               "kind": "recipe",
@@ -978,7 +979,8 @@
                   "default": "100"
                 }
               ],
-              "lines": ["diagnose sniffer packet {{iface}} '{{filter}}' {{verbose}} {{count}} l"]
+              "lines": ["diagnose sniffer packet {{iface}} '{{filter}}' {{verbose}} {{count}} l"],
+              "caution": "Fortinet: “Packet capture can be very resource intensive.” A count of 0, or none, keeps it running until Ctrl+C: keep a filter and a small count, and use high verbosity only on quiet interfaces."
             },
             {
               "kind": "command",
@@ -1013,7 +1015,8 @@
                 "diagnose debug console timestamp enable",
                 "diagnose debug application ike -1",
                 "diagnose debug enable"
-              ]
+              ],
+              "caution": "Fortinet: “Real-time debugging is a CPU intensive task. Use it with caution.” On a busy unit check get system performance status first, and press Stop debug as soon as you have the output."
             },
             {
               "kind": "recipe",
@@ -1024,7 +1027,8 @@
                 "diagnose ip router bgp all enable",
                 "diagnose ip router bgp level info",
                 "diagnose debug enable"
-              ]
+              ],
+              "caution": "Fortinet: “Real-time debugging is a CPU intensive task. Use it with caution.” On a busy unit check get system performance status first, and press Stop debug as soon as you have the output."
             },
             {
               "kind": "recipe",
@@ -1035,14 +1039,16 @@
                 "diagnose ip router ospf all enable",
                 "diagnose ip router ospf level info",
                 "diagnose debug enable"
-              ]
+              ],
+              "caution": "Fortinet: “Real-time debugging is a CPU intensive task. Use it with caution.” On a busy unit check get system performance status first, and press Stop debug as soon as you have the output."
             },
             {
               "kind": "recipe",
               "name": "Link monitor debug",
               "desc": "Real-time link monitor (SD-WAN health) debugging",
               "fields": [],
-              "lines": ["diagnose debug application link-monitor -1", "diagnose debug enable"]
+              "lines": ["diagnose debug application link-monitor -1", "diagnose debug enable"],
+              "caution": "Fortinet: “Real-time debugging is a CPU intensive task. Use it with caution.” On a busy unit check get system performance status first, and press Stop debug as soon as you have the output."
             }
           ]
         },
@@ -1069,21 +1075,24 @@
                 "diagnose ips filter set \"host {{ip}} and port {{port}}\"",
                 "diagnose ips debug enable all",
                 "diagnose debug enable"
-              ]
+              ],
+              "caution": "Fortinet: “Running real-time IPS engine debugs with proper filters can result in high CPU usage.” Run it in a quiet period and press Stop debug as soon as you have the output."
             },
             {
               "kind": "recipe",
               "name": "Web filter debug",
               "desc": "Real-time web filter daemon debugging",
               "fields": [],
-              "lines": ["diagnose debug application urlfilter -1", "diagnose debug enable"]
+              "lines": ["diagnose debug application urlfilter -1", "diagnose debug enable"],
+              "caution": "Fortinet: “Real-time debugging is a CPU intensive task. Use it with caution.” On a busy unit check get system performance status first, and press Stop debug as soon as you have the output."
             },
             {
               "kind": "recipe",
               "name": "DNS proxy debug",
               "desc": "DNS filter, translation and resolution",
               "fields": [],
-              "lines": ["diagnose debug application dnsproxy -1", "diagnose debug enable"]
+              "lines": ["diagnose debug application dnsproxy -1", "diagnose debug enable"],
+              "caution": "Fortinet: “Real-time debugging is a CPU intensive task. Use it with caution.” On a busy unit check get system performance status first, and press Stop debug as soon as you have the output."
             }
           ]
         },
@@ -1099,7 +1108,8 @@
                 "diagnose debug application fnbamd -1",
                 "diagnose debug application authd -1",
                 "diagnose debug enable"
-              ]
+              ],
+              "caution": "Fortinet: “Real-time debugging is a CPU intensive task. Use it with caution.” On a busy unit check get system performance status first, and press Stop debug as soon as you have the output."
             },
             {
               "kind": "recipe",
@@ -1110,21 +1120,24 @@
                 "diagnose debug application fssod -1",
                 "diagnose debug application smbcd -1",
                 "diagnose debug enable"
-              ]
+              ],
+              "caution": "Fortinet: “Real-time debugging is a CPU intensive task. Use it with caution.” On a busy unit check get system performance status first, and press Stop debug as soon as you have the output."
             },
             {
               "kind": "recipe",
               "name": "SAML debug",
               "desc": "Real-time SAML debugging",
               "fields": [],
-              "lines": ["diagnose debug application samld -1", "diagnose debug enable"]
+              "lines": ["diagnose debug application samld -1", "diagnose debug enable"],
+              "caution": "Fortinet: “Real-time debugging is a CPU intensive task. Use it with caution.” On a busy unit check get system performance status first, and press Stop debug as soon as you have the output."
             },
             {
               "kind": "recipe",
               "name": "FortiClient NAC debug",
               "desc": "FortiGate to EMS connectivity (fcnacd)",
               "fields": [],
-              "lines": ["diagnose debug application fcnacd -1", "diagnose debug enable"]
+              "lines": ["diagnose debug application fcnacd -1", "diagnose debug enable"],
+              "caution": "Fortinet: “Real-time debugging is a CPU intensive task. Use it with caution.” On a busy unit check get system performance status first, and press Stop debug as soon as you have the output."
             }
           ]
         },
@@ -1141,7 +1154,8 @@
                 "diagnose debug application hasync -1",
                 "diagnose debug application harelay -1",
                 "diagnose debug enable"
-              ]
+              ],
+              "caution": "Fortinet: “Real-time debugging is a CPU intensive task. Use it with caution.” On a busy unit check get system performance status first, and press Stop debug as soon as you have the output."
             },
             {
               "kind": "recipe",
@@ -1158,7 +1172,8 @@
                 "diagnose wireless-controller wlac sta_filter clear",
                 "diagnose wireless-controller wlac sta_filter {{mac}} 255",
                 "diagnose debug enable"
-              ]
+              ],
+              "caution": "Fortinet: “Real-time debugging is a CPU intensive task. Use it with caution.” On a busy unit check get system performance status first, and press Stop debug as soon as you have the output."
             }
           ]
         }

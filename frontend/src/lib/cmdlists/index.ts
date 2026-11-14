@@ -83,6 +83,8 @@ function item(v: unknown, at: string): ListItem {
       if (v.action) c.action = true
     }
     if (v.keys !== undefined) c.keys = str(v, 'keys', at)
+    const caution = str(v, 'caution', at, true).trim()
+    if (caution) c.caution = caution
     return c
   }
   if (v.kind === 'recipe') {
@@ -104,6 +106,8 @@ function item(v: unknown, at: string): ListItem {
       fields,
       lines: strings(v, 'lines', at),
     }
+    const caution = str(v, 'caution', at, true).trim()
+    if (caution) r.caution = caution
     const keys = new Set(fields.map((f) => f.key))
     if (keys.size !== fields.length) throw new Invalid(`${at}: two fields have the same key`)
     for (const line of r.lines) {
