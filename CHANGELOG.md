@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.5.1] - 2026-11-14
+
+### Changed
+- **More room for the command lists.** ★ Custom and Recent now sit one
+  above the other at the right of the bar, so the lists get the rest of
+  the width: they stay on one line when they fit and only wrap to a second
+  line when they don't.
+
 ## [1.3.0] - 2026-11-13
 
 ### Added
