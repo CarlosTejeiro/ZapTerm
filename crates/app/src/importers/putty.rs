@@ -154,7 +154,7 @@ pub fn parse_port_forwardings(
             Some('D') => "dynamic",
             _ => {
                 warnings.push(format!(
-                    "«{session}»: forward «{item}» no reconocido — omitido"
+                    "“{session}”: forward “{item}” not recognised — skipped"
                 ));
                 continue;
             }
@@ -175,7 +175,7 @@ pub fn parse_port_forwardings(
         };
         let Ok(bind_port) = bind_port_s.trim().parse::<u16>() else {
             warnings.push(format!(
-                "«{session}»: forward «{item}»: puerto inválido — omitido"
+                "“{session}”: forward “{item}”: invalid port — skipped"
             ));
             continue;
         };
@@ -193,19 +193,19 @@ pub fn parse_port_forwardings(
         // local/remote need host:port
         let Some(dest) = dest else {
             warnings.push(format!(
-                "«{session}»: forward «{item}» sin destino — omitido"
+                "“{session}”: forward “{item}” has no destination — skipped"
             ));
             continue;
         };
         let Some((th, tp_s)) = dest.rsplit_once(':') else {
             warnings.push(format!(
-                "«{session}»: forward «{item}»: destino inválido — omitido"
+                "“{session}”: forward “{item}”: invalid destination — skipped"
             ));
             continue;
         };
         let Ok(tp) = tp_s.trim().parse::<u16>() else {
             warnings.push(format!(
-                "«{session}»: forward «{item}»: puerto destino inválido — omitido"
+                "“{session}”: forward “{item}”: invalid destination port — skipped"
             ));
             continue;
         };
@@ -236,14 +236,14 @@ pub fn from_sessions(sessions: &[PuttySession]) -> Parsed {
         match proto {
             "ssh" | "telnet" => {
                 let Some(host) = s.host.clone().filter(|h| !h.is_empty()) else {
-                    warnings.push(format!("«{}»: sin HostName — omitida", s.name));
+                    warnings.push(format!("“{}”: no HostName — skipped", s.name));
                     continue;
                 };
                 let auth = match (proto, &s.public_key_file) {
                     ("ssh", Some(k)) if !k.is_empty() => {
                         if k.to_ascii_lowercase().ends_with(".ppk") {
                             warnings.push(format!(
-                                "«{}»: clave PuTTY {k} (.ppk) — conviértela a OpenSSH para usarla",
+                                "“{}”: PuTTY key {k} (.ppk) — convert it to OpenSSH format to use it",
                                 s.name
                             ));
                         }
@@ -283,7 +283,10 @@ pub fn from_sessions(sessions: &[PuttySession]) -> Parsed {
             }
             "serial" => {
                 let Some(device) = s.serial_line.clone().filter(|d| !d.is_empty()) else {
-                    warnings.push(format!("«{}»: serial sin SerialLine — omitida", s.name));
+                    warnings.push(format!(
+                        "“{}”: serial session without SerialLine — skipped",
+                        s.name
+                    ));
                     continue;
                 };
                 idx += 1;
@@ -306,7 +309,7 @@ pub fn from_sessions(sessions: &[PuttySession]) -> Parsed {
                 rows.push(row);
             }
             other => warnings.push(format!(
-                "«{}»: protocolo «{other}» no soportado — omitida",
+                "“{}”: protocol “{other}” isn't supported — skipped",
                 s.name
             )),
         }

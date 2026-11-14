@@ -8,6 +8,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.5.2] - 2026-11-14
+
+### Fixed
+- **Importing from MobaXterm**, checked against the published description
+  of its session format:
+  - files with accents or € in names (MobaXterm writes Windows-1252, not
+    UTF-8) no longer fail the whole import;
+  - sessions with "Display reconnection message" unchecked are no longer
+    lost;
+  - `<default>` is no longer imported as the user name;
+  - the session type decides the protocol (an RDP session with the SSH icon
+    is skipped, not imported as SSH);
+  - SSH gateways become jump hosts (several hops chain), and a private key
+    is used when the file exists on this computer.
+- **Importing from SecureCRT**, checked against VanDyke's own scripts:
+  - serial sessions are imported (the port is `Com Port`, not
+    `Serial Port`);
+  - the port is the protocol's own (`[SSH2] Port`, `[SSH1] Port` or
+    `Port`), not whichever key ends in "Port";
+  - `Firewall Name = Session:…` becomes the jump host;
+  - files with a BOM and multi-line values are read correctly;
+  - sessions without a usable key use password (prompted on connect)
+    instead of the agent.
+- PuTTY `.reg` exports in UTF-16 (as Windows can save them) are read.
+- Import warnings are in English, like the rest of the app.
+
 ## [1.5.1] - 2026-11-14
 
 ### Changed

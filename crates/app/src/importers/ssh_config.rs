@@ -91,7 +91,7 @@ pub fn parse(path: &Path, home: &Path) -> std::io::Result<ParsedSshConfig> {
                     "port" => match value.parse::<u16>() {
                         Ok(p) => h.port = Some(p),
                         Err(_) => warnings.push(format!(
-                            "host «{}»: Port «{value}» inválido, usando 22",
+                            "host “{}”: invalid Port “{value}”, using 22",
                             h.alias
                         )),
                     },
@@ -110,7 +110,7 @@ pub fn parse(path: &Path, home: &Path) -> std::io::Result<ParsedSshConfig> {
     }
     if skipped_patterns > 0 {
         warnings.push(format!(
-            "{skipped_patterns} bloque(s) Host con comodines omitidos (son defaults, no hosts concretos)"
+            "{skipped_patterns} Host block(s) with wildcards skipped (they hold defaults, not hosts)"
         ));
     }
 
@@ -154,7 +154,7 @@ pub fn parse(path: &Path, home: &Path) -> std::io::Result<ParsedSshConfig> {
         let hops: Vec<&str> = jump.split(',').collect();
         if hops.len() > 1 {
             warnings.push(format!(
-                "host «{}»: ProxyJump con {} saltos — solo se importa el primero",
+                "host “{}”: ProxyJump with {} hops — only the first is imported",
                 h.alias,
                 hops.len()
             ));
@@ -165,7 +165,7 @@ pub fn parse(path: &Path, home: &Path) -> std::io::Result<ParsedSshConfig> {
         match hosts.iter().position(|o| o.alias == hop) {
             Some(idx) => sessions[i].via_session_id = Some((idx + 1) as i64),
             None => warnings.push(format!(
-                "host «{}»: ProxyJump «{hop}» no es un alias del fichero — queda sin bastión",
+                "host “{}”: ProxyJump “{hop}” is not a host in this file — no jump host set",
                 h.alias
             )),
         }
@@ -334,7 +334,7 @@ Host web !web-prod
         assert_eq!(spine.via_session_id, Some(jump.id));
 
         // `Host *` skipped silently into the patterns counter warning.
-        assert!(parsed.warnings.iter().any(|w| w.contains("comodines")));
+        assert!(parsed.warnings.iter().any(|w| w.contains("wildcards")));
         let _ = std::fs::remove_dir_all(dir);
     }
 
