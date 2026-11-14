@@ -8,6 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.4.0] - 2026-11-14
+
+### Added
+- **Richer highlight rules out of the box.** Eleven new built-in rules:
+  usage percentages in four colours (green below 70 %, yellow 70–89 %, red
+  90–97 %, bold red 98–100 %), sizes (`15Gi`, `4.0K`, `1.2 MB`, `10Gbps`,
+  `1000Mb/s`), dates, times, URLs, Unix paths and status words (bad:
+  errors, failed, denied, timeout, unreachable…; warning: deprecated,
+  disabled, retry…; good: ok, established, connected, running, full…).
+  `df -h`, `ping`, `show interfaces` and logs now come out coloured. They
+  are adapted from two open-source colourisers, grc (GPL-2.0-or-later) and
+  ChromaTerm (MIT). Existing installs get them after their own rules,
+  never twice, and like every rule they can be edited, disabled or deleted.
+
+### Fixed
+- **Local tabs are highlighted too.** Highlight rules only applied to SSH,
+  Telnet and serial sessions; the local shell (and saved local/WSL
+  sessions) showed plain output.
+- The IPv6 rule coloured times such as `12:05:11`. It now needs `::` or all
+  eight groups (only where you hadn't edited the rule).
+
 ## [1.3.0] - 2026-11-13
 
 ### Added

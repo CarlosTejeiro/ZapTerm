@@ -167,7 +167,7 @@ pub struct SavedSession {
 
 // rusqlite::Connection is Send; Mutex<Connection> is therefore Send + Sync.
 /// Highest schema version this build knows (the last migration file).
-pub const LATEST_SCHEMA: i64 = 25;
+pub const LATEST_SCHEMA: i64 = 26;
 
 pub struct Database {
     conn: Mutex<Connection>,
@@ -401,6 +401,12 @@ impl Database {
             version,
             25,
             include_str!("migrations/025_forward_name.sql"),
+        )?;
+        apply(
+            &conn,
+            version,
+            26,
+            include_str!("migrations/026_richer_highlight_rules.sql"),
         )?;
         Ok(())
     }
@@ -2374,6 +2380,80 @@ mod migration_tests {
         drop(Database::open(&path).unwrap());
         drop(Database::open(&path).unwrap());
         let _ = std::fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    /// 026 adds the richer highlight rules after the user's own, never twice,
+    /// and replaces the old IPv6 rule only where the user left it as shipped.
+    #[test]
+    fn migration_026_adds_highlight_rules_once() {
+        let c = rusqlite::Connection::open_in_memory().unwrap();
+        c.execute_batch("CREATE TABLE schema_version(version INTEGER PRIMARY KEY);")
+            .unwrap();
+        c.execute_batch(include_str!("migrations/002_highlight_rules.sql"))
+            .unwrap();
+        // The user already has the Time rule (e.g. synced from another device)
+        // and a rule of their own at the end.
+        let time = r"\b(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:[.,]\d{1,6})?)?\b";
+        c.execute(
+            "INSERT INTO highlight_rules(name, pattern, sort_order) VALUES ('my time', ?1, 50), ('mine', 'foo', 51)",
+            [time],
+        )
+        .unwrap();
+        let count = |c: &rusqlite::Connection| -> i64 {
+            c.query_row("SELECT COUNT(*) FROM highlight_rules", [], |r| r.get(0))
+                .unwrap()
+        };
+        assert_eq!(count(&c), 12);
+
+        c.execute_batch(include_str!("migrations/026_richer_highlight_rules.sql"))
+            .unwrap();
+        assert_eq!(count(&c), 23, "11 new rules: Time was already there");
+        let ipv6: String = c
+            .query_row(
+                "SELECT pattern FROM highlight_rules WHERE name='IPv6 address'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert!(ipv6.contains("{7}"), "shipped IPv6 rule replaced: {ipv6}");
+        let first_new: i64 = c
+            .query_row(
+                "SELECT MIN(sort_order) FROM highlight_rules WHERE name LIKE 'Usage%'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert!(
+            first_new > 51,
+            "new rules come after the user's: {first_new}"
+        );
+
+        // Again (e.g. a restored backup): nothing more.
+        c.execute_batch(include_str!("migrations/026_richer_highlight_rules.sql"))
+            .unwrap();
+        assert_eq!(count(&c), 23);
+
+        // An IPv6 rule the user edited is left alone.
+        let c2 = rusqlite::Connection::open_in_memory().unwrap();
+        c2.execute_batch("CREATE TABLE schema_version(version INTEGER PRIMARY KEY);")
+            .unwrap();
+        c2.execute_batch(include_str!("migrations/002_highlight_rules.sql"))
+            .unwrap();
+        c2.execute(
+            "UPDATE highlight_rules SET pattern='my-ipv6' WHERE name='IPv6 address'",
+            [],
+        )
+        .unwrap();
+        c2.execute_batch(include_str!("migrations/026_richer_highlight_rules.sql"))
+            .unwrap();
+        let kept: String = c2
+            .query_row(
+                "SELECT pattern FROM highlight_rules WHERE name='IPv6 address'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(kept, "my-ipv6");
     }
 
     /// 0.13.0 allowed duplicate vault names; 021 renames the extras instead

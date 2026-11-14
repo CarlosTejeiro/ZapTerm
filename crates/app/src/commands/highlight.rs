@@ -392,4 +392,183 @@ mod tests {
         )
         .is_err());
     }
+    /// The built-in rules a fresh database gets, applied to real command
+    /// output: returns (matched text, rule name) in order for one line.
+    fn colored(rules: &[HighlightRule], line: &str) -> Vec<(String, String)> {
+        // Give every rule a unique colour so the output tells which matched.
+        let tagged: Vec<core_highlight::HighlightRule> = rules
+            .iter()
+            .enumerate()
+            .map(|(i, r)| core_highlight::HighlightRule {
+                id: r.id,
+                name: r.name.clone(),
+                pattern: r.pattern.clone(),
+                is_regex: r.is_regex,
+                fg_color: Some(format!("#0000{:02x}", i)),
+                bg_color: None,
+                bold: false,
+                underline: false,
+                enabled: r.enabled,
+                sort_order: r.sort_order,
+            })
+            .collect();
+        let out =
+            String::from_utf8(core_highlight::Highlighter::new(tagged).apply(line.as_bytes()))
+                .unwrap();
+        let mut found = vec![];
+        let mut rest = out.as_str();
+        while let Some(i) = rest.find("\x1b[38;2;0;0;") {
+            let after = &rest[i + "\x1b[38;2;0;0;".len()..];
+            let m = after.find('m').unwrap();
+            let idx: usize = after[..m].parse().unwrap();
+            let body = &after[m + 1..];
+            let end = body.find("\x1b[0m").unwrap();
+            found.push((body[..end].to_string(), rules[idx].name.clone()));
+            rest = &body[end..];
+        }
+        found
+    }
+
+    fn default_rules() -> Vec<HighlightRule> {
+        static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+        let n = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let path = std::env::temp_dir().join(format!(
+            "zapterm-highlight-defaults-{}-{n}.db",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_file(&path);
+        let db = core_persistence::Database::open(&path).expect("open temp db");
+        let rules = db.list_highlight_rules().unwrap();
+        let _ = std::fs::remove_file(&path);
+        rules
+    }
+
+    fn texts(found: &[(String, String)], rule: &str) -> Vec<String> {
+        found
+            .iter()
+            .filter(|(_, r)| r == rule)
+            .map(|(t, _)| t.trim().to_string())
+            .collect()
+    }
+
+    #[test]
+    fn default_rules_all_compile_and_are_unique() {
+        let rules = default_rules();
+        assert_eq!(rules.len(), 22);
+        for r in &rules {
+            regex::Regex::new(&r.pattern).unwrap_or_else(|e| panic!("{}: {e}", r.name));
+        }
+        let mut patterns: Vec<&str> = rules.iter().map(|r| r.pattern.as_str()).collect();
+        patterns.sort();
+        patterns.dedup();
+        assert_eq!(patterns.len(), rules.len());
+    }
+
+    #[test]
+    fn default_rules_on_macos_df() {
+        let rules = default_rules();
+        let f = colored(
+            &rules,
+            "/dev/disk3s5     460Gi   318Gi   108Gi    75%    2.1M  1.1G    0%   /System/Volumes/Data\r\n",
+        );
+        assert_eq!(
+            texts(&f, "Unix path"),
+            ["/dev/disk3s5", "/System/Volumes/Data"]
+        );
+        assert_eq!(
+            texts(&f, "Size"),
+            ["460Gi", "318Gi", "108Gi", "2.1M", "1.1G"]
+        );
+        assert_eq!(texts(&f, "Usage 70–89%"), ["75%"]);
+        assert_eq!(texts(&f, "Usage <70%"), ["0%"]);
+
+        let f = colored(
+            &rules,
+            "devfs            206Ki   206Ki     0Bi   100%     716     0  100%   /dev\n",
+        );
+        assert_eq!(texts(&f, "Usage ≥98%"), ["100%", "100%"]);
+        assert_eq!(texts(&f, "Size"), ["206Ki", "206Ki", "0Bi"]);
+        assert_eq!(texts(&f, "Unix path"), ["/dev"]);
+
+        let f = colored(&rules, "/dev/disk1s2     500Mi   6.0Mi   481Mi     2%       1  4.9M    0%   /System/Volumes/xarts\n");
+        assert_eq!(texts(&f, "Usage <70%"), ["2%", "0%"]);
+        let f = colored(&rules, "/dev/disk3s2     460Gi    15Gi   108Gi    13%    1.7k  1.1G    0%   /System/Volumes/Preboot\n");
+        assert_eq!(
+            texts(&f, "Size"),
+            ["460Gi", "15Gi", "108Gi", "1.7k", "1.1G"]
+        );
+        let f = colored(&rules, "/dev/sda1   50G   46G  2.5G  95% /\n");
+        assert_eq!(texts(&f, "Usage 90–97%"), ["95%"]);
+    }
+
+    #[test]
+    fn default_rules_on_network_output() {
+        let rules = default_rules();
+        // Times are no longer taken for IPv6 addresses.
+        let f = colored(&rules, "System time: Fri Nov 13 12:05:11 2026\r\n");
+        assert_eq!(texts(&f, "Time"), ["12:05:11"]);
+        assert_eq!(texts(&f, "Date"), ["Nov 13"]);
+        assert!(texts(&f, "IPv6 address").is_empty());
+
+        let f = colored(
+            &rules,
+            "inet6 fe80::1c2b:3aff:fe4d:5e6f%en0 prefixlen 64 2001:db8::1/64\n",
+        );
+        assert_eq!(
+            texts(&f, "IPv6 address"),
+            ["fe80::1c2b:3aff:fe4d:5e6f", "2001:db8::1/64"]
+        );
+
+        let f = colored(
+            &rules,
+            "  ether 00:1a:2b:3c:4d:5e  Internet  10.0.0.1  0050.56c0.0001\n",
+        );
+        assert_eq!(texts(&f, "MAC (colon)"), ["00:1a:2b:3c:4d:5e"]);
+        assert_eq!(texts(&f, "IPv4 address"), ["10.0.0.1"]);
+        assert_eq!(texts(&f, "MAC (Cisco dotted)"), ["0050.56c0.0001"]);
+
+        let f = colored(
+            &rules,
+            "GigabitEthernet0/1 is up, line protocol is down, Full-duplex, 1000Mb/s\n",
+        );
+        assert_eq!(texts(&f, "Interface up"), ["up"]);
+        assert_eq!(texts(&f, "Interface down"), ["down"]);
+        assert_eq!(texts(&f, "Status: good"), ["Full"]);
+        assert_eq!(texts(&f, "Size"), ["1000Mb/s"]);
+        assert!(
+            texts(&f, "Unix path").is_empty(),
+            "interface names are not paths"
+        );
+
+        let f = colored(
+            &rules,
+            "4 packets transmitted, 4 packets received, 0.0% packet loss\n",
+        );
+        assert_eq!(texts(&f, "Usage <70%"), ["0.0%"]);
+
+        let f = colored(
+            &rules,
+            "Request timeout for icmp_seq 3; Destination Host Unreachable\n",
+        );
+        assert_eq!(texts(&f, "Status: bad"), ["timeout", "Unreachable"]);
+
+        let f = colored(
+            &rules,
+            "BGP neighbor 192.0.2.1 Established, 10 errors, 3 drops\n",
+        );
+        assert_eq!(texts(&f, "Status: good"), ["Established"]);
+        assert_eq!(texts(&f, "Status: bad"), ["errors", "drops"]);
+
+        let f = colored(
+            &rules,
+            "curl -I https://example.com/path?x=1 saved 1.2 MB in 2026-11-14\n",
+        );
+        assert_eq!(texts(&f, "URL"), ["https://example.com/path?x=1"]);
+        assert_eq!(texts(&f, "Size"), ["1.2 MB"]);
+        assert_eq!(texts(&f, "Date"), ["2026-11-14"]);
+
+        // No colour where there is nothing to say.
+        assert!(colored(&rules, "fw-hq-01 # get system status\n").is_empty());
+        assert!(colored(&rules, "Filesystem  Size  Used Avail Use% Mounted on\n").is_empty());
+    }
 }
