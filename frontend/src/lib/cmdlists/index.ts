@@ -1,4 +1,5 @@
 import type {
+  RecipeField,
   CommandItem,
   CommandList,
   ListIcon,
@@ -97,6 +98,20 @@ function item(v: unknown, at: string): ListItem {
       } as RecipeItem['fields'][number]
       if (f.default !== undefined) field.default = str(f, 'default', fat)
       if (f.placeholder !== undefined) field.placeholder = str(f, 'placeholder', fat)
+      for (const bound of ['min', 'max'] as const) {
+        const b = f[bound]
+        if (b === undefined) continue
+        if (typeof b !== 'number' || !Number.isInteger(b)) {
+          throw new Invalid(`${fat}.${bound} must be a whole number`)
+        }
+        field[bound] = b
+      }
+      if (field.min !== undefined && field.max !== undefined && field.min > field.max) {
+        throw new Invalid(`${fat}: min is greater than max`)
+      }
+      if (field.default !== undefined && fieldProblem(field, field.default)) {
+        throw new Invalid(`${fat}.default is outside ${rangeText(field)}`)
+      }
       return field
     })
     const r: RecipeItem = {
@@ -215,6 +230,26 @@ export function builtinFileText(platform: string): string | null {
 }
 
 const PLACEHOLDER = /<([^<>\s]+)>/g
+
+/** "1–1000", "≥ 1" or "≤ 30" for a bounded field. */
+export function rangeText(f: RecipeField): string {
+  if (f.min !== undefined && f.max !== undefined) return `${f.min}–${f.max}`
+  if (f.min !== undefined) return `≥ ${f.min}`
+  return `≤ ${f.max}`
+}
+
+/** Why `value` can't go in a bounded field, or null when it can (or the
+ *  field has no bounds). */
+export function fieldProblem(f: RecipeField, value: string): string | null {
+  if (f.min === undefined && f.max === undefined) return null
+  const v = value.trim()
+  if (!/^\d+$/.test(v)) return `a whole number, ${rangeText(f)}`
+  const n = Number(v)
+  if ((f.min !== undefined && n < f.min) || (f.max !== undefined && n > f.max)) {
+    return `between ${rangeText(f)}`
+  }
+  return null
+}
 
 /** Split a command into literal text and `<placeholder>` parts, in order. */
 export function commandParts(cmd: string): { text: string; placeholder: boolean }[] {

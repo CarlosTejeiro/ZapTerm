@@ -37,6 +37,10 @@ export interface RecipeField {
   label: string
   default?: string
   placeholder?: string
+  /** A whole number in this range (a packet count, a number of seconds…):
+   *  the form won't send anything else. */
+  min?: number
+  max?: number
 }
 
 export interface RecipeItem {

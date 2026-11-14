@@ -28,6 +28,8 @@
     fillCommand,
     fillRecipe,
     itemMatches,
+    fieldProblem,
+    rangeText,
     type CommandItem,
     type CommandList,
     type ListItem,
@@ -363,7 +365,12 @@
       ? fillRecipe(form.item, form.values)
       : [fillCommand(form.item.cmd, form.values)]
   })
-  const formReady = $derived(!!form && Object.values(form.values).every((v) => v.trim() !== ''))
+  const formReady = $derived(
+    !!form &&
+      Object.values(form.values).every((v) => v.trim() !== '') &&
+      (form.kind !== 'recipe' ||
+        form.item.fields.every((f) => !fieldProblem(f, form!.values[f.key] ?? ''))),
+  )
 
   async function submitForm(typeOnly = false) {
     if (!form || !formReady) return
@@ -703,8 +710,12 @@
             <div class="fields">
               {#if form.kind === 'recipe'}
                 {#each form.item.fields as f, i (f.key)}
+                  {@const problem = fieldProblem(f, form.values[f.key] ?? '')}
                   <label class="field">
-                    <span>{f.label}</span>
+                    <span
+                      >{f.label}{#if f.min !== undefined || f.max !== undefined}
+                        <span class="range">{' '}({rangeText(f)})</span>{/if}</span
+                    >
                     <!-- svelte-ignore a11y_autofocus -->
                     <input
                       type="text"
@@ -712,7 +723,9 @@
                       placeholder={f.placeholder ?? ''}
                       autofocus={i === 0}
                       spellcheck="false"
+                      aria-invalid={!!problem}
                     />
+                    {#if problem}<span class="form-error">Must be {problem}</span>{/if}
                   </label>
                 {/each}
               {:else}
@@ -1366,6 +1379,10 @@
   .tag-type {
     color: #9a5a1a;
     background: color-mix(in srgb, #e6a35a 18%, transparent);
+  }
+  .field .range {
+    color: var(--dim);
+    font-weight: 400;
   }
   .tag-caution {
     color: #a16207;

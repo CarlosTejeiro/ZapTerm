@@ -25,8 +25,13 @@ ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
   all logs, halting or shutting down the system, clearing every BGP session
   or route, `rm -rf`, and the unfiltered IPS debug. Suggested FortiGate
   sniffers now stop after 100 packets. Reboots are still suggested.
+- **Debugs stop by themselves too.** Every FortiGate real-time debug recipe
+  sets how long it runs (5 minutes by default, 30 at most), and number
+  fields such as packet counts or seconds only accept a whole number in
+  range (1–1000 packets, 1–300 seconds), so a 0 that would mean "no limit"
+  can't be sent.
 - Your own command lists can mark commands with `"caution": "why"` to get
-  the same warning.
+  the same warning, and give number fields a `"min"` and `"max"`.
 
 ## [1.5.2] - 2026-11-14
 

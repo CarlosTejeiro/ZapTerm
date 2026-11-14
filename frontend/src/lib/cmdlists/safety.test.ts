@@ -2,7 +2,7 @@
 // built-in lists, and the ones that load it (real-time debugs, captures)
 // must carry a warning that is confirmed before sending.
 import { describe, expect, it } from 'vitest'
-import { BUILTIN, parseVendorLists } from './index'
+import { BUILTIN, fieldProblem, parseVendorLists } from './index'
 import type { ListItem } from './types'
 
 const all = (): [string, string, ListItem][] =>
@@ -55,6 +55,25 @@ describe('command list safety', () => {
     }
   })
 
+  it('bounds every FortiGate real-time debug in time and every count', () => {
+    for (const [p, , i] of all()) {
+      if (i.kind !== 'recipe') continue
+      if (p === 'fortigate' && i.lines.includes('diagnose debug enable')) {
+        const at = i.lines.indexOf('diagnose debug duration {{minutes}}')
+        expect(at, i.name).toBeGreaterThanOrEqual(0)
+        expect(at, i.name).toBeLessThan(i.lines.indexOf('diagnose debug enable'))
+        const m = i.fields.find((f) => f.key === 'minutes')!
+        expect(m.max! <= 30 && m.min! >= 1, i.name).toBe(true)
+      }
+      for (const f of i.fields) {
+        if (['count', 'seconds', 'minutes'].includes(f.key)) {
+          expect(f.min, `${p}: ${i.name}.${f.key}`).toBeGreaterThanOrEqual(1)
+          expect(f.max, `${p}: ${i.name}.${f.key}`).toBeDefined()
+        }
+      }
+    }
+  })
+
   it('reads the caution of a user file', () => {
     const r = parseVendorLists({
       format: 'zapterm-command-lists',
@@ -74,5 +93,37 @@ describe('command list safety', () => {
       ],
     })
     expect(r.ok && r.value.lists[0]!.sections[0]!.items[0]!.caution).toBe('Heavy')
+  })
+  it('checks bounded fields', () => {
+    const f = { key: 'count', label: 'Packets', min: 1, max: 1000 }
+    expect(fieldProblem(f, '100')).toBeNull()
+    expect(fieldProblem(f, '0')).toMatch(/between 1–1000/)
+    expect(fieldProblem(f, '5000')).toMatch(/between/)
+    expect(fieldProblem(f, 'all')).toMatch(/whole number/)
+    expect(fieldProblem({ key: 'ip', label: 'IP' }, 'anything')).toBeNull()
+    const bad = (field: object) =>
+      parseVendorLists({
+        format: 'zapterm-command-lists',
+        version: 1,
+        platform: 'x',
+        lists: [
+          {
+            id: 'a',
+            name: 'A',
+            sections: [
+              {
+                title: '',
+                items: [
+                  { kind: 'recipe', name: 'r', desc: '', fields: [field], lines: ['x {{n}}'] },
+                ],
+              },
+            ],
+          },
+        ],
+      })
+    expect(bad({ key: 'n', label: 'N', min: 5, max: 1 })).toMatchObject({ ok: false })
+    expect(bad({ key: 'n', label: 'N', max: 10, default: '50' })).toMatchObject({ ok: false })
+    expect(bad({ key: 'n', label: 'N', min: 1.5 })).toMatchObject({ ok: false })
+    expect(bad({ key: 'n', label: 'N', min: 1, max: 10, default: '5' })).toMatchObject({ ok: true })
   })
 })
