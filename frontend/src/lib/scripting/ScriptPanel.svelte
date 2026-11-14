@@ -74,6 +74,37 @@
     scriptRun.readOnly = on
     void setSetting('notebook.read_only', on ? '1' : '0').catch(() => {})
   }
+
+  /// Notebook mode, Read-only off: ask before each other command.
+  function setAskChanges(on: boolean) {
+    scriptRun.askChanges = on
+    void setSetting('notebook.ask_changes', on ? '1' : '0').catch(() => {})
+  }
+
+  /** What an MCP client (an AI assistant) needs in its configuration. */
+  const mcpSnippet = $derived.by(() => {
+    const sep = scriptRun.moduleDir.includes('\\') ? '\\' : '/'
+    const python = /Windows/i.test(navigator.userAgent) ? 'python' : 'python3'
+    return JSON.stringify(
+      {
+        mcpServers: {
+          zapterm: { command: python, args: [`${scriptRun.moduleDir}${sep}zapterm_mcp.py`] },
+        },
+      },
+      null,
+      2,
+    )
+  })
+  let mcpCopied = $state(false)
+  async function copyMcp() {
+    try {
+      await navigator.clipboard.writeText(mcpSnippet)
+      mcpCopied = true
+      setTimeout(() => (mcpCopied = false), 1500)
+    } catch {
+      /* clipboard unavailable: the text is on screen to copy by hand */
+    }
+  }
 </script>
 
 <div class="panel" class:collapsed role="region" aria-label="Script run">
@@ -140,6 +171,19 @@
             anything else is listed as "would run".
           </span>
         </label>
+        {#if !scriptRun.readOnly}
+          <label class="ro-toggle">
+            <input
+              type="checkbox"
+              checked={scriptRun.askChanges}
+              onchange={(e) => setAskChanges(e.currentTarget.checked)}
+            />
+            <span>
+              <strong>Ask me first</strong> — before any other command is sent, ZapTerm shows it and waits
+              for your Yes.
+            </span>
+          </label>
+        {/if}
         <p>
           In your notebook (VS Code, JupyterLab) or a <code>python</code> prompt, run:
         </p>
@@ -153,6 +197,18 @@
           {#if scriptRun.idleMinutes > 0}Turns itself off after {scriptRun.idleMinutes} min without notebook
             calls.{/if}
         </p>
+        <details class="mcp">
+          <summary>Connect an AI assistant (MCP)</summary>
+          <p>
+            Add this server to your MCP client (Claude Desktop, Claude Code…). The assistant can
+            list tabs and saved sessions, open one and run commands — under the same Read-only and
+            Ask rules above. What your devices print is sent to that assistant.
+          </p>
+          <div class="snippet">
+            <pre>{mcpSnippet}</pre>
+            <button class="btn" onclick={copyMcp}>{mcpCopied ? 'Copied' : 'Copy'}</button>
+          </div>
+        </details>
       </div>
     {/if}
     {#if scriptRun.report.length > 0}
@@ -319,6 +375,17 @@
   }
   .hint {
     font-size: 11.5px;
+  }
+  .mcp {
+    margin-top: 6px;
+    font-size: 12px;
+  }
+  .mcp summary {
+    cursor: pointer;
+    color: var(--zx-text-muted);
+  }
+  .mcp p {
+    margin: 6px 0;
   }
   .report {
     border-collapse: collapse;
