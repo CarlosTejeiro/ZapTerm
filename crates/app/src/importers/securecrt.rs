@@ -6,12 +6,16 @@
 //! becomes the ZapTerm folder hierarchy.
 //!
 //! VanDyke INI lines are typed: `S:"Key"=str`, `D:"Key"=hexdword`,
-//! `B:"Key"=00000001`. Keys we read:
+//! `B:"Key"=…` (binary, continued on indented lines). The key names below
+//! are the ones VanDyke's own scripting examples read and write
+//! (vandyke.com/support/scripting/scripting-examples):
 //! - `S:"Protocol Name"` → SSH2/SSH1 → ssh, Telnet → telnet, Serial → serial
 //! - `S:"Hostname"`, `S:"Username"`
-//! - `D:"… Port"` (any key ending in "Port") → port
+//! - the port: `D:"[SSH2] Port"` for SSH2, `D:"[SSH1] Port"` for SSH1,
+//!   `D:"Port"` for Telnet
+//! - `S:"Com Port"` + `D:"Baud Rate"` → serial device/speed
 //! - `S:"Identity Filename V2"` / `S:"Identity Filename"` → SSH key path
-//! - `S:"Serial Port"` + `D:"Baud Rate"` → serial device/baud
+//! - `S:"Firewall Name"` = `Session:<name>` → jump host (another session)
 //!
 //! `__FolderData__.ini` and similar non-session files are ignored.
 
@@ -28,12 +32,17 @@ pub fn parse_dir(root: &Path) -> std::io::Result<Parsed> {
     let mut folders: Vec<Folder> = Vec::new();
     let mut folder_ids: HashMap<String, i64> = HashMap::new();
     let mut sessions = Vec::new();
+    // Session id → its path under the root ("Folder/Name") and the session
+    // it names as its jump host, resolved once every file is read.
+    let mut paths: HashMap<i64, String> = HashMap::new();
+    let mut jumps: Vec<(i64, String)> = Vec::new();
     let mut next_folder_id: i64 = 0;
     let mut next_session_id: i64 = 0;
 
     // Depth-first walk so parent folders are created before children.
-    let mut stack: Vec<(std::path::PathBuf, Option<i64>)> = vec![(root.to_path_buf(), None)];
-    while let Some((dir, parent_id)) = stack.pop() {
+    let mut stack: Vec<(std::path::PathBuf, Option<i64>, String)> =
+        vec![(root.to_path_buf(), None, String::new())];
+    while let Some((dir, parent_id, rel)) = stack.pop() {
         let Ok(entries) = std::fs::read_dir(&dir) else {
             continue;
         };
@@ -47,15 +56,19 @@ pub fn parse_dir(root: &Path) -> std::io::Result<Parsed> {
                 if stem.is_empty() || stem.starts_with("__") {
                     continue; // folder metadata, not a session
                 }
-                match std::fs::read_to_string(&path) {
+                match common::read_text(&path) {
                     Ok(content) => {
-                        if let Some(row) = decode_session(
+                        if let Some((row, jump)) = decode_session(
                             stem,
                             &content,
                             parent_id,
                             &mut next_session_id,
                             &mut warnings,
                         ) {
+                            paths.insert(row.id, format!("{rel}{stem}"));
+                            if let Some(j) = jump {
+                                jumps.push((row.id, j));
+                            }
                             sessions.push(row);
                         }
                     }
@@ -82,7 +95,38 @@ pub fn parse_dir(root: &Path) -> std::io::Result<Parsed> {
                 ));
                 next_folder_id
             });
-            stack.push((sub, Some(id)));
+            let sub_rel = format!("{rel}{name}/");
+            stack.push((sub, Some(id), sub_rel));
+        }
+    }
+
+    // `Firewall Name` = "Session:<path>": the session to connect through.
+    for (id, target) in jumps {
+        let target = target.replace('\\', "/");
+        let found = paths
+            .iter()
+            .find(|(_, p)| **p == target)
+            .or_else(|| {
+                // A bare name: accept it when exactly one session has it.
+                let mut by_name = paths
+                    .iter()
+                    .filter(|(_, p)| p.rsplit('/').next() == Some(target.as_str()));
+                match (by_name.next(), by_name.next()) {
+                    (Some(hit), None) => Some(hit),
+                    _ => None,
+                }
+            })
+            .map(|(&jid, _)| jid);
+        let name = paths.get(&id).cloned().unwrap_or_default();
+        match found {
+            Some(jid) if jid != id => {
+                if let Some(s) = sessions.iter_mut().find(|s| s.id == id) {
+                    s.via_session_id = Some(jid);
+                }
+            }
+            _ => warnings.push(format!(
+                "“{name}”: jump host session “{target}” isn't in the folder — connects directly"
+            )),
         }
     }
 
@@ -98,11 +142,15 @@ fn decode_session(
     folder_id: Option<i64>,
     next_id: &mut i64,
     warnings: &mut Vec<String>,
-) -> Option<core_persistence::SavedSession> {
+) -> Option<(core_persistence::SavedSession, Option<String>)> {
     let mut strings: HashMap<String, String> = HashMap::new();
     let mut dwords: HashMap<String, u32> = HashMap::new();
 
     for raw in content.lines() {
+        // Indented lines continue a multi-line (binary or list) value.
+        if raw.starts_with([' ', '\t']) {
+            continue;
+        }
         let line = raw.trim();
         // <type>:"<key>"=<value>
         let Some((typ, rest)) = line.split_once(':') else {
@@ -140,30 +188,33 @@ fn decode_session(
         if strings.contains_key("Hostname") {
             "ssh"
         } else {
-            warnings.push(format!("«{name}»: sin protocolo ni host — omitida"));
+            warnings.push(format!("“{name}”: no protocol and no host — skipped"));
             return None;
         }
     } else {
         warnings.push(format!(
-            "«{name}»: protocolo «{proto_name}» no soportado — omitida"
+            "“{name}”: protocol “{proto_name}” isn't supported — skipped"
         ));
         return None;
     };
 
-    // Port: any D-key ending in "Port" (e.g. "[SSH2] Port").
+    // The port key depends on the protocol.
+    let port_key = match proto_name.as_str() {
+        "ssh2" => "[SSH2] Port",
+        "ssh1" => "[SSH1] Port",
+        _ => "Port",
+    };
     let port = dwords
-        .iter()
-        .find(|(k, _)| k.ends_with("Port"))
-        .and_then(|(_, &v)| u16::try_from(v).ok());
+        .get(port_key)
+        .and_then(|&v| u16::try_from(v).ok())
+        .filter(|&p| p > 0);
 
     if protocol == "serial" {
-        let device = strings
-            .get("Serial Port")
-            .or_else(|| strings.get("Port"))
-            .cloned()
-            .unwrap_or_default();
+        let device = strings.get("Com Port").cloned().unwrap_or_default();
         if device.is_empty() {
-            warnings.push(format!("«{name}»: serial sin puerto — omitida"));
+            warnings.push(format!(
+                "“{name}”: serial session without a COM port — skipped"
+            ));
             return None;
         }
         *next_id += 1;
@@ -183,31 +234,44 @@ fn decode_session(
             r#"{{"device":{},"baud_rate":{baud}}}"#,
             serde_json::to_string(&device).unwrap_or_else(|_| "\"\"".into())
         );
-        return Some(row);
+        return Some((row, None));
     }
 
     let host = strings.get("Hostname").cloned().filter(|h| !h.is_empty());
     let Some(host) = host else {
-        warnings.push(format!("«{name}»: sin Hostname — omitida"));
+        warnings.push(format!("“{name}”: no Hostname — skipped"));
         return None;
     };
     let username = strings.get("Username").cloned().filter(|u| !u.is_empty());
 
-    let auth = if protocol == "ssh" {
-        match strings
+    // SecureCRT exports no passwords: password auth (ZapTerm prompts on
+    // connect) unless the session names a key file that exists here. A path
+    // through a SecureCRT variable (`${VDS_USER_DATA_PATH}\Identity`) can't
+    // be resolved outside SecureCRT.
+    let mut auth = Auth::Password;
+    if protocol == "ssh" {
+        if let Some(key) = strings
             .get("Identity Filename V2")
             .or_else(|| strings.get("Identity Filename"))
             .filter(|k| !k.is_empty())
         {
-            Some(key) => Auth::Key(key.clone()),
-            None => Auth::Agent,
+            if !key.contains("${") && Path::new(key).is_file() {
+                auth = Auth::Key(key.clone());
+            } else {
+                warnings.push(format!(
+                    "“{name}”: key {key} not found on this computer — set to password; pick the key in the session to use it"
+                ));
+            }
         }
-    } else {
-        Auth::Password
-    };
+    }
+    let jump = strings
+        .get("Firewall Name")
+        .and_then(|f| f.strip_prefix("Session:"))
+        .map(|s| s.trim().to_owned())
+        .filter(|s| !s.is_empty());
 
     *next_id += 1;
-    Some(common::session(
+    let row = common::session(
         *next_id,
         folder_id,
         name,
@@ -217,7 +281,8 @@ fn decode_session(
         username,
         auth,
         *next_id - 1,
-    ))
+    );
+    Some((row, jump))
 }
 
 #[cfg(test)]
@@ -237,33 +302,62 @@ mod tests {
     fn walks_session_tree() {
         let root = std::env::temp_dir().join(format!("zapterm-scrt-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
+        let key = root.join("keys/id_ed25519");
+        write(&key, "x");
 
+        // A real SSH2 session also carries other "…Port" keys; only the
+        // protocol's own key is the port. Indented lines continue a binary
+        // value and must not be read as keys.
         write(
             &root.join("edge.ini"),
-            "S:\"Protocol Name\"=SSH2\nS:\"Hostname\"=10.0.0.1\nD:\"[SSH2] Port\"=00000016\nS:\"Username\"=admin\nS:\"Identity Filename V2\"=/home/u/.ssh/id_ed25519\n",
+            &format!(
+                "\u{feff}S:\"Protocol Name\"=SSH2\nS:\"Hostname\"=10.0.0.1\nD:\"Port\"=00000017\n\
+                 B:\"Normal Font v2\"=00000060\n f3 ff ff ff 00 00\n S:\"Hostname\"=evil\n\
+                 D:\"[SSH2] Port\"=00000016\nD:\"[SSH1] Port\"=00000063\nS:\"Username\"=admin\n\
+                 S:\"Identity Filename V2\"={}\n",
+                key.display()
+            ),
         );
         write(
             &root.join("Lab/sw1.ini"),
-            "S:\"Protocol Name\"=Telnet\nS:\"Hostname\"=192.168.1.9\nD:\"[TELNET] Port\"=00000017\n",
+            "S:\"Protocol Name\"=Telnet\nS:\"Hostname\"=192.168.1.9\nD:\"Port\"=00000017\nD:\"[SSH2] Port\"=00000016\n",
+        );
+        write(
+            &root.join("Lab/console.ini"),
+            "S:\"Protocol Name\"=Serial\nS:\"Com Port\"=COM3\nD:\"Baud Rate\"=00002580\n",
+        );
+        write(
+            &root.join("Lab/inner.ini"),
+            "S:\"Protocol Name\"=SSH2\nS:\"Hostname\"=10.9.9.9\nS:\"Firewall Name\"=Session:Jumps/bastion\n\
+             S:\"Identity Filename V2\"=${VDS_USER_DATA_PATH}\\Identity\n",
+        );
+        write(
+            &root.join("Jumps/bastion.ini"),
+            "S:\"Protocol Name\"=SSH2\nS:\"Hostname\"=bastion.example\nD:\"[SSH2] Port\"=000008ae\n",
+        );
+        write(
+            &root.join("Lab/lost.ini"),
+            "S:\"Protocol Name\"=SSH2\nS:\"Hostname\"=10.9.9.8\nS:\"Firewall Name\"=Session:missing\n",
         );
         write(&root.join("__FolderData__.ini"), "S:\"x\"=y\n");
 
         let parsed = parse_dir(&root).unwrap();
         let s = &parsed.file.sessions;
-        assert_eq!(s.len(), 2);
+        assert_eq!(s.len(), 6);
+        let by = |n: &str| s.iter().find(|x| x.name == n).unwrap();
 
-        let edge = s.iter().find(|x| x.name == "edge").unwrap();
+        let edge = by("edge");
         assert_eq!(edge.protocol, "ssh");
         assert_eq!(edge.host.as_deref(), Some("10.0.0.1"));
-        assert_eq!(edge.port, Some(22)); // 0x16
+        assert_eq!(edge.port, Some(22)); // [SSH2] Port = 0x16
         assert_eq!(edge.username.as_deref(), Some("admin"));
         assert_eq!(edge.auth_method.as_deref(), Some("key"));
         assert!(edge.options_json.contains("id_ed25519"));
         assert_eq!(edge.folder_id, None);
 
-        let sw = s.iter().find(|x| x.name == "sw1").unwrap();
+        let sw = by("sw1");
         assert_eq!(sw.protocol, "telnet");
-        assert_eq!(sw.port, Some(23)); // 0x17
+        assert_eq!(sw.port, Some(23)); // Port = 0x17
         let lab = parsed
             .file
             .folders
@@ -271,6 +365,24 @@ mod tests {
             .find(|f| f.name == "Lab")
             .unwrap();
         assert_eq!(sw.folder_id, Some(lab.id));
+
+        let console = by("console");
+        assert_eq!(console.protocol, "serial");
+        assert!(console.options_json.contains("COM3"));
+        assert!(console.options_json.contains("9600")); // 0x2580
+
+        let bastion = by("bastion");
+        assert_eq!(bastion.port, Some(2222)); // 0x8ae
+        let inner = by("inner");
+        assert_eq!(inner.via_session_id, Some(bastion.id));
+        assert_eq!(inner.auth_method.as_deref(), Some("password"));
+        assert!(parsed
+            .warnings
+            .iter()
+            .any(|w| w.contains("VDS_USER_DATA_PATH")));
+
+        assert_eq!(by("lost").via_session_id, None);
+        assert!(parsed.warnings.iter().any(|w| w.contains("missing")));
 
         let _ = std::fs::remove_dir_all(&root);
     }

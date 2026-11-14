@@ -215,7 +215,7 @@ pub fn apply_import_with(
                         id
                     }
                     Err(e) => {
-                        summary.warnings.push(format!("carpeta «{}»: {e}", f.name));
+                        summary.warnings.push(format!("folder “{}”: {e}", f.name));
                         return false;
                     }
                 },
@@ -227,7 +227,7 @@ pub fn apply_import_with(
             // Orphans (parent missing from the file) land at root.
             for f in pending.drain(..) {
                 summary.warnings.push(format!(
-                    "carpeta «{}»: padre no incluido en el export — movida a la raíz",
+                    "folder “{}”: its parent isn't in the file — moved to the top level",
                     f.name
                 ));
                 if let Ok(id) = db.create_folder(&f.name, None) {
@@ -331,7 +331,7 @@ pub fn apply_import_with(
                 if let Some(path) = opts.get("key_path").and_then(|v| v.as_str()) {
                     if !std::path::Path::new(path).exists() {
                         summary.warnings.push(format!(
-                            "sesión «{}»: la clave {path} no existe en esta máquina",
+                            "session “{}”: key {path} doesn't exist on this computer",
                             s.name
                         ));
                     }
@@ -412,7 +412,7 @@ pub fn apply_import_with(
                 }
             }
             None => summary.warnings.push(format!(
-                "sesión id {new_id}: bastión (jump host) no incluido en el export — queda sin via"
+                "session id {new_id}: its jump host isn't in the file — connects directly"
             )),
         }
     }
@@ -441,7 +441,7 @@ pub fn apply_import_with(
         }
         if members.len() < g.session_ids.len() {
             summary.warnings.push(format!(
-                "grupo «{}»: {} miembro(s) no resueltos, omitidos",
+                "group “{}”: {} member(s) not found — skipped",
                 g.name,
                 g.session_ids.len() - members.len()
             ));
@@ -507,7 +507,7 @@ pub fn apply_import_with(
                     });
                     if clash {
                         summary.warnings.push(format!(
-                            "snippet «{}»: shortcut {} already used here — not changed",
+                            "macro “{}”: shortcut {} already used here — not changed",
                             sn.name,
                             want.unwrap_or_default()
                         ));
@@ -634,7 +634,7 @@ pub async fn import_sessions(
 ) -> Result<ImportSummary, AppError> {
     let raw = std::fs::read_to_string(&path).map_err(|e| AppError::Internal(e.to_string()))?;
     let file: ExportFile = serde_json::from_str(&raw)
-        .map_err(|e| AppError::Internal(format!("no es un export válido de ZapTerm: {e}")))?;
+        .map_err(|e| AppError::Internal(format!("not a ZapTerm export file: {e}")))?;
     let summary = apply_import(&state.db, &file)?;
     if summary.rules_added > 0 {
         super::highlight::rebuild_highlighter(&state);
@@ -693,14 +693,15 @@ pub async fn import_putty(
 ) -> Result<ImportSummary, AppError> {
     let parsed = match path {
         Some(p) => {
-            let raw = std::fs::read_to_string(&p).map_err(|e| AppError::Internal(e.to_string()))?;
+            let raw = crate::importers::common::read_text(std::path::Path::new(&p))
+                .map_err(|e| AppError::Internal(e.to_string()))?;
             crate::importers::putty::from_sessions(&crate::importers::putty::parse_reg(&raw))
         }
         None => {
             let sessions = crate::importers::putty::read_registry();
             if sessions.is_empty() && !cfg!(target_os = "windows") {
                 return Err(AppError::Internal(
-                    "en macOS/Linux exporta primero las sesiones de PuTTY a un .reg y elígelo"
+                    "On macOS and Linux, export the PuTTY sessions to a .reg file first and choose it"
                         .into(),
                 ));
             }
@@ -716,7 +717,8 @@ pub async fn import_mobaxterm(
     state: State<'_, AppState>,
     path: String,
 ) -> Result<ImportSummary, AppError> {
-    let raw = std::fs::read_to_string(&path).map_err(|e| AppError::Internal(e.to_string()))?;
+    let raw = crate::importers::common::read_text(std::path::Path::new(&path))
+        .map_err(|e| AppError::Internal(e.to_string()))?;
     let parsed = crate::importers::mobaxterm::parse(&raw);
     finish_import(&state, parsed.file, parsed.warnings)
 }
