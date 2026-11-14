@@ -573,67 +573,70 @@
     <span class="spacer"></span>
   {/if}
 
-  <button
-    type="button"
-    class="recent-btn custom-btn"
-    class:open={customOpen}
-    onclick={toggleCustom}
-    title={customOpen ? undefined : 'Your own commands, on every platform'}
-    aria-haspopup="dialog"
-    aria-expanded={customOpen}
-  >
-    <span aria-hidden="true">★</span>
-    <span>Custom</span>
-    {#if count(custom)}<span class="chip-count">{count(custom)}</span>{/if}
-  </button>
-
-  <div class="recent-wrap" bind:this={recentWrap}>
+  <!-- Custom and Recent stacked, so the lists get the whole width. -->
+  <div class="side">
     <button
       type="button"
-      class="recent-btn"
-      class:open={recentOpen}
-      onclick={toggleRecent}
-      title={recentOpen ? undefined : 'Last commands run in this session'}
-      aria-haspopup="menu"
-      aria-expanded={recentOpen}
+      class="recent-btn custom-btn"
+      class:open={customOpen}
+      onclick={toggleCustom}
+      title={customOpen ? undefined : 'Your own commands, on every platform'}
+      aria-haspopup="dialog"
+      aria-expanded={customOpen}
     >
-      <Icon name="clock" size={12} />
-      <span>Recent</span>
+      <span aria-hidden="true">★</span>
+      <span>Custom</span>
+      {#if count(custom)}<span class="chip-count">{count(custom)}</span>{/if}
     </button>
-    {#if recentOpen}
-      <div class="recent-menu" role="menu" style:background={theme.bodyBg}>
-        {#if recents.length === 0}
-          <div class="recent-empty">No commands yet</div>
-        {:else}
-          {#each recents as r (r.text)}
-            <div class="recent-row">
-              <button
-                type="button"
-                class="recent-item"
-                role="menuitem"
-                onpointerdown={notePress}
-                onclick={(e) => pickRecent(r, shiftClick(e))}
-                title="{r.text} — Shift+click types it without Enter">{r.text}</button
-              >
-              <button
-                type="button"
-                class="type-btn"
-                title="Type without Enter — edit it before running"
-                aria-label="Type {r.text} without Enter"
-                onclick={() => pickRecent(r, true)}>Type</button
-              >
-              <button
-                type="button"
-                class="type-btn star-btn"
-                title="Save to Custom"
-                aria-label="Save {r.text} to Custom"
-                onclick={() => saveRecent(r)}>☆</button
-              >
-            </div>
-          {/each}
-        {/if}
-      </div>
-    {/if}
+
+    <div class="recent-wrap" bind:this={recentWrap}>
+      <button
+        type="button"
+        class="recent-btn"
+        class:open={recentOpen}
+        onclick={toggleRecent}
+        title={recentOpen ? undefined : 'Last commands run in this session'}
+        aria-haspopup="menu"
+        aria-expanded={recentOpen}
+      >
+        <Icon name="clock" size={12} />
+        <span>Recent</span>
+      </button>
+      {#if recentOpen}
+        <div class="recent-menu" role="menu" style:background={theme.bodyBg}>
+          {#if recents.length === 0}
+            <div class="recent-empty">No commands yet</div>
+          {:else}
+            {#each recents as r (r.text)}
+              <div class="recent-row">
+                <button
+                  type="button"
+                  class="recent-item"
+                  role="menuitem"
+                  onpointerdown={notePress}
+                  onclick={(e) => pickRecent(r, shiftClick(e))}
+                  title="{r.text} — Shift+click types it without Enter">{r.text}</button
+                >
+                <button
+                  type="button"
+                  class="type-btn"
+                  title="Type without Enter — edit it before running"
+                  aria-label="Type {r.text} without Enter"
+                  onclick={() => pickRecent(r, true)}>Type</button
+                >
+                <button
+                  type="button"
+                  class="type-btn star-btn"
+                  title="Save to Custom"
+                  aria-label="Save {r.text} to Custom"
+                  onclick={() => saveRecent(r)}>☆</button
+                >
+              </div>
+            {/each}
+          {/if}
+        </div>
+      {/if}
+    </div>
   </div>
 
   {#if openList}
@@ -943,7 +946,8 @@
     flex-shrink: 0;
   }
 
-  /* Chips wrap onto a second line rather than hiding behind a scroll. */
+  /* Chips stay on one line when they fit and wrap onto a second line
+     rather than hiding behind a scroll. */
   .chips {
     display: flex;
     flex-wrap: wrap;
@@ -1011,6 +1015,25 @@
     background: #fff;
   }
 
+  /* Custom over Recent, at the right edge. */
+  .side {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex-shrink: 0;
+    margin-left: 4px;
+  }
+  .side > .recent-btn,
+  .side .recent-wrap .recent-btn {
+    width: 100%;
+    height: 21px;
+    font-size: 11px;
+    padding: 0 8px;
+  }
+  .side .chip-count {
+    margin-left: auto;
+    padding: 0 5px;
+  }
   .recent-wrap {
     position: relative;
     flex-shrink: 0;
@@ -1461,9 +1484,6 @@
   }
 
   /* ── Custom list ── */
-  .custom-btn {
-    margin-right: 6px;
-  }
   .item.with-tools {
     padding-right: 120px;
   }
