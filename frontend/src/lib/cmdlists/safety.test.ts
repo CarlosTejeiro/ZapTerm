@@ -55,6 +55,15 @@ describe('command list safety', () => {
     }
   })
 
+  it('leaves the range out of bounded field labels (the form shows it)', () => {
+    for (const [p, , i] of all()) {
+      if (i.kind !== 'recipe') continue
+      for (const f of i.fields)
+        if (f.min !== undefined || f.max !== undefined)
+          expect(f.label, `${p}: ${i.name}.${f.key}`).not.toMatch(/\(\d+\s*[–-]\s*\d+\)/)
+    }
+  })
+
   it('bounds every FortiGate real-time debug in time and every count', () => {
     for (const [p, , i] of all()) {
       if (i.kind !== 'recipe') continue
