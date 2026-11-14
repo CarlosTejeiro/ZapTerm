@@ -233,7 +233,10 @@ pub fn bulk_add(db: &Database, rows: &[BulkRow], apply: bool) -> Result<BulkResu
                 && s.host.as_deref() == Some(host)
                 && s.port == Some(row.port)
         }) {
-            notes.insert(0, "already in the inventory — skipped, left as it is".into());
+            notes.insert(
+                0,
+                "already in the inventory — skipped, left as it is".into(),
+            );
             RowStatus::Exists
         } else {
             RowStatus::New
