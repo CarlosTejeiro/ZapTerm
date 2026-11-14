@@ -1518,7 +1518,7 @@
     },
     ...Object.entries(themeLabels).map(([key, label]) => ({
       id: `theme-${key}`,
-      label: `Tema · ${label}`,
+      label: `Theme · ${label}`,
       icon: 'contrast' as const,
       section: 'Themes' as const,
       run: () => applyTheme(key),

@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.5.6] - 2026-11-14
+
+### Fixed
+- **The last Spanish texts are now in English**, like the rest of the app:
+  the "Connected" notice when a session connects, the "Theme · …" entries
+  and "No results for …" in the command palette, the notice after opening the
+  hint catalogs folder, the messages when moving the data folder (Settings →
+  Data), and the error for an export file made by a newer ZapTerm.
+
 ## [1.5.5] - 2026-11-14
 
 ### Fixed
