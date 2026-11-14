@@ -1189,12 +1189,12 @@
 
     {
       const label = savedSession?.name ?? ssh?.host ?? telnet?.host ?? 'local'
-      showToast({ kind: 'success', title: 'Conectado', detail: label })
+      showToast({ kind: 'success', title: 'Connected', detail: label })
     }
     onSessionOpen?.()
     // Re-focus after the connect — xterm may have lost focus during the
     // host-key dialog, password prompt, or while the await chain ran.
-    // Without this, the first key after "Conectado" can land nowhere.
+    // Without this, the first key after "Connected" can land nowhere.
     term.focus()
 
     // Self-heal a bad initial fit without waiting for a user resize. If the

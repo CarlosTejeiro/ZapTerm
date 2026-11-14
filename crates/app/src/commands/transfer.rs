@@ -179,7 +179,7 @@ pub fn apply_import_with(
 ) -> Result<ImportSummary, AppError> {
     if file.zapx_export > EXPORT_VERSION {
         return Err(AppError::Internal(format!(
-            "el fichero es de una versión de ZapTerm más nueva (export v{}, soportado v{EXPORT_VERSION})",
+            "the file comes from a newer ZapTerm (export v{}, this version reads up to v{EXPORT_VERSION})",
             file.zapx_export
         )));
     }
