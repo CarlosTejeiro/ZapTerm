@@ -282,6 +282,9 @@ selector, Font family + size, cursor style. -->
   highlight rules (**never passwords**) — idempotent import for backup,
   migration and team sharing.
 - **Importers**: `~/.ssh/config`, PuTTY, MobaXterm and SecureCRT.
+- **Add devices in bulk** (File menu): paste a list of hosts or open a CSV
+  file and add them all as saved sessions, after a preview — see
+  [Add devices in bulk](automation/4-bulk-add.md).
 - **Macros**: exported/imported separately as their own JSON (see
   [Macros](#5-macros)).
 - The **vault and its secrets are never included** in any export.

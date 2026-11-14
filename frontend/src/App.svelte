@@ -38,6 +38,7 @@
   import KeyboardInteractiveDialog from '$lib/terminal/KeyboardInteractiveDialog.svelte'
   import ScriptPanel from '$lib/scripting/ScriptPanel.svelte'
   import ScriptStartDialog from '$lib/scripting/ScriptStartDialog.svelte'
+  import BulkAddDialog from '$lib/inventory/BulkAddDialog.svelte'
   import {
     hostBusy,
     initScriptHost,
@@ -291,6 +292,8 @@
   let focusedPaneId = $state(firstPane.id)
   let sessions = $state<SavedSession[]>([])
   let folders = $state<Folder[]>([])
+  /** File → Add devices in bulk… */
+  let showBulkAdd = $state(false)
   let showNewSession = $state(false)
   let showQuickConnect = $state(false)
   let showSettings = $state(false)
@@ -1510,6 +1513,13 @@
       run: handleImportSecureCrt,
     },
     {
+      id: 'act-bulk-add',
+      label: 'Add devices in bulk…',
+      icon: 'transfer' as const,
+      section: 'Actions' as const,
+      run: () => (showBulkAdd = true),
+    },
+    {
       id: 'act-about',
       label: 'About ZapTerm',
       icon: 'book' as const,
@@ -1761,6 +1771,7 @@
     onImportPutty={handleImportPutty}
     onImportMobaXterm={handleImportMobaXterm}
     onImportSecureCrt={handleImportSecureCrt}
+    onBulkAdd={() => (showBulkAdd = true)}
     onCommandList={() => (showCommandList = true)}
     onTunnelsManager={() => (showTunnelsManager = true)}
   />
@@ -2062,6 +2073,9 @@
 
 <KeyboardInteractiveDialog />
 
+{#if showBulkAdd}
+  <BulkAddDialog {sessions} {folders} onClose={() => (showBulkAdd = false)} onAdded={load} />
+{/if}
 {#if scriptPending}
   {@const path = scriptPending}
   <ScriptStartDialog

@@ -94,4 +94,4 @@ When the cells do what you want:
 `sase_reset.py` is exactly that: the parsing from `explore.ipynb`, plus the
 reset, run on a folder of devices.
 
-[← 2. Python scripts](2-scripts.md) · [Guide index](README.md) · [Scripting reference](../scripting.md)
+[← 2. Python scripts](2-scripts.md) · [Guide index](README.md) · [4. Add devices in bulk →](4-bulk-add.md) · [Scripting reference](../scripting.md)

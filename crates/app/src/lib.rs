@@ -327,6 +327,8 @@ pub fn run() {
             commands::transfer::import_mobaxterm,
             commands::transfer::import_securecrt,
             commands::transfer::save_text_file,
+            commands::bulk::bulk_add_sessions,
+            commands::bulk::read_device_list_file,
             commands::backup::backup_export,
             commands::backup::backup_inspect,
             commands::backup::backup_restore,
