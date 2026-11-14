@@ -14,8 +14,6 @@
 
   function sourceIcon(h: Hint): IconName {
     switch (h.source.kind) {
-      case 'snippet':
-        return 'bolt'
       case 'history':
         return 'clock'
       case 'catalog':
@@ -27,8 +25,6 @@
 
   function sourceLabel(h: Hint): string {
     switch (h.source.kind) {
-      case 'snippet':
-        return h.label ? `snippet · ${h.label}` : 'snippet'
       case 'history':
         return 'history'
       case 'catalog':

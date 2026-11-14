@@ -878,13 +878,17 @@
                         onclick={() => pick(item, true)}>Type</button
                       >
                     {/if}
-                    <button
-                      type="button"
-                      class="type-btn icon-btn"
-                      title="Edit"
-                      aria-label="Edit"
-                      onclick={() => startEdit(item)}>✎</button
-                    >
+                    {#if item.kind === 'command'}
+                      <!-- Recipes (from old snippets, or added to custom.json by
+                           hand) are edited in the file. -->
+                      <button
+                        type="button"
+                        class="type-btn icon-btn"
+                        title="Edit"
+                        aria-label="Edit"
+                        onclick={() => startEdit(item)}>✎</button
+                      >
+                    {/if}
                     <button
                       type="button"
                       class="type-btn icon-btn danger"

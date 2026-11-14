@@ -9,7 +9,7 @@
     subtitle?: string
     icon: IconName
     shortcut?: string
-    section: 'Sessions' | 'Themes' | 'Actions' | 'Snippets' | 'Groups'
+    section: 'Sessions' | 'Themes' | 'Actions' | 'Groups'
     run: () => void
   }
 
@@ -49,7 +49,7 @@
       if (!map.has(it.section)) map.set(it.section, [])
       map.get(it.section)!.push(it)
     }
-    const order = ['Sessions', 'Snippets', 'Actions', 'Themes']
+    const order = ['Sessions', 'Actions', 'Themes']
     return [...map.entries()]
       .sort(([a], [b]) => order.indexOf(a) - order.indexOf(b))
       .map(([section, items]) => ({ section, items }))

@@ -310,11 +310,10 @@ export async function listSnippets(): Promise<Snippet[]> {
   return invoke<Snippet[]>('list_snippets')
 }
 
-/// Subset visible to a session of `platform` — globals (platform IS NULL)
-/// plus matches. On first call for a never-seen platform the backend seeds a
-/// curated default set so the bar isn't empty out of the box.
-export async function listSnippetsForPlatform(platform: string): Promise<Snippet[]> {
-  return invoke<Snippet[]>('list_snippets_for_platform', { platform })
+/// Plain snippets (no macro steps) the user wrote in older versions, without
+/// the defaults those versions seeded. Moved once to the ★ Custom list.
+export async function listUserPlainSnippets(): Promise<Snippet[]> {
+  return invoke<Snippet[]>('list_user_plain_snippets')
 }
 
 export async function listRecentCommandSnippets(
