@@ -95,6 +95,10 @@ export const scriptRun = $state({
    *  rest are logged as "would run". Toggleable live in notebook mode. */
   readOnly: false,
   allow: [...DEFAULT_READ_ONLY_ALLOW] as string[],
+  /** Notebook connection with Read-only off: ask the user before each
+   *  command that isn't a display command (a notebook or an AI client can't
+   *  change a device unseen). Toggleable live. */
+  askChanges: true,
   python: '',
   status: 'done' as RunStatus,
   exitCode: null as number | null,
@@ -120,7 +124,7 @@ export function hostBusy(): boolean {
 /** Thrown inside the host to send a `{kind, message, output}` error back. */
 class ApiError extends Error {
   constructor(
-    public kind: 'error' | 'timeout',
+    public kind: 'error' | 'timeout' | 'refused',
     message: string,
     public output = '',
   ) {
@@ -227,13 +231,36 @@ export async function initScriptHost(hostApi: ScriptHostApi): Promise<() => void
 
 /** Read-only gate for text about to be typed in `sessionId`: true when it may
  *  be sent; otherwise logs what would have been and returns false. */
-function readOnlyLets(sessionId: string, text: string, verb: string): boolean {
+function readOnlyLets(sessionId: string, text: string, verb: string, strict = false): boolean {
   if (!scriptRun.readOnly || readOnlyAllows(text, scriptRun.allow)) return true
   log(`[read-only] ${name(sessionId)}: would ${verb} ${JSON.stringify(text)}`)
+  if (strict) {
+    throw new ApiError(
+      'refused',
+      `not sent — ZapTerm is in read-only mode: only commands starting with ` +
+        `${scriptRun.allow.join(', ')} are sent`,
+    )
+  }
   return false
 }
 
-/** Start `path`. Opens the panel; progress arrives through events. */
+/** Notebook connection with Read-only off: have the user approve `what`
+ *  (shown as is) unless it is a display command. Throws when they decline. */
+async function approveChange(sessionId: string, what: string, displayCommand: string | null) {
+  if (scriptRun.mode !== 'notebook' || scriptRun.readOnly || !scriptRun.askChanges) return
+  if (displayCommand !== null && readOnlyAllows(displayCommand, scriptRun.allow)) return
+  if (!api) throw new ApiError('error', 'ZapTerm is not ready')
+  const yes = await api.confirm(
+    `The notebook or AI client connected to ZapTerm wants to do this on ${name(sessionId)}:\n\n` +
+      `${what}\n\nAllow it?`,
+  )
+  if (!yes) {
+    log(`[declined] ${name(sessionId)}: ${what}`)
+    throw new ApiError('refused', 'not sent — declined by the user in ZapTerm')
+  }
+  log(`[approved] ${name(sessionId)}: ${what}`)
+}
+
 export async function startScript(
   path: string,
   dryRun: boolean,
@@ -298,16 +325,18 @@ export async function stopScript(): Promise<void> {
  *  the user switched it off before (`notebook.read_only`), with their
  *  allowlist (`scripts.read_only_allow`). Used by every "turn on" path. */
 export async function startNotebookFromSettings(): Promise<void> {
-  const [ro, allowText] = await Promise.all([
+  const [ro, allowText, ask] = await Promise.all([
     getSetting('notebook.read_only').catch(() => null),
     getSetting('scripts.read_only_allow').catch(() => null),
+    getSetting('notebook.ask_changes').catch(() => null),
   ])
-  await startNotebook(ro !== '0', parseAllowList(allowText))
+  await startNotebook(ro !== '0', parseAllowList(allowText), ask !== '0')
 }
 
 export async function startNotebook(
   readOnly = true,
   allow: string[] = DEFAULT_READ_ONLY_ALLOW,
+  askChanges = true,
 ): Promise<void> {
   if (hostBusy()) throw new Error('a script or a notebook connection is already active')
   taps.clear()
@@ -319,6 +348,7 @@ export async function startNotebook(
     path: '',
     dryRun: false,
     readOnly,
+    askChanges,
     allow: [...allow],
     python: '',
     status: 'waiting',
@@ -437,7 +467,13 @@ async function dispatch(
     case 'open':
       return openSaved(str(p.name, 'name'), secs(p.timeout, 60), reqId)
     case 'run':
-      return run(str(p.session, 'session'), str(p.command, 'command'), secs(p.timeout, 30), reqId)
+      return run(
+        str(p.session, 'session'),
+        str(p.command, 'command'),
+        secs(p.timeout, 30),
+        reqId,
+        p.strict === true,
+      )
     case 'send': {
       const sid = str(p.session, 'session')
       const text = str(p.text, 'text')
@@ -447,6 +483,7 @@ async function dispatch(
         return null
       }
       if (!readOnlyLets(sid, text, 'send')) return null
+      await approveChange(sid, `send ${JSON.stringify(text)}${enter ? ' + Enter' : ''}`, text)
       await sendText(sid, enter ? text + '\r' : text)
       return null
     }
@@ -478,6 +515,7 @@ async function dispatch(
         log(`[read-only] ${name(sid)}: would type the vault ${field} of "${ref.slice(0, dot)}"`)
         return null
       }
+      await approveChange(sid, `type the vault ${field} of "${ref.slice(0, dot)}"`, null)
       attach(sid)
       await sendVaultField(
         sid,
@@ -601,6 +639,7 @@ async function run(
   command: string,
   timeoutMs: number,
   reqId: number,
+  strict = false,
 ): Promise<string> {
   if (scriptRun.dryRun || sessionId.startsWith('dry:')) {
     log(`[dry-run] ${name(sessionId)}: would run ${JSON.stringify(command)}`)
@@ -609,7 +648,8 @@ async function run(
   if (/[\r\n]/.test(command)) {
     throw new ApiError('error', 'run() takes one command line — call it once per line')
   }
-  if (!readOnlyLets(sessionId, command, 'run')) return ''
+  if (!readOnlyLets(sessionId, command, 'run', strict)) return ''
+  await approveChange(sessionId, `run ${JSON.stringify(command)}`, command)
   const tap = attach(sessionId)
   tap.raw = ''
   tap.lastData = Date.now()

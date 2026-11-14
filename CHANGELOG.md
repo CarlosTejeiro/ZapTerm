@@ -20,6 +20,18 @@ ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
   saved SSH session, both by name, so no password is ever in the list. A
   preview marks every row New, Exists or Error; devices already in the
   inventory are skipped and nothing is added while any row has an error.
+- **MCP server: connect an AI assistant.** `zapterm_mcp.py` (plain Python, no
+  packages) lets an MCP client list tabs and saved sessions, open a session
+  and run commands through ZapTerm, over the notebook connection. ZapTerm
+  enforces the rules: Read-only refuses anything but display commands and now
+  tells the client it was not sent; no tool exposes or types passwords. The
+  notebook panel shows the configuration to copy.
+- **Ask me first.** With the notebook connection's Read-only off, ZapTerm
+  shows each command that isn't a display command and waits for your Yes
+  (for notebooks too; on by default, can be switched off in the panel).
+  Refused, declined and approved commands are logged in the panel.
+- `Session.run(..., strict=True)` raises instead of returning an empty string
+  when read-only keeps a command from being sent.
 
 ## [1.5.3] - 2026-11-14
 

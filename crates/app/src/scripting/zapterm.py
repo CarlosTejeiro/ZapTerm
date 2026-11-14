@@ -288,14 +288,20 @@ class Session:
     def __repr__(self) -> str:
         return f"<zapterm.Session {self.name!r}>"
 
-    def run(self, command: str, timeout: float = 30) -> str:
+    def run(self, command: str, timeout: float = 30, strict: bool = False) -> str:
         """Type ``command`` + Enter and return its output.
 
         The output is what the device printed after echoing the command, up
         to (not including) the prompt that ends it. Raises :class:`Timeout`
         when the prompt does not come back within ``timeout`` seconds.
+
+        In read-only mode a command that isn't a display command is not sent
+        and ``run()`` returns an empty string; with ``strict=True`` it raises
+        :class:`Error` instead, so the caller can tell "not sent" from "printed
+        nothing". From a notebook with Read-only off, ZapTerm may ask the user
+        before sending such a command; if they say no, :class:`Error` is raised.
         """
-        return _call("run", session=self.id, command=command, timeout=timeout)
+        return _call("run", session=self.id, command=command, timeout=timeout, strict=strict)
 
     def send(self, text: str, enter: bool = True) -> None:
         """Type ``text`` (and Enter, unless ``enter=False``) without waiting."""

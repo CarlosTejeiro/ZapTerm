@@ -10,6 +10,7 @@ run, then for real) and explored a device from a notebook.
 | [2. Python scripts](2-scripts.md) | What a script is, run `hello.py`, then `sase_reset.py` step by step — dry run, read-only, then for real. | 15 min |
 | [3. Notebooks](3-notebooks.md) | Connect VS Code or JupyterLab to ZapTerm and explore a device cell by cell. | 15 min |
 | [4. Add devices in bulk](4-bulk-add.md) | Turn a pasted list or a CSV file into saved sessions, with a preview. | 5 min |
+| [5. Connect an AI assistant (MCP)](5-ai-assistant.md) | Let an AI assistant work on your devices through ZapTerm, read-only or with your approval. | 10 min |
 
 ## The idea in one picture
 

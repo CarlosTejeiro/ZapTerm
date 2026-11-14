@@ -1,6 +1,6 @@
 # 4. Add devices in bulk
 
-[← 3. Notebooks](3-notebooks.md) · [Guide index](README.md)
+[← 3. Notebooks](3-notebooks.md) · [Guide index](README.md) · [5. Connect an AI assistant →](5-ai-assistant.md)
 
 Scripts and group actions work on **saved sessions**: that is where the jump
 host, the vault credential and the login script of a device live. **File → Add

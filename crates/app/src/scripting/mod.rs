@@ -28,6 +28,10 @@ use tokio::sync::{mpsc, oneshot};
 /// The `zapterm` module shipped to every script (written next to it on start).
 pub const ZAPTERM_MODULE: &str = include_str!("zapterm.py");
 
+/// The MCP server (`zapterm_mcp.py`) written next to the module: an MCP client
+/// runs it with Python and it reaches ZapTerm over the notebook connection.
+pub const ZAPTERM_MCP: &str = include_str!("zapterm_mcp.py");
+
 /// `zapx.py`: scripts written for ZAPX (`import zapx`) keep working — the
 /// name is an alias of the `zapterm` module.
 pub const ZAPX_ALIAS_MODULE: &str = "\"\"\"ZAPX name of the ZapTerm scripting API: `import zapx` is `import zapterm`.\"\"\"\nimport sys\n\nimport zapterm\n\nsys.modules[__name__] = zapterm\n";
@@ -149,6 +153,7 @@ pub fn install_module(dir: &Path) -> std::io::Result<PathBuf> {
     let path = dir.join("zapterm.py");
     std::fs::write(&path, ZAPTERM_MODULE)?;
     std::fs::write(dir.join("zapx.py"), ZAPX_ALIAS_MODULE)?;
+    std::fs::write(dir.join("zapterm_mcp.py"), ZAPTERM_MCP)?;
     Ok(dir.to_path_buf())
 }
 
@@ -532,7 +537,11 @@ mod tests {
                 }
                 "run" => {
                     let cmd = params["command"].as_str().unwrap_or("");
-                    if cmd == "slow" {
+                    if cmd == "reload" && params["strict"] == true {
+                        Err(
+                            serde_json::json!({"kind": "refused", "message": "not sent: read-only"}),
+                        )
+                    } else if cmd == "slow" {
                         Err(
                             serde_json::json!({"kind": "timeout", "message": "no prompt", "output": "partial"}),
                         )
@@ -551,6 +560,7 @@ mod tests {
                 "tabs" => {
                     Ok(serde_json::json!([{"id": "s1", "name": "fw1", "platform": "fortigate"}]))
                 }
+                "sessions" => Ok(serde_json::json!(["fw1", "sw1"])),
                 "report" | "send" | "close" | "note" | "cancel" => Ok(Value::Null),
                 _ => Err(
                     serde_json::json!({"kind": "error", "message": format!("unknown {method}")}),
@@ -676,14 +686,14 @@ zapterm.report(s.name, "OK", "done")
             return;
         }
         let (code, log) = run_script(
-            "import zapterm\nzapterm.sessions()\n", // unknown method in FakeHost → zapterm.Error
+            "import zapterm\nzapterm._call(\"nope\")\n", // unknown method in FakeHost → zapterm.Error
             true,
         )
         .await;
         assert_eq!(code, Some(1));
         assert!(
             log.iter()
-                .any(|l| l.contains("zapterm.Error: unknown sessions")),
+                .any(|l| l.contains("zapterm.Error: unknown nope")),
             "{log:#?}"
         );
     }
@@ -928,6 +938,169 @@ print(zapterm.session().name)
         assert_eq!(code, None);
         assert!(!nb.file.exists(), "turning it off removes the file");
         assert!(nb.runs.lock().unwrap().is_empty());
+        let _ = std::fs::remove_dir_all(nb.dir);
+    }
+
+    /// Feed JSON-RPC lines to the MCP server and return its replies.
+    async fn mcp_exchange(python: &[String], nb: &Notebook, requests: &[Value]) -> Vec<Value> {
+        let input: String = requests.iter().map(|r| format!("{r}\n")).collect();
+        let mut child = Command::new(&python[0])
+            .args(&python[1..])
+            .arg(nb.module_dir.join("zapterm_mcp.py"))
+            .env("ZAPTERM_CONNECTION", &nb.file)
+            .env_remove("ZAPTERM_PORT")
+            .env_remove("ZAPTERM_TOKEN")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        let mut stdin = child.stdin.take().unwrap();
+        stdin.write_all(input.as_bytes()).await.unwrap();
+        drop(stdin); // end of input: the server exits
+        let out = child.wait_with_output().await.unwrap();
+        let stderr = String::from_utf8_lossy(&out.stderr);
+        assert!(stderr.trim().is_empty(), "stderr: {stderr}");
+        String::from_utf8_lossy(&out.stdout)
+            .lines()
+            .map(|l| serde_json::from_str(l).expect("each reply is one JSON line"))
+            .collect()
+    }
+
+    fn rpc(id: u64, method: &str, params: Value) -> Value {
+        serde_json::json!({"jsonrpc": "2.0", "id": id, "method": method, "params": params})
+    }
+
+    #[tokio::test]
+    async fn the_mcp_server_lists_its_tools_and_runs_commands_through_zapterm() {
+        let Some(python) = python_or_skip() else {
+            return;
+        };
+        let nb = notebook(None).await;
+        let call = |id, name: &str, args: Value| {
+            rpc(
+                id,
+                "tools/call",
+                serde_json::json!({"name": name, "arguments": args}),
+            )
+        };
+        let replies = mcp_exchange(
+            &python,
+            &nb,
+            &[
+                rpc(1, "initialize", serde_json::json!({"protocolVersion": "2025-03-26", "capabilities": {}, "clientInfo": {"name": "t", "version": "0"}})),
+                serde_json::json!({"jsonrpc": "2.0", "method": "notifications/initialized"}),
+                rpc(2, "tools/list", Value::Null),
+                call(3, "list_tabs", serde_json::json!({})),
+                call(4, "run_command", serde_json::json!({"tab": "fw1", "command": "get system status"})),
+                call(5, "run_command", serde_json::json!({"tab": "fw1", "command": "reload"})),
+                call(6, "run_command", serde_json::json!({"tab": "fw1", "command": "slow"})),
+                call(7, "list_saved_sessions", serde_json::json!({})),
+                call(8, "get_mode", serde_json::json!({})),
+                call(9, "nope", serde_json::json!({})),
+                call(10, "run_command", serde_json::json!({"tab": "fw1"})),
+                rpc(11, "resources/list", Value::Null),
+                rpc(12, "ping", Value::Null),
+            ],
+        )
+        .await;
+        // The notification gets no reply: 12 requests, 12 replies, in order.
+        let ids: Vec<u64> = replies.iter().map(|r| r["id"].as_u64().unwrap()).collect();
+        assert_eq!(ids, (1..=12).collect::<Vec<_>>());
+        let text = |i: usize| {
+            replies[i]["result"]["content"][0]["text"]
+                .as_str()
+                .unwrap_or("")
+                .to_string()
+        };
+        let is_error = |i: usize| replies[i]["result"]["isError"] == true;
+
+        assert_eq!(replies[0]["result"]["protocolVersion"], "2025-03-26");
+        assert_eq!(replies[0]["result"]["serverInfo"]["name"], "zapterm");
+        assert!(replies[0]["result"]["capabilities"]["tools"].is_object());
+        let tools: Vec<&str> = replies[1]["result"]["tools"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|t| t["name"].as_str().unwrap())
+            .collect();
+        assert_eq!(
+            tools,
+            [
+                "list_tabs",
+                "list_saved_sessions",
+                "open_session",
+                "run_command",
+                "get_mode"
+            ]
+        );
+        // No tool hands out passwords or types blind.
+        assert!(!tools
+            .iter()
+            .any(|t| t.contains("secret") || t.contains("send")));
+        assert!(text(2).contains("\"fw1\"") && text(2).contains("fortigate"));
+        assert_eq!(text(3), "output of get system status");
+        assert!(!is_error(3));
+        // Refused by ZapTerm (read-only): an error the assistant can see, not "".
+        assert!(is_error(4), "{:?}", replies[4]);
+        assert!(text(4).contains("not sent: read-only"));
+        assert!(is_error(5) && text(5).contains("Timed out") && text(5).contains("partial"));
+        assert!(text(6).contains("sw1"));
+        assert!(text(7).contains("\"read_only\": true"));
+        assert!(is_error(8) && text(8).contains("Unknown tool"));
+        assert!(is_error(9) && text(9).contains("Bad arguments"));
+        assert_eq!(replies[10]["error"]["code"], -32601);
+        assert!(replies[11]["result"].is_object());
+
+        // Every command went through ZapTerm, the refused one flagged strict.
+        let log = nb.host.log.lock().unwrap().clone();
+        assert!(
+            log.iter().any(|l| l.starts_with("req run")
+                && l.contains("reload")
+                && l.contains("\"strict\":true")),
+            "{log:#?}"
+        );
+        nb.run.stop();
+        let _ = std::fs::remove_dir_all(nb.dir);
+    }
+
+    #[tokio::test]
+    async fn the_mcp_server_starts_without_zapterm_and_says_what_to_do() {
+        let Some(python) = python_or_skip() else {
+            return;
+        };
+        let nb = notebook(None).await;
+        nb.run.stop();
+        tokio::time::timeout(Duration::from_secs(5), nb.exited)
+            .await
+            .unwrap()
+            .unwrap();
+        let nb2 = Notebook {
+            dir: nb.dir.clone(),
+            file: nb.dir.join("data").join("missing.json"),
+            module_dir: nb.module_dir.clone(),
+            runs: nb.runs.clone(),
+            host: nb.host.clone(),
+            run: nb.run.clone(),
+            exited: oneshot::channel().1,
+        };
+        let replies = mcp_exchange(
+            &python,
+            &nb2,
+            &[
+                rpc(1, "tools/list", Value::Null),
+                rpc(
+                    2,
+                    "tools/call",
+                    serde_json::json!({"name": "list_tabs", "arguments": {}}),
+                ),
+            ],
+        )
+        .await;
+        assert_eq!(replies[0]["result"]["tools"].as_array().unwrap().len(), 5);
+        assert_eq!(replies[1]["result"]["isError"], true);
+        let text = replies[1]["result"]["content"][0]["text"].as_str().unwrap();
+        assert!(text.contains("Allow notebook connection"), "{text}");
         let _ = std::fs::remove_dir_all(nb.dir);
     }
 
