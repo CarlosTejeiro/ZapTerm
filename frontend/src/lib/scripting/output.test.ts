@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   cleanText,
   echoEnd,
+  effectivePlatform,
   extractRunOutput,
   lastLine,
   looksLikePrompt,
@@ -142,5 +143,21 @@ describe('read-only allowlist', () => {
     expect(parseAllowList('get\nshow\n diagnose  sys ')).toEqual(['get', 'show', 'diagnose sys'])
     expect(parseAllowList('')).toEqual(['get', 'show'])
     expect(readOnlyAllows('diagnose sys top', parseAllowList('diagnose sys'))).toBe(true)
+  })
+})
+
+describe('effectivePlatform', () => {
+  it('keeps a stored platform over a live detection', () => {
+    expect(effectivePlatform('arista_eos', 'linux')).toBe('arista_eos')
+  })
+  it('keeps a stored platform when the detector found nothing', () => {
+    expect(effectivePlatform('arista_eos', undefined)).toBe('arista_eos')
+  })
+  it('uses the detection when nothing (or generic) is stored', () => {
+    expect(effectivePlatform(null, 'fortigate')).toBe('fortigate')
+    expect(effectivePlatform('generic', 'cisco_ios')).toBe('cisco_ios')
+  })
+  it('is null when neither is known', () => {
+    expect(effectivePlatform(null, undefined)).toBeNull()
   })
 })

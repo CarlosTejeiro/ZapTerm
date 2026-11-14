@@ -22,6 +22,7 @@ import { getSetting, promptReturned, sendVaultField } from '$lib/bridge/commands
 import { paneToSession } from '$lib/stores/sessionRuntime.svelte'
 import {
   DEFAULT_READ_ONLY_ALLOW,
+  effectivePlatform,
   extractRunOutput,
   lastLine,
   looksLikePrompt,
@@ -532,7 +533,7 @@ function attach(sessionId: string): Tap {
 function info(sessionId: string): SessionInfo | null {
   const base = api?.describe(sessionId) ?? null
   if (!base) return null
-  return { ...base, platform: platforms.get(sessionId) ?? base.platform }
+  return { ...base, platform: effectivePlatform(base.platform, platforms.get(sessionId)) }
 }
 
 function name(sessionId: string): string {

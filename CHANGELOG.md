@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.5.5] - 2026-11-14
+
+### Fixed
+- **An Arista switch is no longer taken for Linux.** EOS is Linux-based and
+  logs in with "Last login: …" before a bare `switch#` prompt; that was
+  enough to detect Linux, and the detection never changed afterwards, so the
+  tab got the Linux command lists and suggestions. "Last login:" now only
+  counts together with a shell-style prompt (`user@host:~$`,
+  `[root@host ~]#`); a bare `host#` waits for a real clue such as
+  `show version`. A Linux host with a bare `host#` prompt and no distribution
+  name in its banner is detected a little later too, on the first output that
+  names it.
+- **Scripts see the platform saved on the session.** `session.platform` gave
+  the live detection priority over the platform already stored for a saved
+  session; the stored one now wins.
+
 ## [1.5.4] - 2026-11-14
 
 ### Added
