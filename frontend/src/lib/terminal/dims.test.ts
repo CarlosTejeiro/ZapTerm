@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { isSaneDim, saneCols, saneRows, sanitizeDims, FALLBACK_COLS, FALLBACK_ROWS } from './dims'
+import {
+  isSaneDim,
+  saneCols,
+  saneRows,
+  sanitizeDims,
+  FALLBACK_COLS,
+  FALLBACK_ROWS,
+  createShownDetector,
+} from './dims'
 
 describe('isSaneDim', () => {
   it('accepts finite numbers ≥ 2', () => {
@@ -66,5 +74,29 @@ describe('sanitizeDims', () => {
       cols: FALLBACK_COLS,
       rows: FALLBACK_ROWS,
     })
+  })
+})
+
+describe('createShownDetector', () => {
+  it('fires once when a hidden container gets a size again', () => {
+    const shown = createShownDetector()
+    expect(shown(800, 600)).toBe(false) // visible from the start: nothing to redraw
+    expect(shown(0, 0)).toBe(false) // tab switched away (display: none)
+    expect(shown(0, 0)).toBe(false)
+    expect(shown(800, 600)).toBe(true) // shown again: redraw
+    expect(shown(820, 600)).toBe(false) // a plain resize afterwards
+  })
+
+  it('covers a tab created in the background', () => {
+    const shown = createShownDetector()
+    expect(shown(0, 0)).toBe(false)
+    expect(shown(640, 480)).toBe(true)
+  })
+
+  it('treats a collapsed or unmeasurable size as hidden', () => {
+    const shown = createShownDetector()
+    expect(shown(800, 0)).toBe(false)
+    expect(shown(Number.NaN, 600)).toBe(false)
+    expect(shown(800, 600)).toBe(true)
   })
 })
