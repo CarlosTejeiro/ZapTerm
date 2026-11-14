@@ -71,6 +71,25 @@ b { color: #fff; font-weight: 600; }
 .nav-links a { color: var(--muted); font-size: 15px; }
 .nav-links a:hover { color: var(--text); text-decoration: none; }
 
+/* Narrow screens: the section links move to a second row that scrolls
+   sideways, so every page stays one tap away on a phone. */
+@media (max-width: 960px) {
+  html { scroll-padding-top: 108px; }
+  .nav-inner { flex-wrap: wrap; height: auto; row-gap: 0; padding-top: 10px; }
+  .nav-inner .btn { margin-left: auto; }
+  .nav-links {
+    order: 3; width: 100%; margin: 0; gap: 6px; padding: 8px 0 10px;
+    overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    mask-image: linear-gradient(90deg, #000 85%, transparent);
+  }
+  .nav-links::-webkit-scrollbar { display: none; }
+  .nav-links a {
+    flex: none; font-size: 14px; padding: 5px 12px;
+    border: 1px solid var(--line); border-radius: 999px;
+  }
+  .nav-links a[aria-current="page"] { border-color: rgba(139,124,246,.6); background: rgba(139,124,246,.14); }
+}
+
 /* ── Buttons ───────────────────────────────────────────────────────── */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
@@ -362,8 +381,6 @@ h3 { font-size: clamp(24px, 2.6vw, 32px); line-height: 1.15; letter-spacing: -0.
   .zapx-inner { flex-direction: column; align-items: flex-start; }
 }
 @media (max-width: 640px) {
-  .nav-links { display: none; }
-  .nav-inner .btn { margin-left: auto; }
   .hero { padding-top: 56px; }
   .hero-shot { transform: none; }
   .grid, .mini-shots { grid-template-columns: 1fr; }
