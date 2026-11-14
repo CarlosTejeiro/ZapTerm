@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.5.4] - 2026-11-14
+
+### Added
+- **FortiManager and FortiAnalyzer command lists.** FortiManager: System,
+  Network, Devices (ADOMs, managed devices, DVM database and locks, FGFM
+  tunnel), FortiGuard (FDS servers, scheduled updates, bandwidth), HA and a
+  bounded packet capture. FortiAnalyzer: System, Network, Logging (fortilogd
+  rates and volumes, device log usage), SQL & reports and the same capture.
+  Read-only commands only, each checked against the 7.6.0 CLI reference;
+  commands that repair, reset, delete or reboot (such as `diagnose dvm task
+  repair`) and `diagnose dvm check-integrity`, which offers to change the
+  device database, are left out.
+- **FortiAnalyzer detection and suggestions.** A session whose banner or
+  output names FortiAnalyzer is detected as FortiAnalyzer (not FortiGate)
+  and gets its own command suggestions.
+
 ## [1.5.3] - 2026-11-14
 
 ### Changed

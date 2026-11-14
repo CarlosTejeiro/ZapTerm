@@ -75,12 +75,16 @@ describe('command lists', () => {
     expect(listsForPlatform('arista_eos')?.lists.length).toBeGreaterThanOrEqual(8)
     expect(listsForPlatform('juniper')?.lists.length).toBeGreaterThanOrEqual(8)
     expect(listsForPlatform('windows')?.lists.length).toBeGreaterThanOrEqual(6)
+    expect(listsForPlatform('fortimanager')?.lists.length).toBeGreaterThanOrEqual(6)
+    expect(listsForPlatform('fortianalyzer')?.lists.length).toBeGreaterThanOrEqual(5)
     expect(listsForPlatform('mikrotik')).toBeNull()
     expect(listsForPlatform(null)).toBeNull()
   })
 
   it.each([
     'fortigate',
+    'fortimanager',
+    'fortianalyzer',
     'cisco_ios',
     'cisco_iosxr',
     'linux',
