@@ -8,6 +8,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.5.3] - 2026-11-14
+
+### Changed
+- **Safer debugs and captures.** Commands that can load a device now show a
+  ⚠ badge and ask before sending, with the vendor's own warning: every
+  FortiGate real-time debug and the packet sniffer, the Cisco crypto and BGP
+  debugs and the Cisco packet capture, and Junos `monitor traffic`. Typing a
+  command without Enter doesn't ask (you press Enter yourself).
+- **Captures stop by themselves.** The Cisco packet capture now has a time
+  limit (60 s by default) and stops at 1000 packets, Junos `monitor traffic`
+  at 100 packets, and saving a tcpdump capture to a file (Linux, macOS) at
+  10,000 packets, so a forgotten capture can't fill the disk.
+- **Suggestions no longer offer commands that can't be undone or that need
+  someone on site**: factory reset, formatting a disk or flash, deleting
+  all logs, halting or shutting down the system, clearing every BGP session
+  or route, `rm -rf`, and the unfiltered IPS debug. Suggested FortiGate
+  sniffers now stop after 100 packets. Reboots are still suggested.
+- **Debugs stop by themselves too.** Every FortiGate real-time debug recipe
+  sets how long it runs (5 minutes by default, 30 at most), and number
+  fields such as packet counts or seconds only accept a whole number in
+  range (1–1000 packets, 1–300 seconds), so a 0 that would mean "no limit"
+  can't be sent.
+- Your own command lists can mark commands with `"caution": "why"` to get
+  the same warning, and give number fields a `"min"` and `"max"`.
+
 ## [1.5.2] - 2026-11-14
 
 ### Fixed

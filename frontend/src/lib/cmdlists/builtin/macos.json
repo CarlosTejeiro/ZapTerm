@@ -2,7 +2,7 @@
   "format": "zapterm-command-lists",
   "version": 1,
   "platform": "macos",
-  "notes": "macOS command lists, shown for local tabs when ZapTerm runs on a Mac (zsh, the default shell, or bash). Every command and option below was checked against the man page in Apple's open-source releases (github.com/apple-oss-distributions) — nothing was added from memory: uname(1), hostinfo(8), uptime(1), scutil(8), sysctl(8), vm_stat(1), df(1), du(1), iostat(8), dmesg(8), who(1), w(1), last(1), ps(1), top(1), kill(1), killall(1), launchctl(1), ifconfig(8), netstat(1), arp(8), ndp(8), lsof(8), route(8), ping(8), traceroute(8), dns-sd(1), pmset(1), caffeinate(8), tcpdump(1); curl(1) from curl.se. Left out: tools whose man page Apple does not publish as open source (networksetup, diskutil, log, softwareupdate, system_profiler, sw_vers…) and the launchctl subcommands newer than the published launchd man page. Commands that need root are listed as is: prefix them with sudo when needed.",
+  "notes": "macOS command lists, shown for local tabs when ZapTerm runs on a Mac (zsh, the default shell, or bash). Every command and option below was checked against the man page in Apple's open-source releases (github.com/apple-oss-distributions) — nothing was added from memory: uname(1), hostinfo(8), uptime(1), scutil(8), sysctl(8), vm_stat(1), df(1), du(1), iostat(8), dmesg(8), who(1), w(1), last(1), ps(1), top(1), kill(1), killall(1), launchctl(1), ifconfig(8), netstat(1), arp(8), ndp(8), lsof(8), route(8), ping(8), traceroute(8), dns-sd(1), pmset(1), caffeinate(8), tcpdump(1); curl(1) from curl.se. Left out: tools whose man page Apple does not publish as open source (networksetup, diskutil, log, softwareupdate, system_profiler, sw_vers…) and the launchctl subcommands newer than the published launchd man page. Commands that need root are listed as is: prefix them with sudo when needed. Safety review: tcpdump -w is bounded with -c so a capture can't fill the disk.",
   "label": "macOS",
   "stopDebug": [],
   "stopKeys": "\u0003",
@@ -430,8 +430,8 @@
             },
             {
               "kind": "command",
-              "cmd": "tcpdump -n -i <iface> -w <file>",
-              "desc": "Save the capture to a pcap file"
+              "cmd": "tcpdump -n -i <iface> -c 10000 -w <file>",
+              "desc": "Save up to 10,000 packets to a pcap file"
             }
           ]
         }

@@ -28,6 +28,8 @@
     fillCommand,
     fillRecipe,
     itemMatches,
+    fieldProblem,
+    rangeText,
     type CommandItem,
     type CommandList,
     type ListItem,
@@ -283,6 +285,14 @@
     }
   }
 
+  /// A command or recipe that can load the device: say why and ask first.
+  async function confirmCaution(caution: string, text: string): Promise<boolean> {
+    return ask(`${caution}\n\n${text}\n\nSend it?`, {
+      title: 'This can load the device',
+      kind: 'warning',
+    })
+  }
+
   async function confirmAction(text: string): Promise<boolean> {
     return ask(`This changes state on the device:\n\n${text}\n\nSend it?`, {
       title: 'Confirm command',
@@ -344,6 +354,7 @@
       return
     }
     if (item.action && !typeOnly && !(await confirmAction(item.cmd))) return
+    if (item.caution && !typeOnly && !(await confirmCaution(item.caution, item.cmd))) return
     close()
     await send([item.cmd], typeOnly)
   }
@@ -354,7 +365,12 @@
       ? fillRecipe(form.item, form.values)
       : [fillCommand(form.item.cmd, form.values)]
   })
-  const formReady = $derived(!!form && Object.values(form.values).every((v) => v.trim() !== ''))
+  const formReady = $derived(
+    !!form &&
+      Object.values(form.values).every((v) => v.trim() !== '') &&
+      (form.kind !== 'recipe' ||
+        form.item.fields.every((f) => !fieldProblem(f, form!.values[f.key] ?? ''))),
+  )
 
   async function submitForm(typeOnly = false) {
     if (!form || !formReady) return
@@ -362,6 +378,10 @@
     const isAction = form.kind === 'command' && form.item.action
     const isDebugRecipe = form.kind === 'recipe' && !!openList?.debug
     if (isAction && !typeOnly && !(await confirmAction(lines.join('\n')))) return
+    // A recipe "typed without Enter" still sends all lines but the last.
+    const caution = form.item.caution
+    const sendsSomething = !typeOnly || (form.kind === 'recipe' && lines.length > 1)
+    if (caution && sendsSomething && !(await confirmCaution(caution, lines.join('\n')))) return
     close()
     const ok = await send(lines, typeOnly)
     if (ok && isDebugRecipe && !typeOnly) {
@@ -690,8 +710,12 @@
             <div class="fields">
               {#if form.kind === 'recipe'}
                 {#each form.item.fields as f, i (f.key)}
+                  {@const problem = fieldProblem(f, form.values[f.key] ?? '')}
                   <label class="field">
-                    <span>{f.label}</span>
+                    <span
+                      >{f.label}{#if f.min !== undefined || f.max !== undefined}
+                        <span class="range">{' '}({rangeText(f)})</span>{/if}</span
+                    >
                     <!-- svelte-ignore a11y_autofocus -->
                     <input
                       type="text"
@@ -699,7 +723,9 @@
                       placeholder={f.placeholder ?? ''}
                       autofocus={i === 0}
                       spellcheck="false"
+                      aria-invalid={!!problem}
                     />
+                    {#if problem}<span class="form-error">Must be {problem}</span>{/if}
                   </label>
                 {/each}
               {:else}
@@ -847,6 +873,9 @@
                       <span class="item-name">{item.name}</span>
                     {/if}
                     <span class="spacer"></span>
+                    {#if item.caution}
+                      <span class="tag tag-caution" title={item.caution}>⚠ load</span>
+                    {/if}
                     {#if item.kind === 'recipe'}
                       <span class="tag tag-recipe"
                         >{item.lines.length} {item.lines.length === 1 ? 'line' : 'lines'}</span
@@ -1350,6 +1379,15 @@
   .tag-type {
     color: #9a5a1a;
     background: color-mix(in srgb, #e6a35a 18%, transparent);
+  }
+  .field .range {
+    color: var(--dim);
+    font-weight: 400;
+  }
+  .tag-caution {
+    color: #a16207;
+    background: color-mix(in srgb, #eab308 20%, transparent);
+    cursor: help;
   }
   .tag-action {
     color: #b23b3b;

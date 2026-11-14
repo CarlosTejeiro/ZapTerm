@@ -3,7 +3,6 @@
   "/system resource print",
   "/system clock print",
   "/system reboot",
-  "/system shutdown",
   "/system backup save",
   "/system backup load",
   "/system package print",

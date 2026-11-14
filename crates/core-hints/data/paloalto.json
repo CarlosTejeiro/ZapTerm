@@ -114,7 +114,6 @@
   "tftp export",
   "tftp import",
   "request restart system",
-  "request shutdown system",
   "request system reboot",
   "request system software check",
   "request system software download",

@@ -2,7 +2,7 @@
   "format": "zapterm-command-lists",
   "version": 1,
   "platform": "linux",
-  "notes": "Linux command lists (also shown for local shell tabs). Every command and option below was checked against its man page on man7.org — nothing was added from memory: uname(1), hostnamectl(1), uptime(1), timedatectl(1), lscpu(1), free(1), df(1), lsblk(8), dmesg(1), who(1), w(1), last(1), systemctl(1), journalctl(1), ps(1), kill(1), lsof(8), ip(8), ip-address(8), ip-route(8), ip-rule(8), ip-neighbour(8), ip-netns(8), ss(8), resolvectl(1), ethtool(8), ping(8), tracepath(8), traceroute(8), arping(8), curl(1), watch(1), iptables(8), tcpdump(1). Left out: tools without a man7.org page (nft, nmcli, mtr, dig, nc…) and commands that reboot or wipe the machine. Commands that need root are listed as is: prefix them with sudo when needed.",
+  "notes": "Linux command lists (also shown for local shell tabs). Every command and option below was checked against its man page on man7.org — nothing was added from memory: uname(1), hostnamectl(1), uptime(1), timedatectl(1), lscpu(1), free(1), df(1), lsblk(8), dmesg(1), who(1), w(1), last(1), systemctl(1), journalctl(1), ps(1), kill(1), lsof(8), ip(8), ip-address(8), ip-route(8), ip-rule(8), ip-neighbour(8), ip-netns(8), ss(8), resolvectl(1), ethtool(8), ping(8), tracepath(8), traceroute(8), arping(8), curl(1), watch(1), iptables(8), tcpdump(1). Left out: tools without a man7.org page (nft, nmcli, mtr, dig, nc…) and commands that reboot or wipe the machine. Commands that need root are listed as is: prefix them with sudo when needed. Safety review: tcpdump -w is bounded with -c so a capture can't fill the disk.",
   "label": "Linux",
   "stopDebug": [],
   "stopKeys": "\u0003",
@@ -431,8 +431,8 @@
             },
             {
               "kind": "command",
-              "cmd": "tcpdump -nn -i <iface> -w <file>",
-              "desc": "Save the capture to a pcap file"
+              "cmd": "tcpdump -nn -i <iface> -c 10000 -w <file>",
+              "desc": "Save up to 10,000 packets to a pcap file"
             }
           ]
         }

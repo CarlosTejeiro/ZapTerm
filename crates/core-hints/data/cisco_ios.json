@@ -126,8 +126,6 @@
   "no debug all",
   "undebug all",
   "clear counters",
-  "clear ip route *",
-  "clear ip bgp *",
   "clear ip ospf process",
   "clear arp-cache",
   "clear mac address-table dynamic",

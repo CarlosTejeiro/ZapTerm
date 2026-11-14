@@ -2,7 +2,7 @@
   "format": "zapterm-command-lists",
   "version": 1,
   "platform": "juniper",
-  "notes": "Juniper Junos OS command lists. Every command below was checked against its page in the Junos OS CLI Reference (Juniper documentation, now served from networkingdocs.hpe.com): its syntax line, options or a sample — nothing was added from memory. Left out: commands whose page was not found there (EX/QFX ethernet-switching and VLAN tables, \"show interfaces descriptions\"…) and commands that reboot or wipe the device.",
+  "notes": "Juniper Junos OS command lists. Every command below was checked against its page in the Junos OS CLI Reference (Juniper documentation, now served from networkingdocs.hpe.com): its syntax line, options or a sample — nothing was added from memory. Left out: commands whose page was not found there (EX/QFX ethernet-switching and VLAN tables, \"show interfaces descriptions\"…) and commands that reboot or wipe the device. Safety review: monitor traffic is bounded with count 100 and carries a caution quoting the CLI reference (“Running monitoring can adversely impact scale and performance”).",
   "label": "Juniper Junos",
   "stopDebug": ["monitor stop"],
   "stopKeys": "\u0003",
@@ -444,8 +444,9 @@
           "items": [
             {
               "kind": "command",
-              "cmd": "monitor traffic interface <interface> no-resolve",
-              "desc": "Packet headers on an interface"
+              "cmd": "monitor traffic interface <interface> no-resolve count 100",
+              "desc": "Packet headers on an interface",
+              "caution": "Juniper: monitoring “can adversely impact scale and performance”. This stops by itself after 100 packets."
             },
             {
               "kind": "command",

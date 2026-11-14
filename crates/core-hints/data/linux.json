@@ -138,7 +138,6 @@
   "chgrp",
   "ln -s",
   "mkdir -p",
-  "rm -rf",
   "rm -i",
   "mv -v",
   "cp -r",
