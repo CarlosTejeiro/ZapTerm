@@ -14,3 +14,7 @@ cd site && python3 -m http.server 8000
 - `fonts/` — Geist and JetBrains Mono (SIL Open Font License, licences included).
 - Download buttons are resolved from the latest GitHub release by `main.js`;
   without JavaScript or network they link to the releases page.
+- `faq.html` — every question and answer, grouped by topic, with search
+  (`faq.js`). Add a question as a `<details id="…">` in its topic: the id is
+  its shareable link (`faq.html#id`) and the search picks it up on its own.
+  The home page shows a few of them and a search box that opens this page.

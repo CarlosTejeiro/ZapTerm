@@ -27,8 +27,9 @@ document.querySelectorAll('[data-tabs]').forEach((row) => {
 
 // Lightbox: click any screenshot to see it full size.
 const box = document.querySelector('.lightbox')
-const boxImg = box.querySelector('img')
+const boxImg = box?.querySelector('img')
 document.addEventListener('click', (e) => {
+  if (!box) return
   const t = e.target
   if (t instanceof HTMLImageElement && t.hasAttribute('data-zoom')) {
     boxImg.src = t.currentSrc || t.src
@@ -39,7 +40,7 @@ document.addEventListener('click', (e) => {
   }
 })
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') box.hidden = true
+  if (e.key === 'Escape' && box) box.hidden = true
 })
 
 // Reveal sections as they scroll into view.
