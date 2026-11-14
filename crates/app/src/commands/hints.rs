@@ -214,6 +214,7 @@ fn seed_starter_catalogs(dir: &std::path::Path) {
     for p in [
         Platform::Fortigate,
         Platform::Fortimanager,
+        Platform::Fortianalyzer,
         Platform::CiscoIos,
         Platform::CiscoIosXr,
         Platform::AristaEos,
@@ -239,7 +240,7 @@ fn seed_starter_catalogs(dir: &std::path::Path) {
             match, not file order).\n\n\
             Valid filenames: `linux.json`, `cisco_ios.json`, `cisco_iosxr.json`,\n\
             `arista_eos.json`, `windows.json`, `juniper.json`, `mikrotik.json`, `aruba.json`, `fortigate.json`,\n\
-            `fortimanager.json`.\n\n\
+            `fortimanager.json`, `fortianalyzer.json`.\n\n\
             The `*.example.json` files are starter copies of the bundled\n\
             catalogs — rename them (drop `.example`) to activate. Use the\n\
             \"Reload catalogs\" button in Settings → Hints to re-scan without\n\

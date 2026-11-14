@@ -1,0 +1,354 @@
+{
+  "format": "zapterm-command-lists",
+  "version": 1,
+  "platform": "fortimanager",
+  "notes": "FortiManager 7.6 command lists. Every command was checked against the FortiManager 7.6.0 CLI reference (docs.fortinet.com/document/fortimanager/7.6.0/cli-reference): get system, diagnose dvm (140839), diagnose fgfm, diagnose fmupdate, diagnose ha, diagnose fmnetwork, diagnose system, diagnose sniffer, execute. Read-only commands only. Left out on purpose: diagnose dvm task repair/reset and taskline repair (“The FortiManager will reboot”), diagnose dvm check-integrity and diagnose cdb check (they offer to change the database; the 7.6.5 upgrade guide warns check-integrity can corrupt the device database on 7.4.8), every delete, reset, reload, force-resync and fmupdate update/restart command. The sniffer carries a caution quoting the sniffer reference (“Packet capture can be very resource intensive”) and its count is limited to 1–1000.",
+  "label": "FortiManager · 7.6",
+  "stopDebug": [],
+  "stopKeys": "\u0003",
+  "lists": [
+    {
+      "id": "system",
+      "name": "System",
+      "icon": "system",
+      "color": "#5B4FC4",
+      "summary": "Status, resources, disk and licenses",
+      "sections": [
+        {
+          "title": "Status",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "get system status",
+              "desc": "System status and firmware version"
+            },
+            {
+              "kind": "command",
+              "cmd": "get system performance",
+              "desc": "CPU, memory and disk usage"
+            },
+            {
+              "kind": "command",
+              "cmd": "get system dns",
+              "desc": "DNS servers"
+            },
+            {
+              "kind": "command",
+              "cmd": "get system ntp",
+              "desc": "NTP settings"
+            },
+            {
+              "kind": "command",
+              "cmd": "diagnose license list",
+              "desc": "License information"
+            },
+            {
+              "kind": "command",
+              "cmd": "diagnose system admin-session list",
+              "desc": "Login sessions"
+            }
+          ]
+        },
+        {
+          "title": "Disk",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "diagnose system disk health",
+              "desc": "SMART health status (hardware models)"
+            },
+            {
+              "kind": "command",
+              "cmd": "diagnose system disk info",
+              "desc": "SMART information (hardware models)"
+            },
+            {
+              "kind": "command",
+              "cmd": "diagnose system disk errors",
+              "desc": "SMART error logs (hardware models)"
+            },
+            {
+              "kind": "command",
+              "cmd": "diagnose system flash list",
+              "desc": "Flash images: version, size, boot and running image"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "network",
+      "name": "Network",
+      "icon": "interfaces",
+      "color": "#0E7490",
+      "summary": "Interfaces, ARP, routes and connectivity",
+      "sections": [
+        {
+          "title": "Interfaces",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "diagnose fmnetwork interface list",
+              "desc": "All interface details"
+            },
+            {
+              "kind": "command",
+              "cmd": "diagnose fmnetwork interface detail <interface>",
+              "desc": "Details of one interface"
+            },
+            {
+              "kind": "command",
+              "cmd": "diagnose fmnetwork arp list",
+              "desc": "ARP table"
+            },
+            {
+              "kind": "command",
+              "cmd": "get system route",
+              "desc": "Static routes"
+            }
+          ]
+        },
+        {
+          "title": "Connections",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "diagnose fmnetwork netstat tcp",
+              "desc": "TCP connections"
+            },
+            {
+              "kind": "command",
+              "cmd": "diagnose fmnetwork netstat udp",
+              "desc": "UDP connections"
+            },
+            {
+              "kind": "command",
+              "cmd": "execute ping <host>",
+              "desc": "Ping an IP address or hostname"
+            },
+            {
+              "kind": "command",
+              "cmd": "execute traceroute <host>",
+              "desc": "Trace the route to a host"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "devices",
+      "name": "Devices",
+      "icon": "fortilink",
+      "color": "#047857",
+      "summary": "ADOMs, managed devices and the FGFM tunnel",
+      "sections": [
+        {
+          "title": "ADOMs & devices",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "diagnose dvm adom list",
+              "desc": "ADOMs and their details"
+            },
+            {
+              "kind": "command",
+              "cmd": "diagnose dvm device list",
+              "desc": "Managed devices"
+            },
+            {
+              "kind": "command",
+              "cmd": "diagnose dvm group list",
+              "desc": "Device groups"
+            },
+            {
+              "kind": "command",
+              "cmd": "diagnose dvm chassis list",
+              "desc": "Chassis"
+            },
+            {
+              "kind": "command",
+              "cmd": "diagnose dvm fap list <device>",
+              "desc": "FortiAPs connected to a device"
+            },
+            {
+              "kind": "command",
+              "cmd": "diagnose dvm fsw list <device>",
+              "desc": "FortiSwitches connected to a device"
+            },
+            {
+              "kind": "command",
+              "cmd": "diagnose dvm supported-platforms mr-list",
+              "desc": "Supported platforms by major release"
+            }
+          ]
+        },
+        {
+          "title": "Database & tasks",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "diagnose dvm dbstatus",
+              "desc": "Database status"
+            },
+            {
+              "kind": "command",
+              "cmd": "diagnose dvm lock",
+              "desc": "DVM lock states"
+            },
+            {
+              "kind": "command",
+              "cmd": "diagnose dvm proc list",
+              "desc": "DVM process (dvmcmd) information"
+            }
+          ]
+        },
+        {
+          "title": "FGFM tunnel",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "diagnose fgfm session-list <device-id>",
+              "desc": "FGFM sessions of a device"
+            },
+            {
+              "kind": "command",
+              "cmd": "diagnose fgfm install-session",
+              "desc": "Install sessions"
+            },
+            {
+              "kind": "command",
+              "cmd": "diagnose fgfm object-list",
+              "desc": "FGFM objects"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fortiguard",
+      "name": "FortiGuard",
+      "icon": "security",
+      "color": "#B45309",
+      "summary": "FDS / FortiGuard servers and updates",
+      "sections": [
+        {
+          "title": "Settings",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "get fmupdate fds-setting",
+              "desc": "FDS settings"
+            },
+            {
+              "kind": "command",
+              "cmd": "get fmupdate server-override-status",
+              "desc": "Server override status"
+            }
+          ]
+        },
+        {
+          "title": "Servers",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "diagnose fmupdate view-serverlist fds",
+              "desc": "FDS server list"
+            },
+            {
+              "kind": "command",
+              "cmd": "diagnose fmupdate view-serverlist fgd",
+              "desc": "FortiGuard server list"
+            },
+            {
+              "kind": "command",
+              "cmd": "diagnose fmupdate fds-update-info",
+              "desc": "Scheduled update information"
+            },
+            {
+              "kind": "command",
+              "cmd": "diagnose fmupdate fgd-bandwidth 24h",
+              "desc": "Download bandwidth over the last 24 hours (also 1h, 6h, 12h, 7d, 30d)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ha",
+      "name": "HA",
+      "icon": "ha",
+      "color": "#BE185D",
+      "summary": "High availability cluster",
+      "sections": [
+        {
+          "title": "Cluster",
+          "items": [
+            {
+              "kind": "command",
+              "cmd": "get system ha-status",
+              "desc": "HA status"
+            },
+            {
+              "kind": "command",
+              "cmd": "diagnose ha stats",
+              "desc": "HA statistics"
+            },
+            {
+              "kind": "command",
+              "cmd": "diagnose ha dump-datalog",
+              "desc": "Dump the HA data log"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "debug",
+      "name": "Capture",
+      "icon": "debug",
+      "color": "#C2410C",
+      "summary": "Packet capture, bounded in packets",
+      "sections": [
+        {
+          "title": "Sniffer",
+          "items": [
+            {
+              "kind": "recipe",
+              "name": "Packet sniffer",
+              "desc": "Capture packets on an interface with a filter (Ctrl+C to stop)",
+              "fields": [
+                {
+                  "key": "iface",
+                  "label": "Interface",
+                  "default": "port1"
+                },
+                {
+                  "key": "filter",
+                  "label": "Filter",
+                  "placeholder": "host 10.0.0.25"
+                },
+                {
+                  "key": "verbose",
+                  "label": "Verbose",
+                  "default": "1",
+                  "min": 1,
+                  "max": 3
+                },
+                {
+                  "key": "count",
+                  "label": "Packets",
+                  "default": "100",
+                  "min": 1,
+                  "max": 1000
+                }
+              ],
+              "lines": ["diagnose sniffer packet {{iface}} '{{filter}}' {{verbose}} {{count}} l"],
+              "caution": "Fortinet: “Packet capture can be very resource intensive” and should be used “only during periods of minimal traffic”. Keep a filter and a small count; Ctrl+C stops it."
+            }
+          ]
+        }
+      ],
+      "debug": true
+    }
+  ]
+}

@@ -23,6 +23,7 @@ const MIKROTIK_JSON: &str = include_str!("../data/mikrotik.json");
 const ARUBA_JSON: &str = include_str!("../data/aruba.json");
 const FORTIGATE_JSON: &str = include_str!("../data/fortigate.json");
 const FORTIMANAGER_JSON: &str = include_str!("../data/fortimanager.json");
+const FORTIANALYZER_JSON: &str = include_str!("../data/fortianalyzer.json");
 const PALOALTO_JSON: &str = include_str!("../data/paloalto.json");
 const F5_BIGIP_JSON: &str = include_str!("../data/f5_bigip.json");
 const CHECKPOINT_GAIA_JSON: &str = include_str!("../data/checkpoint_gaia.json");
@@ -55,6 +56,7 @@ fn default_registry(user_dir: Option<PathBuf>) -> Registry {
     catalogs.insert(Platform::Aruba, parse_bundled(ARUBA_JSON));
     catalogs.insert(Platform::Fortigate, parse_bundled(FORTIGATE_JSON));
     catalogs.insert(Platform::Fortimanager, parse_bundled(FORTIMANAGER_JSON));
+    catalogs.insert(Platform::Fortianalyzer, parse_bundled(FORTIANALYZER_JSON));
     catalogs.insert(Platform::PaloAlto, parse_bundled(PALOALTO_JSON));
     catalogs.insert(Platform::F5Bigip, parse_bundled(F5_BIGIP_JSON));
     catalogs.insert(
@@ -165,6 +167,7 @@ pub fn all_platforms() -> &'static [Platform] {
         Platform::Aruba,
         Platform::Fortigate,
         Platform::Fortimanager,
+        Platform::Fortianalyzer,
         Platform::PaloAlto,
         Platform::F5Bigip,
         Platform::CheckpointGaia,
