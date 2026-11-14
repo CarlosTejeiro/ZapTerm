@@ -140,6 +140,7 @@ fn prompt_regex(p: Platform) -> &'static Regex {
             Aruba,
             Fortigate,
             Fortimanager,
+            Fortianalyzer,
             PaloAlto,
             F5Bigip,
             CheckpointGaia,
@@ -202,6 +203,7 @@ fn rules() -> &'static [Rule] {
             r!(Platform::Aruba, &["ArubaOS", "ProCurve", "Aruba"]),
             // ── Cisco-style `hostname#` prompt — needs a banner clue to
             //    pick the right vendor (Cisco vs Fortigate vs PAN-OS).
+            r!(Platform::Fortianalyzer, &["FortiAnalyzer"]),
             r!(Platform::Fortimanager, &["FortiManager"]),
             r!(
                 Platform::Fortigate,
@@ -279,7 +281,8 @@ fn prompt_src_for(p: Platform) -> &'static str {
 
         // FortiManager top-level looks like `hostname #` (space before #)
         // and the welcome banner says FortiManager.
-        Platform::Fortimanager => r"^[A-Za-z][\w.-]*\s?#\s*$",
+        // FortiAnalyzer shares the FortiManager CLI and prompt.
+        Platform::Fortimanager | Platform::Fortianalyzer => r"^[A-Za-z][\w.-]*\s?#\s*$",
 
         // FortiGate: `hostname # ` or `hostname (vdom) # ` — space before #.
         Platform::Fortigate => r"^[A-Za-z][\w.-]*\s?(?:\([\w-]+\)\s?)?#\s*$",
@@ -425,6 +428,15 @@ mod tests {
     fn fortimanager() {
         let text = "FortiManager 7.6\nfmg01 # ";
         assert_eq!(detect(text), Some(Platform::Fortimanager));
+    }
+
+    #[test]
+    fn fortianalyzer() {
+        let text = "Platform Full Name : FortiAnalyzer-VM64\nfaz01 # ";
+        assert_eq!(detect(text), Some(Platform::Fortianalyzer));
+        // The banner may also name Fortinet; it must not be taken for a FortiGate.
+        let text = "Fortinet FortiAnalyzer 7.6\nfaz01 # ";
+        assert_eq!(detect(text), Some(Platform::Fortianalyzer));
     }
 
     #[test]
