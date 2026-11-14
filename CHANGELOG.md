@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.5.7] - 2026-11-14
+
+### Fixed
+- **Gaps inside words in a tab opened in the background** ("C isco I O S
+  X E"). The terminal now redraws its screen when a hidden tab is shown and
+  once the terminal font has loaded, so text drawn with stale letter
+  spacing is corrected instead of staying until it scrolls away.
+
 ## [1.5.6] - 2026-11-14
 
 ### Fixed
