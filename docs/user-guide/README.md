@@ -288,8 +288,9 @@ selector, Font family + size, cursor style. -->
 - **Sessions bundle**: one JSON with sessions (and their port forwards and
   triggers), folders, groups, macros and highlight rules (**never passwords**)
   — idempotent import for backup, migration and team sharing. The ★ Custom
-  list and your copies of the command lists are not in it: they are JSON files
-  in the folder Settings → Command Lists opens, and can be copied as they are.
+  list and your copies of the command lists are not in it; the **encrypted
+  backup** (Settings → Backup) and sync include them, together with the
+  passwords and vault entries.
 - **Importers**: `~/.ssh/config`, PuTTY, MobaXterm and SecureCRT.
 - **Macros**: exported/imported separately as their own JSON (see
   [Macros](#5-macros)).
