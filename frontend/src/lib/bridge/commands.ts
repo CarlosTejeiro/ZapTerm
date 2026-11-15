@@ -794,6 +794,8 @@ export interface ExportSummary {
   folders: number
   groups: number
   snippets: number
+  /** The macros in the file (`snippets` also counts plain rows from before 1.5.0). */
+  macros: number
   rules: number
 }
 
@@ -803,13 +805,14 @@ export interface ImportSummary {
   folders_added: number
   groups_added: number
   snippets_added: number
+  macros_added: number
   rules_added: number
   /** Existing items updated from a sync pull (0 for imports and restores). */
   items_updated: number
   warnings: string[]
 }
 
-// Write the whole environment (sessions, folders, groups, snippets,
+// Write the whole environment (sessions, folders, groups, macros,
 // highlight rules — never credentials) as versioned JSON at `path`.
 export async function exportSessions(path: string): Promise<ExportSummary> {
   return invoke<ExportSummary>('export_sessions', { path })
@@ -872,6 +875,7 @@ export interface BundleInfo {
   folders: number
   groups: number
   snippets: number
+  macros: number
   rules: number
   vault_entries: number
   session_credentials: number

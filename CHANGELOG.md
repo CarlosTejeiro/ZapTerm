@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.5.8] - 2026-11-15
+
+### Fixed
+- **Export, import, backup and sync say "macros", and count them.** Their
+  messages still said "snippets", retired in 1.5.0, and counted leftover
+  plain rows with them. The export confirmation now lists what the file
+  really holds (sessions with their port forwards and triggers, folders,
+  groups, macros, highlight rules) and what it doesn't (passwords, the
+  ★ Custom list and your copies of the command lists, which are files).
+- The backup description no longer says "everything": the ★ Custom list and
+  your command list copies are not part of a backup.
+- A macro shortcut can use Ctrl+Shift+1…9 again: it was refused as "already
+  fires the first nine bar buttons", which stopped being true in 1.5.0.
+- User guide: the bottom bar section describes command lists, ★ Custom and
+  Recent instead of snippets, and the shortcut table drops the two snippet
+  shortcuts that no longer exist.
+
 ## [1.5.7] - 2026-11-14
 
 ### Fixed

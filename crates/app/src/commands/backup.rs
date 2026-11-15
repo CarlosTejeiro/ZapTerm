@@ -155,6 +155,8 @@ pub struct BundleInfo {
     pub folders: usize,
     pub groups: usize,
     pub snippets: usize,
+    /// The macros among `snippets` (rows with steps).
+    pub macros: usize,
     pub rules: usize,
     pub vault_entries: usize,
     pub session_credentials: usize,
@@ -172,6 +174,12 @@ impl Bundle {
             folders: self.environment.folders.len(),
             groups: self.environment.broadcast_groups.len(),
             snippets: self.environment.snippets.len(),
+            macros: self
+                .environment
+                .snippets
+                .iter()
+                .filter(|s| s.steps_json.is_some())
+                .count(),
             rules: self.environment.highlight_rules.len(),
             vault_entries: self.vault_entries.len(),
             session_credentials: self.session_credentials.len(),

@@ -1,8 +1,7 @@
 <script lang="ts">
-  /// Records a keyboard shortcut for a snippet or macro. Click "Set", press the
-  /// combo; it is validated (needs Ctrl/Alt/Cmd, not a terminal control key,
-  /// not the reserved Ctrl+Shift+1..9 row) and checked against app shortcuts
-  /// and other snippets before it is accepted. Escape cancels recording.
+  /// Records a keyboard shortcut for a macro. Click "Set", press the combo; it
+  /// is validated (needs Ctrl/Alt/Cmd, not a terminal control key) and checked
+  /// against app shortcuts and other macros before it is accepted. Escape cancels recording.
   import type { PylonTheme } from '$lib/themes/index'
   import { bindings } from '$lib/stores/keybindings.svelte'
   import { snippets } from '$lib/stores/snippets.svelte'

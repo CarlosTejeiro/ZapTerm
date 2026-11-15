@@ -15,7 +15,7 @@ SFTP, port forwarding, split panes and multi-host broadcast.
 3. [Connecting & authentication](#3-connecting--authentication)
 4. [Credential Vault](#4-credential-vault)
 5. [Macros](#5-macros)
-6. [Snippets & the bottom bar](#6-snippets--the-bottom-bar)
+6. [Command lists & the bottom bar](#6-command-lists--the-bottom-bar)
 7. [Command hints & platform detection](#7-command-hints--platform-detection)
 8. [Keyword highlighting](#8-keyword-highlighting)
 9. [SFTP & port forwarding](#9-sftp--port-forwarding)
@@ -44,8 +44,8 @@ notebooks).
   duplicate or close from the tab; `Split` and `Multi` buttons on the right.
 - **Terminal card** — the active terminal, a rounded card. Its header exposes
   per-session actions (record log, SFTP, port forwards, split).
-- **Bottom bar** — one-click **snippets** for the focused session's platform,
-  plus a **Recents** zone of recently-used commands.
+- **Bottom bar** — the **command lists** for the focused session's platform,
+  plus **★ Custom** (your own commands) and **Recent**.
 - **Status bar** — connection state, host, protocol, encoding and terminal size.
 
 ---
@@ -199,16 +199,23 @@ connects (set in the New/Edit Session dialog).
 
 ---
 
-## 6. Snippets & the bottom bar
+## 6. Command lists & the bottom bar
 
-- **Snippets** are one-line commands shown in the bottom bar, scoped to the
-  focused session's platform (globals + that vendor's set). Fire snippet 1–9
-  with `Ctrl+Shift+1..9`.
-- **Recents** shows recently-used commands for quick re-fire.
-- Snippets and **macros are separate**: snippets live in the bottom bar; macros
-  live in the sidebar MACROS zone.
+- **Command lists** are menus of ready-made commands for the platform ZapTerm
+  detected on the focused tab (FortiGate, Cisco IOS / IOS XE, IOS XR, Arista
+  EOS, Junos, FortiManager, FortiAnalyzer, Linux, macOS, Windows). Click a
+  command to run it; Shift+click, or the Type button, types it without Enter.
+  Commands with a `<value>` and multi-line recipes ask for their values first.
+- Commands that can load a device (real-time debugs, captures) show a ⚠ badge
+  and ask before they are sent.
+- **★ Custom** holds your own commands, on every platform; **Recent** lists
+  the commands you used last.
+- **Edit the lists**: Settings → Command Lists → *Make my copy* writes that
+  platform's lists as a JSON file you can change; updates never touch it.
+- Plain **snippets were retired in 1.5.0**: the ones you had were moved to
+  ★ Custom. **Macros** (multi-step, in the sidebar MACROS zone) are unchanged.
 - **Security**: a value you type at a **password prompt is never recorded** to
-  history, Recents or hints (and can't resurface as a "previous command").
+  history, Recent or hints (and can't resurface as a "previous command").
 
 ---
 
@@ -217,8 +224,8 @@ connects (set in the New/Edit Session dialog).
 - As you type, ZapTerm suggests commands from your history and per-vendor catalogs
   (12 platforms). Accept a ghost suggestion with `→` / `End`; open the
   suggestion popup with `Ctrl+Space`.
-- The session's **platform is auto-detected** from the prompt, so suggestions and
-  snippets match the device.
+- The session's **platform is auto-detected** from the banner and prompt, so
+  suggestions and command lists match the device.
 
 ---
 
@@ -278,9 +285,11 @@ selector, Font family + size, cursor style. -->
 
 ## 13. Import & export
 
-- **Sessions bundle**: one JSON with sessions, folders, groups, snippets and
-  highlight rules (**never passwords**) — idempotent import for backup,
-  migration and team sharing.
+- **Sessions bundle**: one JSON with sessions (and their port forwards and
+  triggers), folders, groups, macros and highlight rules (**never passwords**)
+  — idempotent import for backup, migration and team sharing. The ★ Custom
+  list and your copies of the command lists are not in it: they are JSON files
+  in the folder Settings → Command Lists opens, and can be copied as they are.
 - **Importers**: `~/.ssh/config`, PuTTY, MobaXterm and SecureCRT.
 - **Macros**: exported/imported separately as their own JSON (see
   [Macros](#5-macros)).
@@ -317,8 +326,6 @@ All customizable in **Settings → Shortcuts**. Defaults:
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | Next / previous tab |
 | `Ctrl+\` / `Ctrl+Shift+\` | Split horizontally / vertically |
 | `Ctrl+Shift+M` | Toggle multi-exec broadcast |
-| `Ctrl+Shift+S` | Snippets |
-| `Ctrl+Shift+1..9` | Fire snippet 1..9 |
 | `Ctrl+Space` | Command suggestion popup |
 | `Ctrl+F` | In-terminal search |
 | `Ctrl+,` | Settings |
