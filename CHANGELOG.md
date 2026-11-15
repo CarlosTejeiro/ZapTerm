@@ -8,7 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
-## [1.6.0-1] - beta 1 of the automation work (branch `claude/automation`, not on main yet)
+## [1.6.0-beta] - first beta of the automation work (branch `claude/automation`, not on main yet)
+
+Betas are the 1.6.x versions: 1.6.0, 1.6.1… tagged `v1.6.0-beta`, `v1.6.1-beta`…
+The app version itself carries no suffix, because the MSI and RPM bundlers
+disagree on which suffixes they accept.
 
 Includes everything up to 1.5.9, plus:
 
