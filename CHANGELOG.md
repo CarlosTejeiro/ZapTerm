@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.5.9] - 2026-11-15
+
+### Added
+- **The ★ Custom list and your command list copies are in the backup and in
+  sync.** They are files, and neither the encrypted backup nor sync carried
+  them, so moving to another computer lost them. Restoring writes the lists
+  this computer doesn't have and keeps any of yours that differ (the notice
+  says how many were kept); sync also brings edits made on another device,
+  under the same rule as everything else. Backups made before this version
+  restore as before. The plain sessions export still leaves them out.
+
 ## [1.5.8] - 2026-11-15
 
 ### Fixed

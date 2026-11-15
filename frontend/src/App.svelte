@@ -1149,7 +1149,7 @@
       'This exports sessions (with their port forwards and triggers), folders, groups, ' +
         'macros and highlight rules.\n\n' +
         'Not exported: passwords, the ★ Custom list and your copies of the command lists ' +
-        '(those are files: Settings → Command Lists opens their folder).\n\n' +
+        '(the encrypted backup in Settings → Backup includes all of them).\n\n' +
         'Note: login scripts ARE exported verbatim (their "send" steps may contain ' +
         'secrets you typed).',
       { title: 'Export sessions', kind: 'info' },

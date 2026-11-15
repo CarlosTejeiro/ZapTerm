@@ -881,6 +881,7 @@ export interface BundleInfo {
   session_credentials: number
   settings: number
   known_hosts_lines: number
+  command_lists: number
 }
 
 export interface BackupExportSummary {
@@ -896,6 +897,11 @@ export interface RestoreSummary {
   credentials_linked: number
   settings_applied: number
   known_hosts_added: number
+  /** Command list files written, replaced (sync update only) and left alone
+   *  because this device has its own. */
+  command_lists_added: number
+  command_lists_updated: number
+  command_lists_kept: number
   warnings: string[]
 }
 
