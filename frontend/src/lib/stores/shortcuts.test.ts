@@ -112,14 +112,9 @@ describe('snippetComboProblem', () => {
     expect(snippetComboProblem(key('r', { code: 'KeyR', ctrl: true }))).not.toBeNull()
   })
 
-  it('rejects the Ctrl+Shift+1..9 row by physical key, whatever it produces', () => {
-    expect(snippetComboProblem(key('!', { code: 'Digit1', ctrl: true, shift: true }))).toMatch(
-      /1…9/,
-    )
-    expect(snippetComboProblem(key('·', { code: 'Digit3', ctrl: true, shift: true }))).toMatch(
-      /1…9/,
-    )
-    // Ctrl+Shift+0 is outside the reserved row.
+  it('accepts the Ctrl+Shift+1..9 row: nothing uses it since snippets were retired', () => {
+    expect(snippetComboProblem(key('!', { code: 'Digit1', ctrl: true, shift: true }))).toBeNull()
+    expect(snippetComboProblem(key('·', { code: 'Digit3', ctrl: true, shift: true }))).toBeNull()
     expect(snippetComboProblem(key('=', { code: 'Digit0', ctrl: true, shift: true }))).toBeNull()
   })
 })

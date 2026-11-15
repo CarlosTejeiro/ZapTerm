@@ -106,3 +106,14 @@ export function readOnlyAllows(command: string, allow: string[]): boolean {
   if (/[;|&`<>]|\$\(/.test(c)) return false
   return allow.some((p) => c === p || c.startsWith(p + ' '))
 }
+
+/** Platform a script sees for a session: a platform stored on the saved
+ *  session wins (the backend never overwrites it with a detection either),
+ *  then the live detection, then nothing. `generic` counts as "not set". */
+export function effectivePlatform(
+  stored: string | null | undefined,
+  detected: string | null | undefined,
+): string | null {
+  if (stored && stored !== 'generic') return stored
+  return detected ?? stored ?? null
+}

@@ -8,7 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
-## [Unreleased] — automation (branch `claude/automation`, not on main yet)
+## [1.6.0-1] - beta 1 of the automation work (branch `claude/automation`, not on main yet)
+
+Includes everything up to 1.5.9, plus:
 
 ### Added
 - **Add devices in bulk** (File menu and command palette). Paste one device
@@ -32,6 +34,83 @@ ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
   Refused, declined and approved commands are logged in the panel.
 - `Session.run(..., strict=True)` raises instead of returning an empty string
   when read-only keeps a command from being sent.
+
+## [1.5.9] - 2026-11-15
+
+### Added
+- **The ★ Custom list and your command list copies are in the backup and in
+  sync.** They are files, and neither the encrypted backup nor sync carried
+  them, so moving to another computer lost them. Restoring writes the lists
+  this computer doesn't have and keeps any of yours that differ (the notice
+  says how many were kept); sync also brings edits made on another device,
+  under the same rule as everything else. Backups made before this version
+  restore as before. The plain sessions export still leaves them out.
+
+## [1.5.8] - 2026-11-15
+
+### Fixed
+- **Export, import, backup and sync say "macros", and count them.** Their
+  messages still said "snippets", retired in 1.5.0, and counted leftover
+  plain rows with them. The export confirmation now lists what the file
+  really holds (sessions with their port forwards and triggers, folders,
+  groups, macros, highlight rules) and what it doesn't (passwords, the
+  ★ Custom list and your copies of the command lists, which are files).
+- The backup description no longer says "everything": the ★ Custom list and
+  your command list copies are not part of a backup.
+- A macro shortcut can use Ctrl+Shift+1…9 again: it was refused as "already
+  fires the first nine bar buttons", which stopped being true in 1.5.0.
+- User guide: the bottom bar section describes command lists, ★ Custom and
+  Recent instead of snippets, and the shortcut table drops the two snippet
+  shortcuts that no longer exist.
+
+## [1.5.7] - 2026-11-14
+
+### Fixed
+- **Gaps inside words in a tab opened in the background** ("C isco I O S
+  X E"). The terminal now redraws its screen when a hidden tab is shown and
+  once the terminal font has loaded, so text drawn with stale letter
+  spacing is corrected instead of staying until it scrolls away.
+
+## [1.5.6] - 2026-11-14
+
+### Fixed
+- **The last Spanish texts are now in English**, like the rest of the app:
+  the "Connected" notice when a session connects, the "Theme · …" entries
+  and "No results for …" in the command palette, the notice after opening the
+  hint catalogs folder, the messages when moving the data folder (Settings →
+  Data), and the error for an export file made by a newer ZapTerm.
+
+## [1.5.5] - 2026-11-14
+
+### Fixed
+- **An Arista switch is no longer taken for Linux.** EOS is Linux-based and
+  logs in with "Last login: …" before a bare `switch#` prompt; that was
+  enough to detect Linux, and the detection never changed afterwards, so the
+  tab got the Linux command lists and suggestions. "Last login:" now only
+  counts together with a shell-style prompt (`user@host:~$`,
+  `[root@host ~]#`); a bare `host#` waits for a real clue such as
+  `show version`. A Linux host with a bare `host#` prompt and no distribution
+  name in its banner is detected a little later too, on the first output that
+  names it.
+- **Scripts see the platform saved on the session.** `session.platform` gave
+  the live detection priority over the platform already stored for a saved
+  session; the stored one now wins.
+
+## [1.5.4] - 2026-11-14
+
+### Added
+- **FortiManager and FortiAnalyzer command lists.** FortiManager: System,
+  Network, Devices (ADOMs, managed devices, DVM database and locks, FGFM
+  tunnel), FortiGuard (FDS servers, scheduled updates, bandwidth), HA and a
+  bounded packet capture. FortiAnalyzer: System, Network, Logging (fortilogd
+  rates and volumes, device log usage), SQL & reports and the same capture.
+  Read-only commands only, each checked against the 7.6.0 CLI reference;
+  commands that repair, reset, delete or reboot (such as `diagnose dvm task
+  repair`) and `diagnose dvm check-integrity`, which offers to change the
+  device database, are left out.
+- **FortiAnalyzer detection and suggestions.** A session whose banner or
+  output names FortiAnalyzer is detected as FortiAnalyzer (not FortiGate)
+  and gets its own command suggestions.
 
 ## [1.5.3] - 2026-11-14
 

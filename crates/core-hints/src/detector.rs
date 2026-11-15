@@ -79,6 +79,12 @@ struct Rule {
     /// for the rule to fire. Any one of them is enough (`OR`). Empty means
     /// the prompt alone is sufficient (only for unambiguous prompts).
     signatures: &'static [&'static str],
+    /// Weaker clues that only count when the prompt line ALSO matches
+    /// [`linux_strict_prompt`] (`user@host…$`, `[user@host dir]#`). Used for
+    /// text that Linux-based network OSes print too: Arista EOS logs in with
+    /// "Last login: … on console" and then sits at a bare `switch#`, which
+    /// the broad Linux prompt regex would otherwise accept.
+    weak_signatures: &'static [&'static str],
 }
 
 impl Rule {
@@ -90,21 +96,28 @@ impl Rule {
         // (potentially expensive) regex over the tail. Case-insensitive: a
         // server's MOTD might say "ubuntu" or "Ubuntu", a banner "PAN-OS" or
         // "pan-os" — we want both forms to count.
+        let mut strict_only = false;
         if !self.signatures.is_empty() {
             let haystack = text.to_ascii_lowercase();
-            let any_hit = self
-                .signatures
-                .iter()
-                .any(|sig| haystack.contains(&sig.to_ascii_lowercase()));
-            if !any_hit {
-                return false;
+            let hit = |sigs: &[&str]| {
+                sigs.iter()
+                    .any(|sig| haystack.contains(&sig.to_ascii_lowercase()))
+            };
+            if !hit(self.signatures) {
+                if !hit(self.weak_signatures) {
+                    return false;
+                }
+                strict_only = true;
             }
         }
         // Take the last non-empty line and match the regex against it. We
         // also tolerate a trailing partial prompt (no newline yet) — the
         // tail of the buffer.
-        let candidate = last_non_empty_line(text).unwrap_or(text);
-        re.is_match(candidate.trim_end())
+        let candidate = last_non_empty_line(text).unwrap_or(text).trim_end();
+        if strict_only {
+            return linux_strict_prompt().is_match(candidate);
+        }
+        re.is_match(candidate)
     }
 
     /// The regex source — duplicated next to the rule below so it's obvious
@@ -115,6 +128,20 @@ impl Rule {
         // lookup is by Platform discriminant.
         prompt_src_for(self.platform)
     }
+}
+
+/// Prompt shapes only a Unix shell uses: `user@host:path$`, `user@host ~ #`,
+/// `[user@host dir]$` (optionally after a `(venv)` prefix). Required when the
+/// only Linux clue in the buffer is a weak signature — a bare `host#` is just
+/// as likely a Linux-based network OS (Arista EOS) as a root shell.
+fn linux_strict_prompt() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| {
+        Regex::new(
+            r"^(?:\([^)]*\)\s*)?(?:[\w.-]+@[\w.-]+(?:[:\s][^\n]*?)?\s*[$#]|\[[\w.-]+@[\w.-]+(?:\s[^\]]*)?\]\s*[$#])\s*$",
+        )
+        .expect("valid regex")
+    })
 }
 
 fn last_non_empty_line(text: &str) -> Option<&str> {
@@ -140,6 +167,7 @@ fn prompt_regex(p: Platform) -> &'static Regex {
             Aruba,
             Fortigate,
             Fortimanager,
+            Fortianalyzer,
             PaloAlto,
             F5Bigip,
             CheckpointGaia,
@@ -179,10 +207,14 @@ fn rules() -> &'static [Rule] {
         // bounded — twelve cells, once per process.
         macro_rules! r {
             ($platform:expr, $sigs:expr) => {{
+                r!($platform, $sigs, &[])
+            }};
+            ($platform:expr, $sigs:expr, $weak:expr) => {{
                 Rule {
                     platform: $platform,
                     prompt: Box::leak(Box::new(OnceLock::new())),
                     signatures: $sigs,
+                    weak_signatures: $weak,
                 }
             }};
         }
@@ -202,6 +234,7 @@ fn rules() -> &'static [Rule] {
             r!(Platform::Aruba, &["ArubaOS", "ProCurve", "Aruba"]),
             // ── Cisco-style `hostname#` prompt — needs a banner clue to
             //    pick the right vendor (Cisco vs Fortigate vs PAN-OS).
+            r!(Platform::Fortianalyzer, &["FortiAnalyzer"]),
             r!(Platform::Fortimanager, &["FortiManager"]),
             r!(
                 Platform::Fortigate,
@@ -225,7 +258,9 @@ fn rules() -> &'static [Rule] {
             //    bare `host#` too, so we *insist* on a distro hint to avoid
             //    misfiring on a Cisco-style `router#` that lost its banner
             //    from the scrollback. Common distro markers from MOTD, SSH
-            //    banner or `uname -a` output.
+            //    banner or `uname -a` output. "Last login:" is only a weak
+            //    clue: Arista EOS (Linux-based) prints it too, then sits at a
+            //    bare `switch#`, so it needs a `user@host` style prompt.
             r!(
                 Platform::Linux,
                 &[
@@ -241,12 +276,12 @@ fn rules() -> &'static [Rule] {
                     "openSUSE",
                     "GNU/Linux",
                     "Linux Mint",
-                    "Last login:",
                     "/etc/motd",
                     "BusyBox",
                     "kernel",
                     "uname",
-                ]
+                ],
+                &["Last login:"]
             ),
         ]
     })
@@ -279,7 +314,8 @@ fn prompt_src_for(p: Platform) -> &'static str {
 
         // FortiManager top-level looks like `hostname #` (space before #)
         // and the welcome banner says FortiManager.
-        Platform::Fortimanager => r"^[A-Za-z][\w.-]*\s?#\s*$",
+        // FortiAnalyzer shares the FortiManager CLI and prompt.
+        Platform::Fortimanager | Platform::Fortianalyzer => r"^[A-Za-z][\w.-]*\s?#\s*$",
 
         // FortiGate: `hostname # ` or `hostname (vdom) # ` — space before #.
         Platform::Fortigate => r"^[A-Za-z][\w.-]*\s?(?:\([\w-]+\)\s?)?#\s*$",
@@ -428,6 +464,15 @@ mod tests {
     }
 
     #[test]
+    fn fortianalyzer() {
+        let text = "Platform Full Name : FortiAnalyzer-VM64\nfaz01 # ";
+        assert_eq!(detect(text), Some(Platform::Fortianalyzer));
+        // The banner may also name Fortinet; it must not be taken for a FortiGate.
+        let text = "Fortinet FortiAnalyzer 7.6\nfaz01 # ";
+        assert_eq!(detect(text), Some(Platform::Fortianalyzer));
+    }
+
+    #[test]
     fn paloalto() {
         // Real PAN-OS login banner advertises PAN-OS by name.
         let text = "PAN-OS 11.2.3\nadmin@PA-3220> ";
@@ -474,6 +519,48 @@ mod tests {
     fn linux_full_prompt() {
         let text = "Last login: ...\ncarlos@bastion:~/work$ ";
         assert_eq!(detect(text), Some(Platform::Linux));
+    }
+
+    #[test]
+    fn linux_last_login_with_user_at_host_prompt() {
+        let text = "Last login: Fri Mar 15 13:17:13 2024 from 10.99.0.50\r\nuser@host:~$ ";
+        assert_eq!(detect(text), Some(Platform::Linux));
+        let text = "Last login: Fri Mar 15 13:17:13 2024 from 10.99.0.50\n[root@db01 ~]# ";
+        assert_eq!(detect(text), Some(Platform::Linux));
+    }
+
+    #[test]
+    fn eos_console_last_login_is_not_linux() {
+        // Arista EOS is Linux-based and prints "Last login:" before landing
+        // at a bare `switch#`. Without an Arista banner this must stay
+        // undetected rather than latch Linux.
+        assert_eq!(
+            detect("Last login: Fri Mar 15 13:17:13 on console\r\nswitch#"),
+            None
+        );
+        assert_eq!(
+            detect("Last login: Fri Mar 15 13:17:13 2024 from 10.99.0.50\r\nspine-01#"),
+            None
+        );
+        assert_eq!(
+            detect("Last login: Fri Mar 15 13:17:13 on console\nswitch>"),
+            None
+        );
+    }
+
+    #[test]
+    fn eos_last_login_then_show_version_latches_arista() {
+        // Because nothing latched on the bare prompt, the later
+        // `show version` output gets to pick the right vendor.
+        let mut d = PlatformDetector::new();
+        assert_eq!(
+            d.feed(b"Last login: Fri Mar 15 13:17:13 on console\r\nspine-01#"),
+            None
+        );
+        assert_eq!(
+            d.feed(b"show version\r\nArista DCS-7280SR-48C6\r\n\r\nspine-01#"),
+            Some(Platform::AristaEos)
+        );
     }
 
     #[test]

@@ -71,7 +71,7 @@ pub struct UserListFile {
     pub json: String,
 }
 
-fn user_dir(state: &AppState) -> PathBuf {
+pub(crate) fn user_dir(state: &AppState) -> PathBuf {
     state.data_dir.dir.join(DIR)
 }
 

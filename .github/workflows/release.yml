@@ -8,6 +8,7 @@ name: Release
 # - `TAURI_SIGNING_PRIVATE_KEY` / `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
 #
 # To cut a release:  git tag v0.7.0 && git push origin v0.7.0
+# A beta uses a numeric suffix, v1.6.0-1 (the MSI bundler accepts no other).
 
 on:
   push:
@@ -96,7 +97,9 @@ jobs:
           # tag, so re-pushing a tag made tauri-action create duplicate empty
           # drafts; a published release is found by tag and reused on re-run.
           releaseDraft: false
-          prerelease: false
+          # A tag with a suffix (v1.6.0-1) is a beta: GitHub keeps it out of
+          # "latest", so the site's download buttons stay on the stable one.
+          prerelease: ${{ contains(github.ref_name, '-') }}
           args: --target ${{ matrix.target }}
 
       # Portable Windows build: the bare exe (frontend embedded) runs from

@@ -1149,9 +1149,12 @@
   /// passwords themselves never leave the keyring.
   async function handleExport() {
     const proceed = await ask(
-      'This exports sessions, folders, groups, snippets and highlight rules.\n\n' +
-        'Passwords are NOT exported. Note: login scripts ARE exported verbatim ' +
-        '(their "send" steps may contain secrets you typed).',
+      'This exports sessions (with their port forwards and triggers), folders, groups, ' +
+        'macros and highlight rules.\n\n' +
+        'Not exported: passwords, the ★ Custom list and your copies of the command lists ' +
+        '(the encrypted backup in Settings → Backup includes all of them).\n\n' +
+        'Note: login scripts ARE exported verbatim (their "send" steps may contain ' +
+        'secrets you typed).',
       { title: 'Export sessions', kind: 'info' },
     )
     if (!proceed) return
@@ -1166,7 +1169,7 @@
       showToast({
         kind: 'success',
         title: 'Export complete',
-        detail: `${s.sessions} sessions, ${s.folders} folders, ${s.groups} groups, ${s.snippets} snippets, ${s.rules} rules → ${s.path}`,
+        detail: `${s.sessions} sessions, ${s.folders} folders, ${s.groups} groups, ${s.macros} macros, ${s.rules} rules → ${s.path}`,
       })
     } catch (e) {
       showToast({ kind: 'error', title: 'Export failed', detail: errorText(e) })
@@ -1181,7 +1184,7 @@
       detail:
         `${s.sessions_added} new sessions (${s.sessions_skipped} already existed), ` +
         `${s.folders_added} folders, ${s.groups_added} groups, ` +
-        `${s.snippets_added} snippets, ${s.rules_added} rules`,
+        `${s.macros_added} macros, ${s.rules_added} rules`,
     })
     if (s.warnings.length > 0) {
       showToast({
@@ -1528,7 +1531,7 @@
     },
     ...Object.entries(themeLabels).map(([key, label]) => ({
       id: `theme-${key}`,
-      label: `Tema · ${label}`,
+      label: `Theme · ${label}`,
       icon: 'contrast' as const,
       section: 'Themes' as const,
       run: () => applyTheme(key),
