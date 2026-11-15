@@ -12,9 +12,11 @@
 //! go to logs.
 
 pub mod error;
+pub mod master;
 pub mod sealed;
 
 pub use error::Error;
+pub use master::{validate_master_password, VaultKey, MIN_MASTER_PASSWORD_CHARS};
 pub use sealed::{open, seal};
 
 const SERVICE: &str = "zapterm";
