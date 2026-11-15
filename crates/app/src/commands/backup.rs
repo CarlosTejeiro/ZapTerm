@@ -97,6 +97,17 @@ pub struct Bundle {
     /// Verbatim `~/.ssh/known_hosts`, if present on the exporting device.
     #[serde(default)]
     pub known_hosts: Option<String>,
+    /// The user's command list files (`<data dir>/cmdlists/<platform>.json`):
+    /// the ★ Custom list (`custom`) and copies of the built-in lists.
+    #[serde(default)]
+    pub command_lists: Vec<BundleCommandList>,
+}
+
+/// One command list file, by its platform key (`custom`, `fortigate`…).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BundleCommandList {
+    pub platform: String,
+    pub json: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -155,11 +166,14 @@ pub struct BundleInfo {
     pub folders: usize,
     pub groups: usize,
     pub snippets: usize,
+    /// The macros among `snippets` (rows with steps).
+    pub macros: usize,
     pub rules: usize,
     pub vault_entries: usize,
     pub session_credentials: usize,
     pub settings: usize,
     pub known_hosts_lines: usize,
+    pub command_lists: usize,
 }
 
 impl Bundle {
@@ -172,6 +186,12 @@ impl Bundle {
             folders: self.environment.folders.len(),
             groups: self.environment.broadcast_groups.len(),
             snippets: self.environment.snippets.len(),
+            macros: self
+                .environment
+                .snippets
+                .iter()
+                .filter(|s| s.steps_json.is_some())
+                .count(),
             rules: self.environment.highlight_rules.len(),
             vault_entries: self.vault_entries.len(),
             session_credentials: self.session_credentials.len(),
@@ -185,6 +205,7 @@ impl Bundle {
                         .count()
                 })
                 .unwrap_or(0),
+            command_lists: self.command_lists.len(),
         }
     }
 }
@@ -205,6 +226,12 @@ pub struct RestoreSummary {
     pub credentials_linked: usize,
     pub settings_applied: usize,
     pub known_hosts_added: usize,
+    /// Command list files written because this device had none for that key.
+    pub command_lists_added: usize,
+    /// Command list files replaced by the bundle's (sync update mode only).
+    pub command_lists_updated: usize,
+    /// Command list files left alone because this device has its own.
+    pub command_lists_kept: usize,
     pub warnings: Vec<String>,
 }
 
@@ -243,6 +270,9 @@ pub(crate) struct BackupCtx<'a> {
     pub portable: bool,
     /// `known_hosts` to read from / merge into. `None` = the user's real file.
     pub known_hosts_path: Option<PathBuf>,
+    /// Folder of the user's command list files. `None` = lists are neither
+    /// read into a bundle nor restored from one.
+    pub cmdlists_dir: Option<PathBuf>,
 }
 
 impl<'a> BackupCtx<'a> {
@@ -254,6 +284,7 @@ impl<'a> BackupCtx<'a> {
             password_cache: Some(&state.password_cache),
             portable: state.data_dir.is_portable(),
             known_hosts_path: None,
+            cmdlists_dir: Some(super::cmdlists::user_dir(state)),
         }
     }
 
@@ -427,6 +458,17 @@ pub(crate) fn build_bundle(
         vault_entries,
         session_credentials,
         known_hosts,
+        command_lists: ctx
+            .cmdlists_dir
+            .as_deref()
+            .map(super::cmdlists::read_dir_lists)
+            .unwrap_or_default()
+            .into_iter()
+            .map(|l| BundleCommandList {
+                platform: l.platform,
+                json: l.json,
+            })
+            .collect(),
     })
 }
 
@@ -607,6 +649,27 @@ pub(crate) fn apply_bundle_with(
             None => summary
                 .warnings
                 .push("known_hosts not merged: no home directory".into()),
+        }
+    }
+
+    // 5. Command lists — a file this device doesn't have is written; one it
+    //    has is kept (it may be the user's own edit), unless this is a sync
+    //    pull onto an unchanged device, where the bundle's copy is the edit.
+    if let Some(dir) = ctx.cmdlists_dir.as_deref() {
+        let local = super::cmdlists::read_dir_lists(dir);
+        for list in &bundle.command_lists {
+            match local.iter().find(|l| l.platform == list.platform) {
+                Some(mine) if mine.json == list.json => {}
+                Some(_) if !update_existing => summary.command_lists_kept += 1,
+                existing => match super::cmdlists::write_list(dir, &list.platform, &list.json) {
+                    Ok(()) if existing.is_some() => summary.command_lists_updated += 1,
+                    Ok(()) => summary.command_lists_added += 1,
+                    Err(e) => summary.warnings.push(format!(
+                        "command list “{}” not restored: {e}",
+                        list.platform
+                    )),
+                },
+            }
         }
     }
 
@@ -839,6 +902,7 @@ mod tests {
                 password_cache: Some(&self.cache),
                 portable: false,
                 known_hosts_path: Some(self.dir.join("known_hosts")),
+                cmdlists_dir: Some(self.dir.join("cmdlists")),
             }
         }
 
@@ -1095,6 +1159,77 @@ mod tests {
             "{:?}",
             s.warnings
         );
+    }
+
+    /// Command list files travel in the bundle: missing ones are written, a
+    /// different local one is kept on restore and replaced only in update
+    /// mode, and bundles made before lists existed still restore.
+    #[test]
+    fn command_lists_are_backed_up_and_restored() {
+        let lists =
+            |f: &Fixture| crate::commands::cmdlists::read_dir_lists(&f.dir.join("cmdlists"));
+        let put = |f: &Fixture, platform: &str, json: &str| {
+            crate::commands::cmdlists::write_list(&f.dir.join("cmdlists"), platform, json).unwrap()
+        };
+        let src = Fixture::new("lists-src");
+        put(&src, "custom", r#"{"mine":1}"#);
+        put(&src, "fortigate", r#"{"fg":1}"#);
+        let mut w = Vec::new();
+        let bundle = build_bundle(&src.ctx(), "1", &mut w).unwrap();
+        assert_eq!(bundle.info().command_lists, 2);
+
+        // Through the encrypted file, onto a device with its own fortigate copy.
+        let file = src.dir.join("b.zaptermbak");
+        write_bundle(&file, "correct horse battery", &bundle).unwrap();
+        let bundle = read_bundle(&file, "correct horse battery").unwrap();
+        let dst = Fixture::new("lists-dst");
+        put(&dst, "fortigate", r#"{"local":true}"#);
+        let s = apply_bundle(&dst.ctx(), &bundle).unwrap();
+        assert_eq!(
+            (
+                s.command_lists_added,
+                s.command_lists_kept,
+                s.command_lists_updated
+            ),
+            (1, 1, 0)
+        );
+        let got = lists(&dst);
+        assert_eq!(got.len(), 2);
+        assert_eq!(got[0].json, r#"{"mine":1}"#); // custom: restored
+        assert_eq!(got[1].json, r#"{"local":true}"#); // fortigate: the local edit stays
+
+        // Restoring again changes nothing.
+        let s = apply_bundle(&dst.ctx(), &bundle).unwrap();
+        assert_eq!((s.command_lists_added, s.command_lists_kept), (0, 1));
+
+        // Update mode (a sync pull onto an unchanged device): the bundle wins.
+        let s = apply_bundle_with(&dst.ctx(), &bundle, true).unwrap();
+        assert_eq!(s.command_lists_updated, 1);
+        assert_eq!(lists(&dst)[1].json, r#"{"fg":1}"#);
+
+        // A name that could leave the folder is refused, not written.
+        let mut evil: Bundle =
+            serde_json::from_value(serde_json::to_value(&bundle).unwrap()).unwrap();
+        evil.command_lists = vec![BundleCommandList {
+            platform: "../x".into(),
+            json: "{}".into(),
+        }];
+        let s = apply_bundle(&dst.ctx(), &evil).unwrap();
+        assert_eq!(s.command_lists_added, 0);
+        assert!(
+            s.warnings.iter().any(|w| w.contains("not restored")),
+            "{:?}",
+            s.warnings
+        );
+        assert!(!dst.dir.join("x.json").exists());
+
+        // A bundle from before lists were included has none: nothing happens.
+        let mut old = serde_json::to_value(&bundle).unwrap();
+        old.as_object_mut().unwrap().remove("command_lists");
+        let old: Bundle = serde_json::from_value(old).unwrap();
+        let s = apply_bundle(&dst.ctx(), &old).unwrap();
+        assert_eq!((s.command_lists_added, s.command_lists_kept), (0, 0));
+        assert_eq!(lists(&dst).len(), 2);
     }
 
     #[test]

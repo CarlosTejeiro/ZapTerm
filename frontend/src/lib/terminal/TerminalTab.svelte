@@ -28,7 +28,7 @@
     searchCommandHistory,
   } from '$lib/bridge/commands'
   import type { SavedSession, SessionLog, AuthMethod, HostKeyStatus } from '$lib/bridge/types'
-  import { sanitizeDims, isSaneDim } from './dims'
+  import { sanitizeDims, isSaneDim, createShownDetector } from './dims'
   import HostKeyDialog from './HostKeyDialog.svelte'
   import TunnelsDialog from './TunnelsDialog.svelte'
   import SftpDialog from './SftpDialog.svelte'
@@ -1189,12 +1189,12 @@
 
     {
       const label = savedSession?.name ?? ssh?.host ?? telnet?.host ?? 'local'
-      showToast({ kind: 'success', title: 'Conectado', detail: label })
+      showToast({ kind: 'success', title: 'Connected', detail: label })
     }
     onSessionOpen?.()
     // Re-focus after the connect — xterm may have lost focus during the
     // host-key dialog, password prompt, or while the await chain ran.
-    // Without this, the first key after "Conectado" can land nowhere.
+    // Without this, the first key after "Connected" can land nowhere.
     term.focus()
 
     // Self-heal a bad initial fit without waiting for a user resize. If the
@@ -1278,9 +1278,14 @@
     // Resize terminal when the container size changes. safeFit re-validates the
     // measurement (with retry), and we only forward the resize when the fitted
     // size is sane — never send a 1×1 / NaN resize to the PTY.
+    // Rows keep the letter-spacing they were drawn with (see
+    // createShownDetector): redraw the screen when a hidden tab is shown.
+    const shownAgain = createShownDetector()
     resizeObserver = new ResizeObserver(() => {
       if (!term) return
+      const redraw = shownAgain(container.offsetWidth, container.offsetHeight)
       void safeFit().then((ok) => {
+        if (term && redraw) term.refresh(0, term.rows - 1)
         if (!term || !sessionId) return
         if (ok && isSaneDim(term.cols) && isSaneDim(term.rows)) {
           invoke('resize_terminal', {
@@ -1354,6 +1359,8 @@
       if (!term || terminalSettings.fontFamily !== family) return
       term.options.fontFamily = family
       if (await safeFit()) await correctPtySize()
+      // Rows drawn before the font was ready were spaced for its fallback.
+      term?.refresh(0, term.rows - 1)
     })
     term.options.cursorStyle = terminalSettings.cursorStyle
     term.options.cursorBlink = terminalSettings.cursorBlink

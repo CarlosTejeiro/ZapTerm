@@ -35,3 +35,26 @@ export function sanitizeDims(cols: number, rows: number): { cols: number; rows: 
   }
   return { cols: FALLBACK_COLS, rows: FALLBACK_ROWS }
 }
+
+/** Tracks whether a terminal's container is laid out, to catch the moment a
+ *  hidden tab (`display: none`, so 0×0) is shown again.
+ *
+ *  xterm's DOM renderer gives each run of text a letter-spacing computed from
+ *  glyph widths it measures with real elements, and only redraws a row when
+ *  its content changes. A row drawn with wrong measurements — while the tab
+ *  was hidden (elements measure 0) or before the terminal font was ready
+ *  (fallback widths) — keeps gaps inside its words ("C isco I O S") after
+ *  the measurements are right again. Redrawing the visible rows when the tab
+ *  is shown clears them. */
+export function createShownDetector(): (width: number, height: number) => boolean {
+  let hidden = false
+  return (width, height) => {
+    if (!(width > 0 && height > 0)) {
+      hidden = true
+      return false
+    }
+    const becameVisible = hidden
+    hidden = false
+    return becameVisible
+  }
+}

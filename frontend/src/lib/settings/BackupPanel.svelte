@@ -19,6 +19,7 @@
   import { showToast } from '$lib/ui/toast-store.svelte'
   import PassphraseDialog from '$lib/ui/PassphraseDialog.svelte'
   import { SYNC_STATE_LABELS, handleSyncStatus } from '$lib/backup/sync'
+  import { loadUserLists } from '$lib/cmdlists/userLists.svelte'
 
   let busy = $state(false)
 
@@ -129,9 +130,9 @@
   function describe(i: BundleInfo): string {
     return (
       `${i.sessions} sessions, ${i.folders} folders, ${i.groups} groups, ` +
-      `${i.snippets} snippets, ${i.rules} rules, ${i.vault_entries} vault entries, ` +
+      `${i.macros} macros, ${i.rules} rules, ${i.vault_entries} vault entries, ` +
       `${i.session_credentials} session credentials, ${i.settings} settings, ` +
-      `${i.known_hosts_lines} known hosts`
+      `${i.known_hosts_lines} known hosts, ${i.command_lists} command lists`
     )
   }
 
@@ -226,13 +227,16 @@
         title: 'Backup restored',
         detail:
           `${env.sessions_added} new sessions (${env.sessions_skipped} already existed), ` +
-          `${env.folders_added} folders, ${env.groups_added} groups, ${env.snippets_added} snippets, ` +
+          `${env.folders_added} folders, ${env.groups_added} groups, ${env.macros_added} macros, ` +
           `${env.rules_added} rules · vault: ${s.vault_added} added, ${s.vault_updated} updated · ` +
           `${s.credentials_linked} credentials attached · ${s.settings_applied} settings · ` +
-          `${s.known_hosts_added} known hosts`,
+          `${s.known_hosts_added} known hosts · command lists: ${s.command_lists_added} added` +
+          (s.command_lists_kept ? `, ${s.command_lists_kept} kept (yours differ)` : ''),
         ttl: 0,
       })
       warn('Restore', [...env.warnings, ...s.warnings])
+      // Restored list files show up without waiting for a restart.
+      void loadUserLists().catch(() => {})
       const yes = await ask(
         'Restart ZapTerm now so the restored sessions and settings are loaded?\n\nOpen sessions will be closed.',
         { title: 'Restart ZapTerm', kind: 'info' },
@@ -248,10 +252,10 @@
   <section>
     <h3>Encrypted backup</h3>
     <p class="hint">
-      One file with <strong>everything</strong>: sessions, folders, groups, snippets and macros,
-      highlight rules, settings, trusted host keys — and the passwords and vault entries that the
-      plain sessions export leaves out. It is sealed with a passphrase you choose (Argon2id +
-      AES-256-GCM), so it is safe to keep in any cloud-synced folder: the provider only ever sees
+      One file with sessions, folders, groups, macros, highlight rules, settings, trusted host keys,
+      the ★ Custom list and your copies of the command lists — and the passwords and vault entries
+      that the plain sessions export leaves out. It is sealed with a passphrase you choose (Argon2id
+      + AES-256-GCM), so it is safe to keep in any cloud-synced folder: the provider only ever sees
       ciphertext.
     </p>
     <div class="actions">

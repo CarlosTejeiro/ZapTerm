@@ -172,7 +172,7 @@
       {/each}
 
       {#if flat.length === 0}
-        <div class="empty">Sin resultados para "{query}"</div>
+        <div class="empty">No results for "{query}"</div>
       {/if}
     </div>
 

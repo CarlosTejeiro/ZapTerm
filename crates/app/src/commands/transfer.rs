@@ -73,7 +73,11 @@ pub struct ExportSummary {
     pub sessions: usize,
     pub folders: usize,
     pub groups: usize,
+    /// Every row of the snippets table in the file (macros plus any plain
+    /// rows left from before 1.5.0).
     pub snippets: usize,
+    /// The macros among them: what the user sees as "macros".
+    pub macros: usize,
     pub rules: usize,
 }
 
@@ -84,6 +88,8 @@ pub struct ImportSummary {
     pub folders_added: usize,
     pub groups_added: usize,
     pub snippets_added: usize,
+    /// The macros among `snippets_added`.
+    pub macros_added: usize,
     pub rules_added: usize,
     /// Existing items whose fields were overwritten from the file (only in
     /// update mode — a sync pull onto a device with no local changes).
@@ -179,7 +185,7 @@ pub fn apply_import_with(
 ) -> Result<ImportSummary, AppError> {
     if file.zapx_export > EXPORT_VERSION {
         return Err(AppError::Internal(format!(
-            "el fichero es de una versión de ZapTerm más nueva (export v{}, soportado v{EXPORT_VERSION})",
+            "the file comes from a newer ZapTerm (export v{}, this version reads up to v{EXPORT_VERSION})",
             file.zapx_export
         )));
     }
@@ -551,6 +557,9 @@ pub fn apply_import_with(
             }
         }
         summary.snippets_added += 1;
+        if sn.steps_json.is_some() {
+            summary.macros_added += 1;
+        }
     }
 
     // 6. Highlight rules — identity: (pattern, is_regex).
@@ -623,6 +632,11 @@ pub async fn export_sessions(
         folders: file.folders.len(),
         groups: file.broadcast_groups.len(),
         snippets: file.snippets.len(),
+        macros: file
+            .snippets
+            .iter()
+            .filter(|s| s.steps_json.is_some())
+            .count(),
         rules: file.highlight_rules.len(),
     })
 }
@@ -840,6 +854,7 @@ mod tests {
         assert_eq!(s1.folders_added, 2);
         assert_eq!(s1.groups_added, 1);
         assert_eq!(s1.snippets_added, 2);
+        assert_eq!(s1.macros_added, 1); // only the one with steps is a macro
         assert_eq!(s1.rules_added, 1);
         assert!(
             !dst.list_highlight_rules()

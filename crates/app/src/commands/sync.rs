@@ -396,12 +396,23 @@ pub(crate) fn fingerprint(bundle: &Bundle, key: &str) -> String {
     known_hosts.sort_unstable();
     known_hosts.dedup();
 
-    let canonical = json!({
+    let mut canonical = json!({
         "folders": folders, "sessions": sessions, "forwards": forwards,
         "groups": groups, "snippets": snippets, "rules": rules,
         "settings": settings, "vault": vault, "credentials": creds,
         "known_hosts": known_hosts,
     });
+    // Only when there are any, so a device without list files keeps the
+    // fingerprint it had before lists were synced (no spurious "changed").
+    if !bundle.command_lists.is_empty() {
+        let mut lists: Vec<Value> = bundle
+            .command_lists
+            .iter()
+            .map(|l| json!({ "platform": l.platform, "json": l.json }))
+            .collect();
+        lists.sort_by_key(|v| v["platform"].to_string());
+        canonical["command_lists"] = Value::Array(lists);
+    }
     let bytes = serde_json::to_vec(&canonical).unwrap_or_default();
     // Keyed with this install's secret key: the canonical form includes
     // passwords, and a plain hash kept in the database would let anyone with
@@ -899,6 +910,7 @@ mod tests {
                 password_cache: Some(&self.cache),
                 portable: false,
                 known_hosts_path: Some(self.dir.join("known_hosts")),
+                cmdlists_dir: Some(self.dir.join("cmdlists")),
             }
         }
         fn add_ssh(&self, name: &str) -> i64 {
@@ -1014,6 +1026,29 @@ mod tests {
         assert_eq!(st.state, SyncState::Disabled);
         assert!(!st.has_passphrase);
         let _ = std::fs::remove_dir_all(&root);
+    }
+
+    /// Command list files count as content — but a device without any keeps
+    /// the fingerprint it had before lists were synced.
+    #[test]
+    fn fingerprint_sees_command_lists() {
+        let root = root("fp-lists");
+        let a = Device::new(&root, "a");
+        let mut w = Vec::new();
+        let fp = |d: &Device, w: &mut Vec<String>| {
+            fingerprint(&backup::build_bundle(&d.ctx(), "1", w).unwrap(), "k")
+        };
+        let before = fp(&a, &mut w);
+        let mut legacy = backup::build_bundle(&a.ctx(), "1", &mut w).unwrap();
+        legacy.command_lists.clear();
+        assert_eq!(fingerprint(&legacy, "k"), before);
+
+        let dir = a.dir.join("cmdlists");
+        crate::commands::cmdlists::write_list(&dir, "custom", r#"{"v":1}"#).unwrap();
+        let with_list = fp(&a, &mut w);
+        assert_ne!(with_list, before);
+        crate::commands::cmdlists::write_list(&dir, "custom", r#"{"v":2}"#).unwrap();
+        assert_ne!(fp(&a, &mut w), with_list);
     }
 
     /// The fingerprint ignores ids and ordering but sees every content change.
