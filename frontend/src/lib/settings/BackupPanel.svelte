@@ -129,7 +129,7 @@
   function describe(i: BundleInfo): string {
     return (
       `${i.sessions} sessions, ${i.folders} folders, ${i.groups} groups, ` +
-      `${i.snippets} snippets, ${i.rules} rules, ${i.vault_entries} vault entries, ` +
+      `${i.macros} macros, ${i.rules} rules, ${i.vault_entries} vault entries, ` +
       `${i.session_credentials} session credentials, ${i.settings} settings, ` +
       `${i.known_hosts_lines} known hosts`
     )
@@ -226,7 +226,7 @@
         title: 'Backup restored',
         detail:
           `${env.sessions_added} new sessions (${env.sessions_skipped} already existed), ` +
-          `${env.folders_added} folders, ${env.groups_added} groups, ${env.snippets_added} snippets, ` +
+          `${env.folders_added} folders, ${env.groups_added} groups, ${env.macros_added} macros, ` +
           `${env.rules_added} rules · vault: ${s.vault_added} added, ${s.vault_updated} updated · ` +
           `${s.credentials_linked} credentials attached · ${s.settings_applied} settings · ` +
           `${s.known_hosts_added} known hosts`,
@@ -248,11 +248,11 @@
   <section>
     <h3>Encrypted backup</h3>
     <p class="hint">
-      One file with <strong>everything</strong>: sessions, folders, groups, snippets and macros,
-      highlight rules, settings, trusted host keys — and the passwords and vault entries that the
-      plain sessions export leaves out. It is sealed with a passphrase you choose (Argon2id +
-      AES-256-GCM), so it is safe to keep in any cloud-synced folder: the provider only ever sees
-      ciphertext.
+      One file with sessions, folders, groups, macros, highlight rules, settings, trusted host keys
+      — and the passwords and vault entries that the plain sessions export leaves out. The ★ Custom
+      list and your copies of the command lists are files and are not part of it. It is sealed with
+      a passphrase you choose (Argon2id + AES-256-GCM), so it is safe to keep in any cloud-synced
+      folder: the provider only ever sees ciphertext.
     </p>
     <div class="actions">
       <button type="button" class="ok-btn" disabled={busy} onclick={chooseExportFile}>

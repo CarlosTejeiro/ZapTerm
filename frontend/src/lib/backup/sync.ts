@@ -43,7 +43,7 @@ function reportRestore(s: RestoreSummary) {
     detail:
       `${env.sessions_added} new sessions, ${env.items_updated} items updated, ` +
       `${env.folders_added} folders, ${env.groups_added} groups, ` +
-      `${env.snippets_added} snippets, ${env.rules_added} rules · vault: ${s.vault_added} added, ` +
+      `${env.macros_added} macros, ${env.rules_added} rules · vault: ${s.vault_added} added, ` +
       `${s.vault_updated} updated · ${s.credentials_linked} credentials · ${s.settings_applied} settings · ` +
       `${s.known_hosts_added} known hosts`,
     ttl: 0,

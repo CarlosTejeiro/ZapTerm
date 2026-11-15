@@ -86,10 +86,7 @@ export interface ShortcutSnippet {
   shortcut: string | null
 }
 
-/// Why this key press can't be a snippet shortcut, or `null` if it can. Takes
-/// the event rather than the combo string because the reserved Ctrl+Shift+1..9
-/// row is identified by physical key: with Shift held the produced character
-/// is layout-dependent (`!`, `"`, `·`…).
+/// Why this key press can't be a macro shortcut, or `null` if it can.
 export function snippetComboProblem(e: KeyboardEvent): string | null {
   if (eventToCombo(e) === null) return 'Press a key together with the modifiers.'
   if (!e.ctrlKey && !e.altKey && !e.metaKey) return 'Use Ctrl, Alt or Cmd in the shortcut.'
@@ -97,8 +94,6 @@ export function snippetComboProblem(e: KeyboardEvent): string | null {
   // Ctrl+R, Ctrl+A…); stealing one would break the terminal.
   if (e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey)
     return 'Ctrl+<key> alone is reserved for the terminal — add Shift or Alt.'
-  if (e.ctrlKey && e.shiftKey && /^Digit[1-9]$/.test(e.code))
-    return 'Ctrl+Shift+1…9 already fire the first nine bar buttons.'
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'k')
     return 'Ctrl+K opens the command palette.'
   return null
