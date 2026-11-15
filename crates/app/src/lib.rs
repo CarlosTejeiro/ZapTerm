@@ -5,6 +5,7 @@ mod events;
 mod hint_watcher;
 mod importers;
 mod login_script;
+mod master;
 mod menu;
 mod scripting;
 mod secrets;
@@ -211,6 +212,7 @@ pub fn run() {
                 forwards: Mutex::new(HashMap::new()),
                 password_cache: Arc::new(Mutex::new(HashMap::new())),
                 vault_seed,
+                master_vault: Default::default(),
                 sftp_cancellations: Arc::new(Mutex::new(HashMap::new())),
                 hint_watcher,
                 scripts: Default::default(),
@@ -327,6 +329,12 @@ pub fn run() {
             commands::transfer::import_mobaxterm,
             commands::transfer::import_securecrt,
             commands::transfer::save_text_file,
+            commands::master::master_status,
+            commands::master::master_create,
+            commands::master::master_unlock,
+            commands::master::master_lock,
+            commands::master::master_change_password,
+            commands::master::master_set_remember,
             commands::backup::backup_export,
             commands::backup::backup_inspect,
             commands::backup::backup_restore,
