@@ -7,3 +7,4 @@
 # its URL must keep serving the same file. Don't re-run the release workflow
 # for a version listed here, or the file served would change.
 1.5.9
+1.7.1
