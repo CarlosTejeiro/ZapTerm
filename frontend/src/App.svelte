@@ -1,6 +1,6 @@
 <script lang="ts">
   import { errorText } from '$lib/bridge/errors'
-  import { onMount } from 'svelte'
+  import { onMount, tick } from 'svelte'
   import { getTheme, applyTheme } from '$lib/themes/store.svelte'
   import { themes, themeLabels, colorSchemeFor } from '$lib/themes/index'
   import MarkTile from '$lib/icons/MarkTile.svelte'
@@ -84,7 +84,11 @@
     deleteFolder,
     openLogsDir,
   } from '$lib/bridge/commands'
-  import { claimBroadcastScope, releaseBroadcastScope } from '$lib/stores/sessionRuntime.svelte'
+  import {
+    claimBroadcastScope,
+    focusPane,
+    releaseBroadcastScope,
+  } from '$lib/stores/sessionRuntime.svelte'
   import {
     snippets,
     loadSnippets,
@@ -921,6 +925,7 @@
       const active = tabs.find((t) => t.id === activeTabId)
       if (active) focusedPaneId = firstPaneId(active)
     }
+    focusActivePane()
   }
 
   function renameTab(id: number, label: string) {
@@ -958,6 +963,15 @@
     activeTabId = id
     const tab = tabs.find((t) => t.id === id)
     if (tab) focusedPaneId = firstPaneId(tab)
+    focusActivePane()
+  }
+
+  /// Give the keyboard to the active tab's focused terminal. Clicking a tab
+  /// leaves focus on the tab button, so typing went nowhere until the user
+  /// also clicked inside the terminal. Waits until the tab is shown: a hidden
+  /// terminal can't take focus.
+  function focusActivePane() {
+    void tick().then(() => requestAnimationFrame(() => focusPane(focusedPaneId)))
   }
 
   function handleStatusChange(tabId: number, paneId: number, status: PaneStatus) {
