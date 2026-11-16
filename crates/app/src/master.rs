@@ -57,6 +57,17 @@ impl MasterVault {
             *slot = key.map(Arc::new);
         }
     }
+
+    /// Test helper: an open vault without going through a master password.
+    #[cfg(test)]
+    pub(crate) fn open_with(&self, key: VaultKey) {
+        self.set(Some(key));
+    }
+
+    #[cfg(test)]
+    pub(crate) fn close(&self) {
+        self.set(None);
+    }
 }
 
 /// What the UI needs to decide between set-up, unlock and normal use.

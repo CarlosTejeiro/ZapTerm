@@ -16,13 +16,32 @@ fn ctl<'a>(state: &'a AppState, keyring: &'a KeyringStore) -> Ctl<'a> {
     }
 }
 
-/// Current state. A vault remembered on this device is opened here, so the
-/// first call at start tells the UI whether to ask for the master password.
+/// The vault just opened: move whatever older versions stored (OS keyring
+/// entries, `vault.key` copies) into it.
+fn opened(state: &AppState) {
+    let moved = crate::secrets::migrate_all(&state.secret_store(), &state.db, &state.vault_seed);
+    tracing::info!(secrets = moved, "vault open");
+}
+
+/// At start: open a vault remembered on this device, so sessions restored
+/// from the last run find their passwords without waiting for the UI.
+pub(crate) fn open_at_start(state: &AppState) {
+    let keyring = KeyringStore;
+    if ctl(state, &keyring).auto_unlock() {
+        opened(state);
+    }
+}
+
+/// Current state. A vault remembered on this device is opened here if it
+/// isn't yet, so the UI learns whether to ask for the master password.
 #[tauri::command]
 pub async fn master_status(state: State<'_, AppState>) -> Result<VaultStatus, AppError> {
     let keyring = KeyringStore;
     let ctl = ctl(&state, &keyring);
-    ctl.auto_unlock();
+    let was_open = ctl.status().unlocked;
+    if ctl.auto_unlock() && !was_open {
+        opened(&state);
+    }
     Ok(ctl.status())
 }
 
@@ -33,7 +52,9 @@ pub async fn master_create(
     remember: bool,
 ) -> Result<VaultStatus, AppError> {
     let password = zeroize::Zeroizing::new(password);
-    ctl(&state, &KeyringStore).create(&password, remember)
+    let status = ctl(&state, &KeyringStore).create(&password, remember)?;
+    opened(&state);
+    Ok(status)
 }
 
 #[tauri::command]
@@ -42,7 +63,9 @@ pub async fn master_unlock(
     password: String,
 ) -> Result<VaultStatus, AppError> {
     let password = zeroize::Zeroizing::new(password);
-    ctl(&state, &KeyringStore).unlock(&password)
+    let status = ctl(&state, &KeyringStore).unlock(&password)?;
+    opened(&state);
+    Ok(status)
 }
 
 #[tauri::command]

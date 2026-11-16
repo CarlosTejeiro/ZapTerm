@@ -67,7 +67,7 @@ pub async fn create_vault_entry(
     let keyring_key = format!("vault:{}", Uuid::new_v4());
     // OS keyring first; when it can't take the secret, the encrypted database
     // copy written below holds it instead (see `crate::secrets`).
-    let in_keyring = crate::secrets::keyring_put(&keyring_key, &password);
+    let in_keyring = crate::secrets::keyring_put(&state.secret_store(), &keyring_key, &password);
     // The pre-check above is racy: two same-name creates can both pass it, and
     // the partial unique index (migration 021) then rejects the second insert.
     // Don't leak the just-stored keyring secret on ANY insert failure — delete
@@ -78,12 +78,10 @@ pub async fn create_vault_entry(
     {
         Ok(id) => {
             if let Err(e) = crate::secrets::settle_fallback(
+                &state.secret_store(),
                 &state.db,
-                &state.vault_seed,
                 crate::secrets::Fallback::Credential(id),
-                &password,
                 in_keyring,
-                state.data_dir.is_portable(),
             ) {
                 // Stored nowhere: don't leave an entry that can't work.
                 state.db.delete_credential(id).ok();
@@ -92,7 +90,7 @@ pub async fn create_vault_entry(
             Ok(id)
         }
         Err(e) => {
-            core_vault::Vault::delete(&keyring_key).ok();
+            crate::commands::backup::SecretStore::delete(&state.secret_store(), &keyring_key);
             Err(AppError::Internal(e.to_string()))
         }
     }
@@ -148,12 +146,11 @@ pub async fn update_vault_entry(
     // it was instead of renamed with the old password.
     if let Some(pw) = password {
         crate::secrets::persist(
+            &state.secret_store(),
             &state.db,
-            &state.vault_seed,
             &cred.keyring_key,
             crate::secrets::Fallback::Credential(id),
             &pw,
-            state.data_dir.is_portable(),
         )
         .map_err(AppError::Internal)?;
     }
@@ -181,13 +178,7 @@ fn vault_credential(state: &AppState, id: i64) -> Result<core_persistence::Crede
 
 /// The secret of a vault entry: keyring, else its encrypted database copy.
 fn vault_secret(state: &AppState, cred: &core_persistence::Credential) -> Result<String, AppError> {
-    crate::secrets::resolve(
-        &state.db,
-        &state.vault_seed,
-        &cred.keyring_key,
-        crate::secrets::Fallback::Credential(cred.id),
-        state.data_dir.is_portable(),
-    )
+    crate::secrets::resolve(&state.secret_store(), &state.db, &state.vault_seed, &cred.keyring_key, crate::secrets::Fallback::Credential(cred.id))
     .ok_or_else(|| {
         AppError::Internal(format!(
             "the password of vault entry «{}» is unavailable (not in the OS keyring and no saved copy) — set it again in the vault",
@@ -207,7 +198,7 @@ pub async fn delete_vault_entry(state: State<'_, AppState>, id: i64) -> Result<(
         .db
         .delete_credential(id)
         .map_err(|e| AppError::Internal(e.to_string()))?;
-    core_vault::Vault::delete(&cred.keyring_key).ok();
+    crate::commands::backup::SecretStore::delete(&state.secret_store(), &cred.keyring_key);
     state.db.delete_credential_secret(id).ok();
     Ok(())
 }
