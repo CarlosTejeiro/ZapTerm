@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.7.1] - 2026-11-16
+
+### Fixed
+- **Switching tabs puts the keyboard in the terminal.** After clicking a tab
+  (or switching with the keyboard shortcut, or closing the tab you were in),
+  you had to click inside the terminal before typing; the tab button kept the
+  focus.
+
 ## [1.7.0] - 2026-11-16
 
 **Make an encrypted backup before updating.** This version upgrades the
