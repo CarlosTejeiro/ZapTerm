@@ -179,22 +179,19 @@ pub fn run() {
                     .collect(),
             )));
 
-            // Local-fallback vault seed: a random per-install key in
-            // `vault.key` (mode 0600), not the predictable data-dir path the
-            // older builds used. If the keyfile didn't exist yet, this is the
-            // first launch on the new scheme — migrate any secrets written
-            // under the legacy seed so the user isn't re-prompted. If the
-            // keyfile can't be created (read-only dir), degrade to the legacy
-            // seed so credentials still resolve.
-            let legacy_seed = resolved.legacy_vault_seed();
-            let vault_key_existed = data_dir.join("vault.key").exists();
-            let vault_seed = core_vault::load_or_create_seed(&data_dir).unwrap_or_else(|e| {
-                tracing::warn!("vault keyfile unavailable ({e}); falling back to legacy seed");
-                legacy_seed.clone()
-            });
-            if !vault_key_existed && vault_seed != legacy_seed {
-                data_dir::migrate_session_secrets(&db, &legacy_seed, &vault_seed);
-            }
+            // The seed older versions encrypted database copies of secrets
+            // with: `vault.key` if one is still there, else the value builds
+            // before it used. Nothing is encrypted with it any more — it only
+            // reads those copies while they are moved into the vault — so no
+            // key file is created.
+            let vault_seed = match core_vault::load_seed(&data_dir) {
+                Ok(Some(seed)) => seed,
+                Ok(None) => resolved.legacy_vault_seed(),
+                Err(e) => {
+                    tracing::warn!("{e}; secrets saved under it can't be read");
+                    resolved.legacy_vault_seed()
+                }
+            };
 
             // The SSH library used to keep `known_hosts` under
             // `%USERPROFILE%\ssh\` on Windows; it now uses the standard

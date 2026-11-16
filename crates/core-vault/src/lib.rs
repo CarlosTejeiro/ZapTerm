@@ -133,6 +133,33 @@ pub fn load_or_create_seed(dir: &Path) -> Result<String, Error> {
     }
 }
 
+/// The seed an older version left in `dir/vault.key`, if any. Never creates
+/// the file: since the vault key took over, the seed is only needed to read
+/// copies not yet moved into the vault.
+pub fn load_seed(dir: &Path) -> Result<Option<String>, Error> {
+    let key_path = dir.join("vault.key");
+    match std::fs::read(&key_path) {
+        Ok(bytes) => {
+            let text = std::str::from_utf8(&bytes).map_err(|_| {
+                Error::Io(format!("{} is not a valid key file", key_path.display()))
+            })?;
+            let trimmed = text.trim();
+            if trimmed.len() < 32 {
+                return Err(Error::Io(format!(
+                    "{} is damaged (too short)",
+                    key_path.display()
+                )));
+            }
+            Ok(Some(trimmed.to_string()))
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(e) => Err(Error::Io(format!(
+            "cannot read {}: {e}",
+            key_path.display()
+        ))),
+    }
+}
+
 /// An existing key file readable by others (e.g. copied with 0644) is
 /// restricted to the owner.
 #[cfg(unix)]

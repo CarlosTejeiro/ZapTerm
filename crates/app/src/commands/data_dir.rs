@@ -50,10 +50,9 @@ pub async fn get_data_dir_info(
 ///
 /// - If `new_dir` already holds a `zapterm.db`, it is adopted as-is (no copy) —
 ///   this is how a second machine attaches to a synced folder.
-/// - Otherwise the live DB is snapshotted there (`VACUUM INTO`), the
-///   `session_secrets` fallback blobs are re-encrypted for the new seed
-///   (the seed derives from the dir path), and `session_logs/` +
-///   `catalogs/` are copied best-effort.
+/// - Otherwise the live DB is snapshotted there (`VACUUM INTO`) — the vault
+///   and its secrets are inside it — and `session_logs/` + `catalogs/` are
+///   copied best-effort.
 ///
 /// Returns a human-readable summary. The caller should prompt to restart.
 #[tauri::command]
@@ -88,66 +87,15 @@ pub async fn set_data_dir(
             .vacuum_into(&new_db)
             .map_err(|e| AppError::Internal(format!("copying the database failed: {e}")))?;
 
-        // 2. Re-encrypt the SQLite fallback secrets for the new seed. The
-        //    OS keyring (primary store) is untouched. Blobs that fail to
-        //    decrypt (foreign DB, older seed) are dropped — the keyring or
-        //    a fresh prompt covers those sessions. The seed is the new dir's
-        //    own random `vault.key` (created here), not the dir path.
-        let new_seed = core_vault::load_or_create_seed(&new_dir)
-            .map_err(|e| AppError::Internal(format!("vault keyfile en destino: {e}")))?;
-        let migrated_db = core_persistence::Database::open(&new_db)
-            .map_err(|e| AppError::Internal(format!("DB migrada no abre: {e}")))?;
-        let mut reencrypted = 0usize;
-        for session in state.db.list_sessions().unwrap_or_default() {
-            let Ok(Some(blob)) = state.db.get_session_secret(session.id) else {
-                continue;
-            };
-            match core_vault::decrypt_with_seed(&state.vault_seed, &blob) {
-                Ok(secret) => {
-                    if let Ok(new_blob) = core_vault::encrypt_with_seed(&new_seed, &secret) {
-                        let _ = migrated_db.set_session_secret(session.id, &new_blob);
-                        reencrypted += 1;
-                    }
-                }
-                Err(_) => {
-                    let _ = migrated_db.delete_session_secret(session.id);
-                }
-            }
-        }
-
-        // Vault entries' encrypted copies and the sync passphrase are sealed
-        // with the same key: re-encrypt them too, or they'd be unreadable in
-        // the new folder.
-        for cred in state.db.list_vault_entries().unwrap_or_default() {
-            let Ok(Some(blob)) = state.db.get_credential_secret(cred.id) else {
-                continue;
-            };
-            match core_vault::decrypt_with_seed(&state.vault_seed, &blob) {
-                Ok(secret) => {
-                    if let Ok(new_blob) = core_vault::encrypt_with_seed(&new_seed, &secret) {
-                        let _ = migrated_db.set_credential_secret(cred.id, &new_blob);
-                        reencrypted += 1;
-                    }
-                }
-                Err(_) => {
-                    let _ = migrated_db.delete_credential_secret(cred.id);
-                }
-            }
-        }
-        if let Some(pass) = state
-            .db
-            .get_setting(super::sync::SYNC_PASSPHRASE_KEY)
-            .ok()
-            .flatten()
-            .and_then(|hex| super::sync::hex_decode(&hex))
-            .and_then(|blob| core_vault::decrypt_with_seed(&state.vault_seed, &blob).ok())
-        {
-            if let Ok(new_blob) = core_vault::encrypt_with_seed(&new_seed, &pass) {
-                let _ = migrated_db.set_setting(
-                    super::sync::SYNC_PASSPHRASE_KEY,
-                    &super::sync::hex_encode(&new_blob),
-                );
-            }
+        // 2. Secrets are in the database copy, encrypted under the vault
+        //    key (itself wrapped under the master password), so they need no
+        //    re-encryption. A `vault.key` an older version left here travels
+        //    too while it is still needed to read copies not yet moved into
+        //    the vault.
+        let old_key = state.data_dir.dir.join("vault.key");
+        if old_key.is_file() && !new_dir.join("vault.key").exists() {
+            std::fs::copy(&old_key, new_dir.join("vault.key"))
+                .map_err(|e| AppError::Internal(format!("copying vault.key failed: {e}")))?;
         }
 
         // 3. Logs + catalogs travel too (best-effort; sizes can be large).
@@ -161,7 +109,7 @@ pub async fn set_data_dir(
         );
 
         format!(
-            "Data moved: database copied, {reencrypted} credentials re-encrypted, {logs} logs and {cats} catalogs copied."
+            "Data moved: database copied (saved passwords included), {logs} logs and {cats} catalogs copied."
         )
     };
 

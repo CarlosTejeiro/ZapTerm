@@ -865,7 +865,7 @@ export async function getDataDirInfo(): Promise<DataDirInfo> {
 /** File extension of a sealed bundle. */
 export const BACKUP_EXTENSION = 'zapxb'
 /** Minimum passphrase length the backend accepts (mirrors Rust). */
-export const BACKUP_MIN_PASSPHRASE = 8
+export const BACKUP_MIN_PASSPHRASE = 14
 
 export interface BundleInfo {
   app_version: string

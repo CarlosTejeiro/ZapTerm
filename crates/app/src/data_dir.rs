@@ -52,53 +52,15 @@ impl DataDir {
         self.source == Source::Portable
     }
 
-    /// Legacy seed for the AES-256-GCM `session_secrets` fallback, used by
-    /// builds before the random `vault.key`. Kept only so existing secrets can
-    /// be migrated to the new keyfile-based seed on first launch; new secrets
-    /// are always keyed off [`core_vault::load_or_create_seed`].
+    /// Seed of the database copies of secrets written by builds older than
+    /// `vault.key`. Only ever used to read such a copy while it is moved into
+    /// the vault; nothing is encrypted with it.
     pub fn legacy_vault_seed(&self) -> String {
         if self.is_portable() {
             PORTABLE_VAULT_SEED.to_owned()
         } else {
             self.dir.to_string_lossy().into_owned()
         }
-    }
-}
-
-/// Re-encrypt `session_secrets` blobs from `old_seed` to `new_seed`.
-///
-/// Run once on first launch after upgrading to the random `vault.key` seed, so
-/// fallback secrets written by older builds (keyed off the data-dir path or the
-/// portable constant) keep working without an unexpected re-prompt. Idempotent
-/// and self-healing: a blob that already decrypts under `new_seed` is skipped,
-/// and one that decrypts under neither is left untouched (the keyring or a
-/// fresh prompt covers it).
-pub(crate) fn migrate_session_secrets(
-    db: &core_persistence::Database,
-    old_seed: &str,
-    new_seed: &str,
-) {
-    let sessions = db.list_sessions().unwrap_or_default();
-    let mut migrated = 0usize;
-    for session in sessions {
-        let Ok(Some(blob)) = db.get_session_secret(session.id) else {
-            continue;
-        };
-        // Already keyed off the new seed → nothing to do.
-        if core_vault::decrypt_with_seed(new_seed, &blob).is_ok() {
-            continue;
-        }
-        // Legacy blob → re-encrypt under the new seed.
-        if let Ok(secret) = core_vault::decrypt_with_seed(old_seed, &blob) {
-            if let Ok(new_blob) = core_vault::encrypt_with_seed(new_seed, &secret) {
-                if db.set_session_secret(session.id, &new_blob).is_ok() {
-                    migrated += 1;
-                }
-            }
-        }
-    }
-    if migrated > 0 {
-        tracing::info!(migrated, "migrated session secrets to the vault.key seed");
     }
 }
 

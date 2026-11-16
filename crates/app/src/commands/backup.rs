@@ -43,7 +43,7 @@ pub const BUNDLE_EXTENSION: &str = "zapxb";
 /// Passphrases shorter than this are refused at export time. Argon2id makes
 /// guessing slow, not impossible — a 3-character passphrase is still 3
 /// characters.
-pub const MIN_PASSPHRASE_CHARS: usize = 8;
+pub const MIN_PASSPHRASE_CHARS: usize = 14;
 /// Settings key holding this install's stable device id (created lazily).
 pub const DEVICE_ID_KEY: &str = "backup.device_id";
 /// Settings that describe *this* install and must neither travel in a bundle
@@ -1218,7 +1218,8 @@ mod tests {
         bundle.zapx_bundle = BUNDLE_VERSION + 1;
         assert!(apply_bundle(&f.ctx(), &bundle).is_err());
         assert!(validate_passphrase("short").is_err());
-        assert!(validate_passphrase("long enough").is_ok());
+        assert!(validate_passphrase("thirteen char").is_err());
+        assert!(validate_passphrase("fourteen chars").is_ok());
         assert!(matches!(
             read_bundle(&f.dir.join("nope.zapxb"), "whatever!"),
             Err(AppError::Internal(_))
