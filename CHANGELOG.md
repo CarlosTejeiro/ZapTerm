@@ -8,12 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
-## [1.7.0-beta] - first beta of the encrypted vault (branch `claude/vault`, not on main yet)
+## [1.7.0] - 2026-11-16
 
-Betas of the vault are the 1.7.x versions, tagged `v1.7.0-beta`, `v1.7.1-beta`…
+**Make an encrypted backup before updating.** This version upgrades the
+database; an older ZapTerm can no longer open it afterwards.
 
-**Before trying it on real data, make an encrypted backup.** This version
-upgrades the database; an older ZapTerm can no longer open it afterwards.
+**On macOS**, the first start after updating may ask for your keychain password
+several times — once for each saved password while it is read and removed
+from the keychain. Choose *Always Allow*. It doesn't happen again afterwards.
 
 ### Added
 - **Encrypted vault with a master password.** Every saved password is now
