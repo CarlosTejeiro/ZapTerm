@@ -107,6 +107,8 @@ pub struct AppState {
     /// SQLite `session_secrets` fallback. Currently the app data
     /// directory's path — same for every launch by the same OS user.
     pub vault_seed: String,
+    /// The vault key while the vault is open (see `crate::master`).
+    pub master_vault: crate::master::MasterVault,
     /// Active SFTP transfers keyed by their frontend-issued `transfer_id`.
     /// The frontend calls `sftp_cancel_transfer` with the id; we flip the
     /// flag and the streaming loop returns `Error::Cancelled` on its next
