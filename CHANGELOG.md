@@ -8,6 +8,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.7.0] - 2026-11-16
+
+**Make an encrypted backup before updating.** This version upgrades the
+database; an older ZapTerm can no longer open it afterwards.
+
+**On macOS**, the first start after updating may ask for your keychain password
+several times — once for each saved password while it is read and removed
+from the keychain. Choose *Always Allow*. It doesn't happen again afterwards.
+
+### Added
+- **Encrypted vault with a master password.** Every saved password is now
+  encrypted (AES-256-GCM) under a random vault key that only your master
+  password opens (Argon2id). ZapTerm asks you to create it the first time it
+  starts: at least 14 characters, no recovery if you forget it.
+- **Remember on this computer** (installed copies): the vault key is kept in
+  the OS keyring so ZapTerm opens without asking. The keyring holds that one
+  key and no passwords.
+- **Settings → Vault**: remember on/off, lock now, change the master password
+  (no password is re-encrypted).
+
+### Changed
+- **Passwords are no longer stored in the OS keyring** nor in the database
+  under `vault.key`. What older versions stored is moved into the vault the
+  first time it opens — written, read back, then removed from where it was —
+  and `vault.key` is deleted once nothing depends on it.
+- **Portable copies** ask for the master password at every start and store
+  nothing in the keyring of the computer they run on; what an older portable
+  copy left there is removed. A copy of the `data/` folder is useless without
+  the master password.
+- **New backup passphrases need 14 characters** (was 8). Existing backups and
+  a sync folder another device already set up keep their passphrase.
+
+### Security
+- Copying a portable `data/` folder no longer gives access to the saved
+  passwords.
+- The predictable key older versions fell back to when `vault.key` could not
+  be created is no longer used to encrypt anything.
+- A stored secret is bound to its own name: copied onto another entry, it does
+  not decrypt.
+
 ## [1.5.9] - 2026-11-15
 
 ### Added

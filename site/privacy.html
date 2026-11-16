@@ -32,7 +32,7 @@
     <header class="section-head">
       <p class="kicker">Privacy</p>
       <h1>Privacy policy</h1>
-      <p>Last updated: 16 November 2026</p>
+      <p>Last updated: 16 November 2026 (version 1.7.0)</p>
     </header>
 
     <p>ZapTerm is a free, open-source terminal application for network engineers, developed by
@@ -50,9 +50,10 @@
     <ul>
       <li>The sessions you save: names, host names or addresses, ports, user names, folders,
         notes and settings.</li>
-      <li>Passwords and key passphrases you choose to save. They are kept in your operating
-        system's credential store or encrypted inside ZapTerm's data folder, never in clear
-        text.</li>
+      <li>Passwords and key passphrases you choose to save. They are encrypted inside
+        ZapTerm's data folder under a key that only your master password opens, never kept in
+        clear text. If you choose "Remember on this computer", that one key is kept in your
+        operating system's keyring so ZapTerm opens without asking.</li>
       <li>Your macros, command lists, highlight rules, appearance settings and trusted host
         keys.</li>
       <li>The commands you recently ran, to offer them again.</li>
