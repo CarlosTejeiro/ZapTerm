@@ -21,3 +21,6 @@ cd site && python3 -m http.server 8000
 - `automation.html` — Python scripts and notebooks, with the code of two
   example scripts (`version_audit.py`, `push_template.py` with `ntp.j2` and
   `devices.csv`) exactly as they were run for the screenshots (`img/auto-*`).
+- `privacy.html` — the privacy policy (linked from every footer). It describes what
+  the released app and this site actually do; update it before releasing any change in
+  how data is handled.
