@@ -35,6 +35,7 @@
   import type { ConnectParams } from '$lib/sessions/QuickConnectDialog.svelte'
   import ResizeHandles from '$lib/pylon/ResizeHandles.svelte'
   import SettingsModal from '$lib/settings/SettingsModal.svelte'
+  import VaultGate from '$lib/vault/VaultGate.svelte'
   import KeyboardInteractiveDialog from '$lib/terminal/KeyboardInteractiveDialog.svelte'
   import ScriptPanel from '$lib/scripting/ScriptPanel.svelte'
   import ScriptStartDialog from '$lib/scripting/ScriptStartDialog.svelte'
@@ -2137,6 +2138,8 @@
     onCancel={() => (prompt = null)}
   />
 {/if}
+
+<VaultGate />
 
 <Toasts />
 
