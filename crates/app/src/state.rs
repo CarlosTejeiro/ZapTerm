@@ -107,6 +107,8 @@ pub struct AppState {
     /// SQLite `session_secrets` fallback. Currently the app data
     /// directory's path — same for every launch by the same OS user.
     pub vault_seed: String,
+    /// The vault key while the vault is open (see `crate::master`).
+    pub master_vault: crate::master::MasterVault,
     /// Active SFTP transfers keyed by their frontend-issued `transfer_id`.
     /// The frontend calls `sftp_cancel_transfer` with the id; we flip the
     /// flag and the streaming loop returns `Error::Cancelled` on its next
@@ -118,4 +120,15 @@ pub struct AppState {
     pub hint_watcher: Option<crate::hint_watcher::WatcherGuard>,
     /// Running Python scripts by run id (see `crate::scripting`).
     pub scripts: crate::scripting::Runs,
+}
+
+impl AppState {
+    /// The encrypted vault as the place secrets are stored and read.
+    pub(crate) fn secret_store(&self) -> crate::vault_store::VaultStore<'_> {
+        crate::vault_store::VaultStore {
+            db: &self.db,
+            vault: &self.master_vault,
+            legacy: &crate::vault_store::OsKeyring,
+        }
+    }
 }
