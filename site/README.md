@@ -24,3 +24,7 @@ cd site && python3 -m http.server 8000
 - `privacy.html` — the privacy policy (linked from every footer). It describes what
   the released app and this site actually do; update it before releasing any change in
   how data is handled.
+- `downloads/<version>/` — not in the repository: the deployment copies the Windows
+  installers of the versions listed in `.github/store-installers.txt` from their
+  releases, for the Microsoft Store, which needs a package URL that doesn't
+  redirect. Keep every version submitted to the Store in that list.
