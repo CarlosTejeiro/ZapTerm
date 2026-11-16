@@ -11,6 +11,7 @@ mod scripting;
 mod secrets;
 mod state;
 mod triggers;
+mod vault_store;
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
@@ -220,6 +221,8 @@ pub fn run() {
 
             // Sync folder: periodic push of local changes + notification of
             // remote ones. No-op until the user configures a folder.
+            commands::master::open_at_start(&app.state::<AppState>());
+
             commands::sync::spawn(app.handle().clone());
             Ok(())
         })

@@ -121,3 +121,14 @@ pub struct AppState {
     /// Running Python scripts by run id (see `crate::scripting`).
     pub scripts: crate::scripting::Runs,
 }
+
+impl AppState {
+    /// The encrypted vault as the place secrets are stored and read.
+    pub(crate) fn secret_store(&self) -> crate::vault_store::VaultStore<'_> {
+        crate::vault_store::VaultStore {
+            db: &self.db,
+            vault: &self.master_vault,
+            legacy: &crate::vault_store::OsKeyring,
+        }
+    }
+}

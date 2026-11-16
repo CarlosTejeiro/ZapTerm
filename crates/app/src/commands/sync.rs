@@ -40,7 +40,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tauri::{AppHandle, Emitter, Manager, State};
 
-use super::backup::{self, BackupCtx, Bundle, KeyringStore, RestoreSummary};
+use super::backup::{self, BackupCtx, Bundle, RestoreSummary};
 use crate::error::AppError;
 use crate::state::AppState;
 
@@ -162,31 +162,16 @@ pub(crate) fn hex_decode(s: &str) -> Option<Vec<u8>> {
         .collect()
 }
 
-/// Same rule as every other secret (`crate::secrets`): OS keyring first, the
-/// encrypted database copy only when the keyring can't take it or on a
-/// portable install. When the keyring write fails, an older value it may
-/// still hold is removed so it can't shadow the new passphrase.
+/// The sync passphrase lives in the vault like every other secret. A copy an
+/// older version kept in the settings (under the `vault.key` seed) is dropped.
 fn store_passphrase(ctx: &BackupCtx<'_>, passphrase: &str) -> Result<(), AppError> {
-    let in_keyring = match ctx.secrets.put(SYNC_KEYRING_KEY, passphrase) {
-        Ok(()) => true,
-        Err(e) => {
-            tracing::warn!("sync passphrase not stored in keyring: {e}");
-            ctx.secrets.delete(SYNC_KEYRING_KEY);
-            false
-        }
-    };
-    if in_keyring && !ctx.portable {
-        ctx.db.delete_setting(SYNC_PASSPHRASE_KEY).ok();
-        return Ok(());
-    }
-    let blob = core_vault::encrypt_with_seed(ctx.vault_seed, passphrase).map_err(internal)?;
-    ctx.db
-        .set_setting(SYNC_PASSPHRASE_KEY, &hex_encode(&blob))
-        .map_err(internal)
+    ctx.secrets.put(SYNC_KEYRING_KEY, passphrase)?;
+    ctx.db.delete_setting(SYNC_PASSPHRASE_KEY).ok();
+    Ok(())
 }
 
-/// Keyring first, then the database copy — moved into the keyring when it
-/// works (written, read back, then the copy dropped).
+/// From the vault; else the copy an older version kept in the settings, which
+/// is moved into the vault (written, read back, then the copy dropped).
 fn load_passphrase(ctx: &BackupCtx<'_>) -> Option<String> {
     if let Some(p) = ctx.secrets.get(SYNC_KEYRING_KEY) {
         return Some(p);
@@ -194,8 +179,7 @@ fn load_passphrase(ctx: &BackupCtx<'_>) -> Option<String> {
     let hex = setting(ctx, SYNC_PASSPHRASE_KEY)?;
     let blob = hex_decode(&hex)?;
     let p = core_vault::decrypt_with_seed(ctx.vault_seed, &blob).ok()?;
-    if !ctx.portable
-        && ctx.secrets.put(SYNC_KEYRING_KEY, &p).is_ok()
+    if ctx.secrets.put(SYNC_KEYRING_KEY, &p).is_ok()
         && ctx.secrets.get(SYNC_KEYRING_KEY).as_deref() == Some(p.as_str())
     {
         ctx.db.delete_setting(SYNC_PASSPHRASE_KEY).ok();
@@ -734,7 +718,7 @@ pub fn spawn(app: AppHandle) {
 fn run_once(app: &AppHandle, last_signature: &mut Option<String>) {
     let state = app.state::<AppState>();
     let version = app.package_info().version.to_string();
-    let store = KeyringStore;
+    let store = state.secret_store();
     let ctx = BackupCtx::from_state(&state, &store);
     let st = {
         let _g = SYNC_LOCK.lock().unwrap_or_else(|p| p.into_inner());
@@ -775,7 +759,7 @@ fn with_ctx<T>(
     f: impl FnOnce(&BackupCtx<'_>, &str) -> Result<T, AppError>,
 ) -> Result<T, AppError> {
     let version = app.package_info().version.to_string();
-    let store = KeyringStore;
+    let store = state.secret_store();
     let ctx = BackupCtx::from_state(state, &store);
     let _g = SYNC_LOCK.lock().unwrap_or_else(|p| p.into_inner());
     f(&ctx, &version)
@@ -908,7 +892,6 @@ mod tests {
                 secrets: &self.store,
                 vault_seed: "seed",
                 password_cache: Some(&self.cache),
-                portable: false,
                 known_hosts_path: Some(self.dir.join("known_hosts")),
                 cmdlists_dir: Some(self.dir.join("cmdlists")),
             }
