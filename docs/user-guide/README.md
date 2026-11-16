@@ -101,15 +101,10 @@ a log.
   - Attach it to a saved session (the session's auth "Use a saved credential").
   - Reference it from a macro: `{{vault:<Name>.Password}}` or
     `{{vault:<Name>.Username}}` (see [Macros](#5-macros)).
-- **Where the secret lives**: the OS keyring (Windows Credential Manager, macOS
-  Keychain, libsecret on Linux). If the keyring can't return it (e.g. on an
-  unsigned build), ZapTerm falls back to an AES-256-GCM copy encrypted in its
-  database. The secret is resolved in the backend at run time and written
-  straight to the session — it never reaches the UI, JSON, exports or logs.
-
-> If a vault reference stops working after an app update with a
-> "keyring … No matching entry" error, **re-save the entry** once (Edit →
-> re-enter the password) to write the encrypted fallback.
+- **Where the secret lives**: in ZapTerm's encrypted vault (see
+  [Security model](#14-security-model)). The secret is resolved in the backend
+  at run time and written straight to the session — it never reaches the UI,
+  JSON, exports or logs.
 
 ---
 
@@ -300,10 +295,27 @@ selector, Font family + size, cursor style. -->
 
 ## 14. Security model
 
-- Passwords are stored in the **OS keyring**; when the keyring can't return a
-  secret, an **AES-256-GCM** copy encrypted in the database is used as a
-  fallback (also the mechanism in portable mode). Secrets never enter SQLite in
-  cleartext, exports, or logs.
+- **Encrypted vault.** Every saved password (sessions, vault entries, the sync
+  passphrase) is encrypted with AES-256-GCM under a random vault key, inside
+  ZapTerm's database. Secrets never enter SQLite in cleartext, exports, or
+  logs.
+- **Master password.** The vault key is protected by a master password you
+  choose the first time ZapTerm starts (at least 14 characters; a few unrelated
+  words work well). A copy of ZapTerm's data is useless without it. **It cannot
+  be recovered**: keep an encrypted backup (Settings → Backup) as a way back.
+- **Opening ZapTerm.** On an installed copy, "Remember on this computer"
+  (Settings → Vault) keeps the vault key in the OS keyring, protected by your
+  user account, so ZapTerm opens without asking. Turn it off to be asked for
+  the master password at every start; "Lock now" closes the vault at once.
+- **Portable copies** always ask for the master password at start and never
+  store anything in the keyring of the computer they run on.
+- **Coming from an older version.** The first time the vault opens, passwords
+  that were in the OS keyring or in the database under `vault.key` are moved
+  into it and removed from where they were; `vault.key` is deleted once
+  nothing depends on it. After that, an older ZapTerm can no longer open this
+  data — make a backup before updating if you may need to go back.
+- **Backups** are sealed with their own passphrase (at least 14 characters for
+  a new one), separate from the master password.
 - **Vault secrets** are resolved in the backend at run time and written straight
   to the session — the macro/export only ever holds the `{{vault:…}}`
   placeholder.

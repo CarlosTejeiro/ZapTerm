@@ -357,10 +357,10 @@
     message={prompt.mode === 'export'
       ? `Choose a passphrase (at least ${BACKUP_MIN_PASSPHRASE} characters). You will need it to restore the backup — it cannot be recovered.`
       : prompt.mode === 'sync'
-        ? `The passphrase that seals the bundle in the sync folder (at least ${BACKUP_MIN_PASSPHRASE} characters). Use the same one on every device. It is kept in this device's keyring.`
+        ? `The passphrase that seals the bundle in the sync folder: at least ${BACKUP_MIN_PASSPHRASE} characters for a new folder, or the one already in use if another device set it up. Use the same one on every device. It is kept in ZapTerm's vault.`
         : 'Enter the passphrase the backup was created with.'}
     confirm={prompt.mode !== 'restore'}
-    minLength={prompt.mode === 'restore' ? 0 : BACKUP_MIN_PASSPHRASE}
+    minLength={prompt.mode === 'export' ? BACKUP_MIN_PASSPHRASE : 0}
     submitLabel={prompt.mode === 'export'
       ? 'Create backup'
       : prompt.mode === 'sync'

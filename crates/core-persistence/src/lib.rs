@@ -1013,6 +1013,19 @@ impl Database {
     // (migration 027). `key` is the reference held elsewhere in the schema.
     // -----------------------------------------------------------------------
 
+    /// How many secrets are still in the pre-vault tables (`session_secrets`,
+    /// `credential_secrets`), i.e. encrypted under the old `vault.key` seed.
+    pub fn count_legacy_secret_copies(&self) -> Result<i64, Error> {
+        let conn = self.conn.lock().unwrap();
+        let n = conn.query_row(
+            "SELECT (SELECT COUNT(*) FROM session_secrets)
+                  + (SELECT COUNT(*) FROM credential_secrets)",
+            [],
+            |row| row.get::<_, i64>(0),
+        )?;
+        Ok(n)
+    }
+
     pub fn set_vault_secret(&self, key: &str, ciphertext: &[u8]) -> Result<(), Error> {
         let conn = self.conn.lock().unwrap();
         conn.execute(

@@ -187,6 +187,28 @@ fn load_passphrase(ctx: &BackupCtx<'_>) -> Option<String> {
     Some(p)
 }
 
+/// Move a sync passphrase an older version kept in the settings into the
+/// vault (written, read back, then the copy dropped). Run when the vault opens.
+pub(crate) fn migrate_passphrase(
+    store: &dyn backup::SecretStore,
+    db: &core_persistence::Database,
+    seed: &str,
+) {
+    let Some(hex) = db.get_setting(SYNC_PASSPHRASE_KEY).ok().flatten() else {
+        return;
+    };
+    let Some(p) = hex_decode(&hex).and_then(|blob| core_vault::decrypt_with_seed(seed, &blob).ok())
+    else {
+        return;
+    };
+    if store.get(SYNC_KEYRING_KEY).is_some()
+        || (store.put(SYNC_KEYRING_KEY, &p).is_ok()
+            && store.get(SYNC_KEYRING_KEY).as_deref() == Some(p.as_str()))
+    {
+        db.delete_setting(SYNC_PASSPHRASE_KEY).ok();
+    }
+}
+
 fn clear_passphrase(ctx: &BackupCtx<'_>) {
     ctx.secrets.delete(SYNC_KEYRING_KEY);
     ctx.db.delete_setting(SYNC_PASSPHRASE_KEY).ok();
@@ -649,15 +671,18 @@ pub(crate) fn configure(
         )));
     }
     if let Some(pw) = passphrase {
-        backup::validate_passphrase(pw)?;
         // The folder already holds a bundle: the passphrase must open it, or
         // this device's next push would re-seal the shared bundle under a
-        // mistyped passphrase and lock every other device out.
+        // mistyped passphrase and lock every other device out. Its length is
+        // whatever the first device chose (the minimum was shorter once), so
+        // only a passphrase for a new folder is held to today's minimum.
         let bundle = dir.join(SYNC_BUNDLE_FILE);
         if bundle.is_file() {
             backup::read_bundle(&bundle, pw).map_err(|_| {
                 internal("this passphrase doesn't open the sync bundle already in that folder")
             })?;
+        } else {
+            backup::validate_passphrase(pw)?;
         }
     }
     std::fs::create_dir_all(dir).map_err(|e| internal(format!("{}: {e}", dir.display())))?;
@@ -945,7 +970,7 @@ mod tests {
         let st = configure(&a.ctx(), &shared, None, "1").unwrap();
         assert_eq!(st.state, SyncState::NoPassphrase);
         assert!(configure(&a.ctx(), &shared, Some("short"), "1").is_err());
-        let st = configure(&a.ctx(), &shared, Some("shared passphrase"), "1").unwrap();
+        let st = configure(&a.ctx(), &shared, Some("shared passphrase!"), "1").unwrap();
         assert_eq!(st.state, SyncState::LocalChanges, "{st:?}");
         assert!(st.has_passphrase);
 
@@ -961,7 +986,7 @@ mod tests {
         assert_eq!(status(&a.ctx(), "1").state, SyncState::InSync);
 
         // B joins: the folder already holds A's bundle → remote changes.
-        let st = configure(&b.ctx(), &shared, Some("shared passphrase"), "1").unwrap();
+        let st = configure(&b.ctx(), &shared, Some("shared passphrase!"), "1").unwrap();
         assert_eq!(st.state, SyncState::RemoteChanges, "{st:?}");
         // Unattended run must NOT pull on its own.
         assert_eq!(auto(&b.ctx(), "1").unwrap().state, SyncState::RemoteChanges);
@@ -1112,9 +1137,9 @@ mod tests {
         a.store.put("vault:x", "old-secret").unwrap();
         a.db.create_vault_entry("lab", Some("ops"), "vault:x")
             .unwrap();
-        configure(&a.ctx(), &shared, Some("shared passphrase"), "1").unwrap();
+        configure(&a.ctx(), &shared, Some("shared passphrase!"), "1").unwrap();
         assert_eq!(auto(&a.ctx(), "1").unwrap().state, SyncState::InSync);
-        configure(&b.ctx(), &shared, Some("shared passphrase"), "1").unwrap();
+        configure(&b.ctx(), &shared, Some("shared passphrase!"), "1").unwrap();
         let (_, st) = pull(&b.ctx(), "1").unwrap();
         assert_eq!(st.state, SyncState::InSync, "{st:?}");
 
@@ -1228,10 +1253,10 @@ mod tests {
         let b = Device::new(&root, "b");
         a.add_ssh("from-a");
         b.add_ssh("own");
-        configure(&a.ctx(), &shared, Some("shared passphrase"), "1").unwrap();
+        configure(&a.ctx(), &shared, Some("shared passphrase!"), "1").unwrap();
         auto(&a.ctx(), "1").unwrap();
 
-        configure(&b.ctx(), &shared, Some("shared passphrase"), "1").unwrap();
+        configure(&b.ctx(), &shared, Some("shared passphrase!"), "1").unwrap();
         let (_, st) = pull(&b.ctx(), "1").unwrap();
         assert_eq!(st.state, SyncState::LocalChanges, "{st:?}");
         let st = auto(&b.ctx(), "1").unwrap();
@@ -1262,19 +1287,19 @@ mod tests {
         let a = Device::new(&root, "a");
         let b = Device::new(&root, "b");
         a.add_ssh("x");
-        configure(&a.ctx(), &shared, Some("passphrase-a"), "1").unwrap();
+        configure(&a.ctx(), &shared, Some("passphrase-a-long"), "1").unwrap();
         auto(&a.ctx(), "1").unwrap();
         // Joining a folder with a passphrase that doesn't open its bundle is
         // refused (a push would re-seal the shared bundle under it).
-        let err = configure(&b.ctx(), &shared, Some("passphrase-b"), "1")
+        let err = configure(&b.ctx(), &shared, Some("passphrase-b-long"), "1")
             .unwrap_err()
             .to_string();
         assert!(err.contains("doesn't open"), "{err}");
         // A relative folder is refused too.
         assert!(configure(&b.ctx(), Path::new("rel/dir"), None, "1").is_err());
         // A stored passphrase that no longer matches: pull says so.
-        configure(&b.ctx(), &shared, Some("passphrase-a"), "1").unwrap();
-        store_passphrase(&b.ctx(), "passphrase-b").unwrap();
+        configure(&b.ctx(), &shared, Some("passphrase-a-long"), "1").unwrap();
+        store_passphrase(&b.ctx(), "passphrase-b-long").unwrap();
         let err = pull(&b.ctx(), "1").unwrap_err().to_string();
         assert!(err.contains("wrong passphrase"), "{err}");
         // Corrupted (non-ASCII) hex is rejected, not a panic.

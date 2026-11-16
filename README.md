@@ -103,9 +103,10 @@ The little things that add up across a long day:
 
 ### Keep credentials safe
 
-- **Credential vault** — reusable named credentials stored in the OS keyring
-  (with an AES-256-GCM database fallback). Attach one to a session, or reference
-  it from a macro as `{{vault:Name.Password}}`.
+- **Encrypted vault** — every saved password is encrypted (AES-256-GCM) under a
+  key that only your master password opens (Argon2id). Reusable named
+  credentials can be attached to a session or referenced from a macro as
+  `{{vault:Name.Password}}`.
 - Secrets are resolved **in the backend** at run time — they never enter the UI,
   the JSON, exports or logs.
 - Passwords **typed at a prompt** are never recorded to history or recents.
@@ -182,12 +183,10 @@ or right-click the app → **Open** → **Open** on first launch.
 the WebView2 runtime, preinstalled on Windows 11 and updated Windows 10).
 To make it fully self-contained — sessions, settings, command lists, hint catalogs and
 logs travelling with the exe — create an empty file named `portable` next to
-it; everything is then kept in a `data/` folder beside the executable. In
-portable mode credentials are stored AES-256-GCM-encrypted in the database
-instead of the OS keyring, under a random key kept in `vault.key` (mode 0600)
-beside the database. Because both files live in the same `data/` folder,
-anyone with access to that folder can use the credentials — treat the folder
-like a physical key.
+it; everything is then kept in a `data/` folder beside the executable. A
+portable copy asks for the master password every time it starts and never
+stores anything in the keyring of the computer it runs on, so a copy of the
+`data/` folder is useless without the master password.
 
 ### Custom data folder
 
@@ -225,7 +224,7 @@ zapterm/
 │   ├── app/               # Tauri shell — commands, state, IPC bridge, data-dir resolver
 │   ├── core-transport/    # SSH, Telnet, Serial, local PTY, SFTP, port forwarding
 │   ├── core-persistence/  # SQLite via rusqlite — sessions, rules, logs, settings
-│   ├── core-vault/        # OS keyring + AES-256-GCM portable fallback
+│   ├── core-vault/        # vault key + master password, sealed backups
 │   ├── core-highlight/    # Regex keyword highlighting, ANSI injection
 │   ├── core-hints/        # Command suggestions: history, vendor catalogs, sequences
 │   ├── core-terminal/     # VT100/xterm escape-sequence parser
@@ -238,10 +237,14 @@ zapterm/
 
 ## Security
 
-- Passwords are stored in the **OS keyring** (Windows Credential Manager, macOS Keychain,
-  libsecret on Linux) — never in SQLite in cleartext and never in logs. When the keyring
-  can't return a secret (e.g. unsigned builds) or in portable mode, an **AES-256-GCM**
-  copy encrypted in the database is used as a fallback.
+- Passwords are stored in an **encrypted vault** inside the database: AES-256-GCM
+  under a random vault key, itself protected by your **master password**
+  (Argon2id, at least 14 characters). They are never in SQLite in cleartext and
+  never in logs. The master password cannot be recovered.
+- On an installed copy, "Remember on this computer" keeps the vault key in the
+  **OS keyring** (Windows Credential Manager, macOS Keychain, libsecret on Linux)
+  so ZapTerm opens without asking; the keyring holds that one key, no passwords.
+  A portable copy never uses the keyring.
 - **Vault** secrets and session passwords are resolved in the backend at run time and
   written straight to the session; a macro or export only ever holds the `{{vault:…}}`
   placeholder — never the secret.
