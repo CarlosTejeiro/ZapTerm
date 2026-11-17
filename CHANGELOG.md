@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.7.7] - 2026-11-17
+
+### Added
+- **Junos is detected without its login banner.** The role line Junos
+  prints above the prompt (`{master:0}`, `{backup:1}`, `{master}`,
+  `{primary:node0}`…) now identifies a Juniper device, so an EX/QFX virtual
+  chassis, a dual routing-engine MX or an SRX cluster shows the Junos
+  command lists even when the banner has scrolled away. A device that
+  prints neither is detected after `show version`, as before.
+
 ## [1.7.6] - 2026-11-17
 
 Fixes from a review of the app.

@@ -275,7 +275,24 @@ fn rules() -> &'static [Rule] {
                     "FWF"
                 ]
             ),
-            r!(Platform::Juniper, &["JUNOS", "Juniper"]),
+            // Besides the banner, Junos prints the routing-engine / chassis
+            // role on its own line above the prompt: `{master:0}` on a
+            // virtual chassis, `{master}` with two routing engines,
+            // `{primary:node0}` on an SRX cluster. Nothing else here does.
+            r!(
+                Platform::Juniper,
+                &[
+                    "JUNOS",
+                    "Juniper",
+                    "{master}",
+                    "{master:",
+                    "{backup}",
+                    "{backup:",
+                    "{linecard:",
+                    "{primary:node",
+                    "{secondary:node",
+                ]
+            ),
             // EOS prompts look like IOS (`switch#`, `switch(config-if-Et1)#`);
             // `show version` starts with "Arista <model>".
             r!(Platform::AristaEos, &["Arista", "vEOS", "cEOS"]),
@@ -494,6 +511,24 @@ mod tests {
         assert_eq!(detect("Comware Software\n<HP-5130>"), None);
         assert_eq!(detect("ArubaOS\nsw1# "), None);
         assert_eq!(detect("Fabric OS\nsanswitch:admin> "), None);
+    }
+
+    #[test]
+    fn junos_role_line_is_enough_without_a_banner() {
+        for text in [
+            "{master:0}\ncarlos@ex4300> ",
+            "{backup:1}\ncarlos@ex4300> ",
+            "{master}\ncarlos@mx480> ",
+            "{master:0}[edit]\ncarlos@qfx5100# ",
+            "{primary:node0}\ncarlos@srx-a> ",
+            "{secondary:node1}[edit interfaces]\ncarlos@srx-b# ",
+        ] {
+            assert_eq!(detect(text), Some(Platform::Juniper), "{text:?}");
+        }
+        // The bare prompt is still not enough: `user@host>` is not only Junos.
+        assert_eq!(detect("carlos@mx-edge> "), None);
+        // And the role text in a Linux shell's output doesn't make it Junos.
+        assert_eq!(detect("{master:0}\nroot@web:~# "), None);
     }
 
     #[test]
