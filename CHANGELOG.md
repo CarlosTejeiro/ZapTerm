@@ -8,6 +8,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.7.8] - 2026-11-17
+
+### Added
+- **Command lists can follow the device's OS release.** ZapTerm now reads the
+  version a FortiGate or FortiWiFi states in `get system status`
+  (`Version: FortiGate-60F v7.4.3,…`), remembers it for the session, and
+  shows the command lists written for that release — switching as soon as
+  the command is run, and again after an upgrade. When there are no lists for
+  the exact release it uses the newest ones written for an older one.
+  This version brings the mechanism; the built-in FortiGate lists are still
+  the FortiOS 7.6 ones (the 7.2 and 7.4 lists come next). Your own files can
+  already use it: see "Lists for another OS release" in the command lists
+  README (`"osVersion"`, `"variantOf"`).
+- **A FortiGate first taken for Linux corrects itself.** That same status
+  line proves what the device is: a session whose platform was a guess
+  (none, generic or Linux) becomes FortiGate. A platform you chose yourself
+  is never changed.
+
+### Changed
+- The database gains a column for the version (schema 28). Older ZapTerm
+  versions cannot open a data folder once this one has.
+
 ## [1.7.7] - 2026-11-17
 
 ### Added

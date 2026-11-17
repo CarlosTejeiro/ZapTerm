@@ -36,6 +36,7 @@
   import ResizeHandles from '$lib/pylon/ResizeHandles.svelte'
   import SettingsModal from '$lib/settings/SettingsModal.svelte'
   import VaultGate from '$lib/vault/VaultGate.svelte'
+  import { loadOsVersion, setOsVersion } from '$lib/cmdlists/osVersions.svelte'
   import KeyboardInteractiveDialog from '$lib/terminal/KeyboardInteractiveDialog.svelte'
   import ScriptPanel from '$lib/scripting/ScriptPanel.svelte'
   import ScriptStartDialog from '$lib/scripting/ScriptStartDialog.svelte'
@@ -539,6 +540,7 @@
     const pane = focusedPaneData
     const sid = pane?.savedSession?.id ?? null
     if (sid != null) {
+      void loadOsVersion(sid)
       getSessionPlatform(sid)
         .then((p) => setBarContext(p, sid))
         .catch(() => setBarContext(null, sid))
@@ -1660,6 +1662,31 @@
       unlistenPlatform = fn
     })
 
+    // The device stated its OS version (FortiOS `get system status`): the
+    // bar switches to the lists for that release. The report can also have
+    // corrected the session's platform (a FortiGate first taken for Linux).
+    let unlistenOsVersion: UnlistenFn | null = null
+    listen<{
+      session_id: string
+      saved_session_id: number | null
+      platform: string
+      version: string
+    }>('session-os-version-detected', async (e) => {
+      const savedSid = e.payload.saved_session_id
+      if (savedSid == null) return
+      setOsVersion(savedSid, e.payload.version)
+      listSessions()
+        .then((v) => (sessions = v))
+        .catch(() => {})
+      savedPlatformCache.set(savedSid, e.payload.platform)
+      const focusedRuntimeSid = paneToSession.get(focusedPaneId) ?? null
+      if (focusedRuntimeSid === e.payload.session_id) {
+        await setBarContext(e.payload.platform, savedSid)
+      }
+    }).then((fn) => {
+      unlistenOsVersion = fn
+    })
+
     // SFTP "edit remote file": the backend re-uploads on each save and emits
     // these so the user gets feedback that their edit landed.
     let unlistenEditSaved: UnlistenFn | null = null
@@ -1737,6 +1764,7 @@
       document.removeEventListener('keydown', onKeydown)
       if (unlistenStats) unlistenStats()
       if (unlistenPlatform) unlistenPlatform()
+      if (unlistenOsVersion) unlistenOsVersion()
       if (unlistenMss) unlistenMss()
       if (unlistenEditSaved) unlistenEditSaved()
       if (unlistenEditError) unlistenEditError()

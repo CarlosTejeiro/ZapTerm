@@ -10,6 +10,7 @@ import {
   listsForPlatform,
   parseVendorLists,
   placeholderNames,
+  type VendorLists,
   typedPrefix,
 } from './index'
 import type { CommandItem, RecipeItem } from './types'
@@ -195,5 +196,65 @@ describe('command lists', () => {
       expect(r.value.lists[0]!.icon).toBe('system')
       expect(r.value.stopDebug).toEqual([])
     }
+  })
+})
+
+describe('lists per OS release', () => {
+  const lists = (osVersion: string, variantOf?: string): VendorLists => ({
+    label: `fgt ${osVersion}`,
+    stopDebug: [],
+    lists: [],
+    osVersion,
+    ...(variantOf ? { variantOf } : {}),
+  })
+  const files = {
+    fortigate: lists('7.6'),
+    fortigate_7_4: lists('7.4', 'fortigate'),
+    fortigate_7_2: lists('7.2', 'fortigate'),
+    other_7_4: lists('7.4', 'cisco_ios'),
+  }
+  const pick = (v?: string | null) => listsForPlatform('fortigate', files, v)?.label
+
+  it('uses the platform file when the version is unknown', () => {
+    expect(pick()).toBe('fgt 7.6')
+    expect(pick(null)).toBe('fgt 7.6')
+    expect(pick('garbage')).toBe('fgt 7.6')
+  })
+
+  it('uses the lists of the device release', () => {
+    expect(pick('7.2.8')).toBe('fgt 7.2')
+    expect(pick('7.4.3')).toBe('fgt 7.4')
+    expect(pick('7.6.0')).toBe('fgt 7.6')
+  })
+
+  it('falls back to the newest older release, or the oldest there is', () => {
+    expect(pick('8.0.1')).toBe('fgt 7.6')
+    expect(pick('7.5.0')).toBe('fgt 7.4')
+    expect(pick('7.10.0')).toBe('fgt 7.6') // 10 > 6, not "1" < "6"
+    expect(pick('7.0.14')).toBe('fgt 7.2')
+    expect(pick('6.4.15')).toBe('fgt 7.2')
+  })
+
+  it('a platform whose lists state no release is unaffected', () => {
+    expect(listsForPlatform('linux', {}, '7.4.3')).toBe(BUILTIN.linux)
+  })
+
+  it('the built-in FortiGate lists say which release they are for', () => {
+    expect(BUILTIN.fortigate?.osVersion).toBe('7.6')
+    expect(listsForPlatform('fortigate', {}, '7.2.8')).toBe(BUILTIN.fortigate)
+  })
+
+  it('checks osVersion and variantOf in a file', () => {
+    const file = (extra: object) => ({
+      format: 'zapterm-command-lists',
+      version: 1,
+      platform: 'fortigate_7_4',
+      lists: [],
+      ...extra,
+    })
+    const ok = parseVendorLists(file({ osVersion: '7.4', variantOf: 'fortigate' }))
+    expect(ok.ok && ok.value.variantOf).toBe('fortigate')
+    expect(parseVendorLists(file({ osVersion: '7.4.3' })).ok).toBe(false)
+    expect(parseVendorLists(file({ variantOf: 'fortigate' })).ok).toBe(false)
   })
 })

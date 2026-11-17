@@ -57,6 +57,21 @@ built-in list is used) and Settings shows what's wrong.
       ]
     }
 
+## Lists for another OS release
+
+A platform can have lists for several releases. Add `"osVersion": "7.4"`
+(major.minor) to a file to say which release it is written for. For an extra
+release, use another file name and say which platform it belongs to:
+
+    fortigate_7_4.json:
+      "platform": "fortigate_7_4",     // must match the file name
+      "variantOf": "fortigate",
+      "osVersion": "7.4",
+
+When the device says its version (FortiOS: `get system status`), ZapTerm
+uses the lists for that release; if there are none, the newest ones written
+for an older release.
+
 - `<name>` in a command is a part you fill in before it runs.
 - `"action": true` asks before sending (commands that change things).
 - A recipe sends its `lines` in order after a small form fills `{{key}}`.

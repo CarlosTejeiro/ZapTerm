@@ -13,6 +13,7 @@
 pub mod catalog;
 pub mod detector;
 pub mod error;
+pub mod os_version;
 
 use std::str::FromStr;
 use std::sync::OnceLock;

@@ -142,6 +142,18 @@ pub async fn get_session_platform(
         .map_err(|e| AppError::Internal(e.to_string()))
 }
 
+/// The OS version a saved session's device last reported (e.g. "7.4.3").
+#[tauri::command]
+pub async fn get_session_os_version(
+    state: State<'_, AppState>,
+    saved_session_id: i64,
+) -> Result<Option<String>, AppError> {
+    state
+        .db
+        .get_session_os_version(saved_session_id)
+        .map_err(|e| AppError::Internal(e.to_string()))
+}
+
 #[tauri::command]
 pub async fn list_platforms() -> Result<Vec<PlatformInfo>, AppError> {
     Ok(core_hints::catalog::all_platforms()

@@ -193,6 +193,16 @@ export function parseVendorLists(input: unknown, expectPlatform?: string): Parse
       lists,
     }
     if (v.stopKeys !== undefined) value.stopKeys = str(v, 'stopKeys', 'file')
+    if (v.osVersion !== undefined) {
+      const os = str(v, 'osVersion', 'file')
+      if (!/^\d+\.\d+$/.test(os))
+        throw new Invalid(`"osVersion" must look like "7.4" (major.minor), not "${os}"`)
+      value.osVersion = os
+    }
+    if (v.variantOf !== undefined) {
+      value.variantOf = str(v, 'variantOf', 'file')
+      if (!value.osVersion) throw new Invalid('"variantOf" needs "osVersion" next to it')
+    }
     const notes = typeof v.notes === 'string' ? v.notes : undefined
     return { ok: true, platform, value, notes }
   } catch (e) {
@@ -222,15 +232,48 @@ export const BUILTIN: Record<string, VendorLists> = Object.fromEntries(
   }),
 )
 
+/** `major.minor` of a version ("7.4.3" → [7, 4]); null when it isn't one. */
+function train(version: string | null | undefined): [number, number] | null {
+  const m = /^(\d+)\.(\d+)/.exec(version ?? '')
+  return m ? [Number(m[1]), Number(m[2])] : null
+}
+
+function compareTrains(a: [number, number], b: [number, number]): number {
+  return a[0] - b[0] || a[1] - b[1]
+}
+
 /** The lists for a platform: the user's copy when there is one (it replaces
  *  the built-in list as a whole), else the built-in one. Platforms without
- *  lists get none. */
+ *  lists get none.
+ *
+ *  A platform can have lists for several OS releases (`osVersion`, and
+ *  `variantOf` on the extra files). When the device's version is known the
+ *  lists for its release are used; failing that, the newest ones written for
+ *  an older release (commands rarely disappear in a patch train, they appear),
+ *  and for a device older than all of them, the oldest. With no version, or
+ *  no lists that state one, it is the platform's own file as before. */
 export function listsForPlatform(
   platform: string | null | undefined,
   userLists: Record<string, VendorLists> = {},
+  osVersion?: string | null,
 ): VendorLists | null {
   if (!platform) return null
-  return userLists[platform] ?? BUILTIN[platform] ?? null
+  const base = userLists[platform] ?? BUILTIN[platform] ?? null
+  const device = train(osVersion)
+  if (!device) return base
+
+  // The user's copy of a file replaces the built-in file of the same name.
+  const files = { ...BUILTIN, ...userLists }
+  const versioned: { at: [number, number]; lists: VendorLists }[] = []
+  for (const [name, lists] of Object.entries(files)) {
+    const belongs = name === platform || lists.variantOf === platform
+    const at = train(lists.osVersion)
+    if (belongs && at) versioned.push({ at, lists })
+  }
+  if (versioned.length === 0) return base
+  versioned.sort((a, b) => compareTrains(a.at, b.at))
+  const notNewer = versioned.filter((v) => compareTrains(v.at, device) <= 0)
+  return (notNewer.at(-1) ?? versioned[0])?.lists ?? base
 }
 
 /** A built-in list as the file a user copy starts from. */
