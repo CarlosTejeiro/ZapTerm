@@ -40,7 +40,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tauri::{AppHandle, Emitter, Manager, State};
 
-use super::backup::{self, BackupCtx, Bundle, KeyringStore, RestoreSummary};
+use super::backup::{self, BackupCtx, Bundle, RestoreSummary};
 use crate::error::AppError;
 use crate::state::AppState;
 
@@ -162,31 +162,16 @@ pub(crate) fn hex_decode(s: &str) -> Option<Vec<u8>> {
         .collect()
 }
 
-/// Same rule as every other secret (`crate::secrets`): OS keyring first, the
-/// encrypted database copy only when the keyring can't take it or on a
-/// portable install. When the keyring write fails, an older value it may
-/// still hold is removed so it can't shadow the new passphrase.
+/// The sync passphrase lives in the vault like every other secret. A copy an
+/// older version kept in the settings (under the `vault.key` seed) is dropped.
 fn store_passphrase(ctx: &BackupCtx<'_>, passphrase: &str) -> Result<(), AppError> {
-    let in_keyring = match ctx.secrets.put(SYNC_KEYRING_KEY, passphrase) {
-        Ok(()) => true,
-        Err(e) => {
-            tracing::warn!("sync passphrase not stored in keyring: {e}");
-            ctx.secrets.delete(SYNC_KEYRING_KEY);
-            false
-        }
-    };
-    if in_keyring && !ctx.portable {
-        ctx.db.delete_setting(SYNC_PASSPHRASE_KEY).ok();
-        return Ok(());
-    }
-    let blob = core_vault::encrypt_with_seed(ctx.vault_seed, passphrase).map_err(internal)?;
-    ctx.db
-        .set_setting(SYNC_PASSPHRASE_KEY, &hex_encode(&blob))
-        .map_err(internal)
+    ctx.secrets.put(SYNC_KEYRING_KEY, passphrase)?;
+    ctx.db.delete_setting(SYNC_PASSPHRASE_KEY).ok();
+    Ok(())
 }
 
-/// Keyring first, then the database copy — moved into the keyring when it
-/// works (written, read back, then the copy dropped).
+/// From the vault; else the copy an older version kept in the settings, which
+/// is moved into the vault (written, read back, then the copy dropped).
 fn load_passphrase(ctx: &BackupCtx<'_>) -> Option<String> {
     if let Some(p) = ctx.secrets.get(SYNC_KEYRING_KEY) {
         return Some(p);
@@ -194,13 +179,34 @@ fn load_passphrase(ctx: &BackupCtx<'_>) -> Option<String> {
     let hex = setting(ctx, SYNC_PASSPHRASE_KEY)?;
     let blob = hex_decode(&hex)?;
     let p = core_vault::decrypt_with_seed(ctx.vault_seed, &blob).ok()?;
-    if !ctx.portable
-        && ctx.secrets.put(SYNC_KEYRING_KEY, &p).is_ok()
+    if ctx.secrets.put(SYNC_KEYRING_KEY, &p).is_ok()
         && ctx.secrets.get(SYNC_KEYRING_KEY).as_deref() == Some(p.as_str())
     {
         ctx.db.delete_setting(SYNC_PASSPHRASE_KEY).ok();
     }
     Some(p)
+}
+
+/// Move a sync passphrase an older version kept in the settings into the
+/// vault (written, read back, then the copy dropped). Run when the vault opens.
+pub(crate) fn migrate_passphrase(
+    store: &dyn backup::SecretStore,
+    db: &core_persistence::Database,
+    seed: &str,
+) {
+    let Some(hex) = db.get_setting(SYNC_PASSPHRASE_KEY).ok().flatten() else {
+        return;
+    };
+    let Some(p) = hex_decode(&hex).and_then(|blob| core_vault::decrypt_with_seed(seed, &blob).ok())
+    else {
+        return;
+    };
+    if store.get(SYNC_KEYRING_KEY).is_some()
+        || (store.put(SYNC_KEYRING_KEY, &p).is_ok()
+            && store.get(SYNC_KEYRING_KEY).as_deref() == Some(p.as_str()))
+    {
+        db.delete_setting(SYNC_PASSPHRASE_KEY).ok();
+    }
 }
 
 fn clear_passphrase(ctx: &BackupCtx<'_>) {
@@ -665,15 +671,18 @@ pub(crate) fn configure(
         )));
     }
     if let Some(pw) = passphrase {
-        backup::validate_passphrase(pw)?;
         // The folder already holds a bundle: the passphrase must open it, or
         // this device's next push would re-seal the shared bundle under a
-        // mistyped passphrase and lock every other device out.
+        // mistyped passphrase and lock every other device out. Its length is
+        // whatever the first device chose (the minimum was shorter once), so
+        // only a passphrase for a new folder is held to today's minimum.
         let bundle = dir.join(SYNC_BUNDLE_FILE);
         if bundle.is_file() {
             backup::read_bundle(&bundle, pw).map_err(|_| {
                 internal("this passphrase doesn't open the sync bundle already in that folder")
             })?;
+        } else {
+            backup::validate_passphrase(pw)?;
         }
     }
     std::fs::create_dir_all(dir).map_err(|e| internal(format!("{}: {e}", dir.display())))?;
@@ -734,7 +743,7 @@ pub fn spawn(app: AppHandle) {
 fn run_once(app: &AppHandle, last_signature: &mut Option<String>) {
     let state = app.state::<AppState>();
     let version = app.package_info().version.to_string();
-    let store = KeyringStore;
+    let store = state.secret_store();
     let ctx = BackupCtx::from_state(&state, &store);
     let st = {
         let _g = SYNC_LOCK.lock().unwrap_or_else(|p| p.into_inner());
@@ -775,7 +784,7 @@ fn with_ctx<T>(
     f: impl FnOnce(&BackupCtx<'_>, &str) -> Result<T, AppError>,
 ) -> Result<T, AppError> {
     let version = app.package_info().version.to_string();
-    let store = KeyringStore;
+    let store = state.secret_store();
     let ctx = BackupCtx::from_state(state, &store);
     let _g = SYNC_LOCK.lock().unwrap_or_else(|p| p.into_inner());
     f(&ctx, &version)
@@ -908,7 +917,6 @@ mod tests {
                 secrets: &self.store,
                 vault_seed: "seed",
                 password_cache: Some(&self.cache),
-                portable: false,
                 known_hosts_path: Some(self.dir.join("known_hosts")),
                 cmdlists_dir: Some(self.dir.join("cmdlists")),
             }
@@ -962,7 +970,7 @@ mod tests {
         let st = configure(&a.ctx(), &shared, None, "1").unwrap();
         assert_eq!(st.state, SyncState::NoPassphrase);
         assert!(configure(&a.ctx(), &shared, Some("short"), "1").is_err());
-        let st = configure(&a.ctx(), &shared, Some("shared passphrase"), "1").unwrap();
+        let st = configure(&a.ctx(), &shared, Some("shared passphrase!"), "1").unwrap();
         assert_eq!(st.state, SyncState::LocalChanges, "{st:?}");
         assert!(st.has_passphrase);
 
@@ -978,7 +986,7 @@ mod tests {
         assert_eq!(status(&a.ctx(), "1").state, SyncState::InSync);
 
         // B joins: the folder already holds A's bundle → remote changes.
-        let st = configure(&b.ctx(), &shared, Some("shared passphrase"), "1").unwrap();
+        let st = configure(&b.ctx(), &shared, Some("shared passphrase!"), "1").unwrap();
         assert_eq!(st.state, SyncState::RemoteChanges, "{st:?}");
         // Unattended run must NOT pull on its own.
         assert_eq!(auto(&b.ctx(), "1").unwrap().state, SyncState::RemoteChanges);
@@ -1129,9 +1137,9 @@ mod tests {
         a.store.put("vault:x", "old-secret").unwrap();
         a.db.create_vault_entry("lab", Some("ops"), "vault:x")
             .unwrap();
-        configure(&a.ctx(), &shared, Some("shared passphrase"), "1").unwrap();
+        configure(&a.ctx(), &shared, Some("shared passphrase!"), "1").unwrap();
         assert_eq!(auto(&a.ctx(), "1").unwrap().state, SyncState::InSync);
-        configure(&b.ctx(), &shared, Some("shared passphrase"), "1").unwrap();
+        configure(&b.ctx(), &shared, Some("shared passphrase!"), "1").unwrap();
         let (_, st) = pull(&b.ctx(), "1").unwrap();
         assert_eq!(st.state, SyncState::InSync, "{st:?}");
 
@@ -1245,10 +1253,10 @@ mod tests {
         let b = Device::new(&root, "b");
         a.add_ssh("from-a");
         b.add_ssh("own");
-        configure(&a.ctx(), &shared, Some("shared passphrase"), "1").unwrap();
+        configure(&a.ctx(), &shared, Some("shared passphrase!"), "1").unwrap();
         auto(&a.ctx(), "1").unwrap();
 
-        configure(&b.ctx(), &shared, Some("shared passphrase"), "1").unwrap();
+        configure(&b.ctx(), &shared, Some("shared passphrase!"), "1").unwrap();
         let (_, st) = pull(&b.ctx(), "1").unwrap();
         assert_eq!(st.state, SyncState::LocalChanges, "{st:?}");
         let st = auto(&b.ctx(), "1").unwrap();
@@ -1279,19 +1287,19 @@ mod tests {
         let a = Device::new(&root, "a");
         let b = Device::new(&root, "b");
         a.add_ssh("x");
-        configure(&a.ctx(), &shared, Some("passphrase-a"), "1").unwrap();
+        configure(&a.ctx(), &shared, Some("passphrase-a-long"), "1").unwrap();
         auto(&a.ctx(), "1").unwrap();
         // Joining a folder with a passphrase that doesn't open its bundle is
         // refused (a push would re-seal the shared bundle under it).
-        let err = configure(&b.ctx(), &shared, Some("passphrase-b"), "1")
+        let err = configure(&b.ctx(), &shared, Some("passphrase-b-long"), "1")
             .unwrap_err()
             .to_string();
         assert!(err.contains("doesn't open"), "{err}");
         // A relative folder is refused too.
         assert!(configure(&b.ctx(), Path::new("rel/dir"), None, "1").is_err());
         // A stored passphrase that no longer matches: pull says so.
-        configure(&b.ctx(), &shared, Some("passphrase-a"), "1").unwrap();
-        store_passphrase(&b.ctx(), "passphrase-b").unwrap();
+        configure(&b.ctx(), &shared, Some("passphrase-a-long"), "1").unwrap();
+        store_passphrase(&b.ctx(), "passphrase-b-long").unwrap();
         let err = pull(&b.ctx(), "1").unwrap_err().to_string();
         assert!(err.contains("wrong passphrase"), "{err}");
         // Corrupted (non-ASCII) hex is rejected, not a panic.

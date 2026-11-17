@@ -43,7 +43,7 @@ pub const BUNDLE_EXTENSION: &str = "zapxb";
 /// Passphrases shorter than this are refused at export time. Argon2id makes
 /// guessing slow, not impossible — a 3-character passphrase is still 3
 /// characters.
-pub const MIN_PASSPHRASE_CHARS: usize = 8;
+pub const MIN_PASSPHRASE_CHARS: usize = 14;
 /// Settings key holding this install's stable device id (created lazily).
 pub const DEVICE_ID_KEY: &str = "backup.device_id";
 /// Settings that describe *this* install and must neither travel in a bundle
@@ -267,7 +267,6 @@ pub(crate) struct BackupCtx<'a> {
     pub secrets: &'a dyn SecretStore,
     pub vault_seed: &'a str,
     pub password_cache: Option<&'a PasswordCache>,
-    pub portable: bool,
     /// `known_hosts` to read from / merge into. `None` = the user's real file.
     pub known_hosts_path: Option<PathBuf>,
     /// Folder of the user's command list files. `None` = lists are neither
@@ -282,7 +281,6 @@ impl<'a> BackupCtx<'a> {
             secrets,
             vault_seed: &state.vault_seed,
             password_cache: Some(&state.password_cache),
-            portable: state.data_dir.is_portable(),
             known_hosts_path: None,
             cmdlists_dir: Some(super::cmdlists::user_dir(state)),
         }
@@ -297,13 +295,13 @@ impl<'a> BackupCtx<'a> {
     /// Resolve a credential's secret: keyring first, then the encrypted DB
     /// fallback that vault entries carry.
     fn credential_secret(&self, cred: &Credential) -> Option<String> {
-        self.secrets.get(&cred.keyring_key).or_else(|| {
-            self.db
-                .get_credential_secret(cred.id)
-                .ok()
-                .flatten()
-                .and_then(|blob| core_vault::decrypt_with_seed(self.vault_seed, &blob).ok())
-        })
+        crate::secrets::resolve(
+            self.secrets,
+            self.db,
+            self.vault_seed,
+            &cred.keyring_key,
+            crate::secrets::Fallback::Credential(cred.id),
+        )
     }
 
     /// Resolve a session's private secret through the same chain the SSH
@@ -316,11 +314,12 @@ impl<'a> BackupCtx<'a> {
                     .and_then(|c| c.lock().unwrap().get(&session.id).cloned())
             })
             .or_else(|| {
-                self.db
-                    .get_session_secret(session.id)
-                    .ok()
-                    .flatten()
-                    .and_then(|blob| core_vault::decrypt_with_seed(self.vault_seed, &blob).ok())
+                crate::secrets::read_fallback(
+                    self.secrets,
+                    self.db,
+                    self.vault_seed,
+                    crate::secrets::Fallback::Session(session.id),
+                )
             })
             .or_else(|| self.credential_secret(cred))
     }
@@ -331,17 +330,9 @@ impl<'a> BackupCtx<'a> {
     fn settle_secret(
         &self,
         target: crate::secrets::Fallback,
-        secret: &str,
         in_keyring: bool,
     ) -> Result<(), String> {
-        crate::secrets::settle_fallback(
-            self.db,
-            self.vault_seed,
-            target,
-            secret,
-            in_keyring,
-            self.portable,
-        )
+        crate::secrets::settle_fallback(self.secrets, self.db, target, in_keyring)
     }
 }
 
@@ -524,7 +515,6 @@ pub(crate) fn apply_bundle_with(
                     let in_keyring = ctx.secrets.put(&ex.keyring_key, &entry.secret).is_ok();
                     match ctx.settle_secret(
                         crate::secrets::Fallback::Credential(ex.id),
-                        &entry.secret,
                         in_keyring,
                     ) {
                         Ok(()) => summary.vault_updated += 1,
@@ -547,11 +537,8 @@ pub(crate) fn apply_bundle_with(
                     continue;
                 }
             };
-            if let Err(e) = ctx.settle_secret(
-                crate::secrets::Fallback::Credential(id),
-                &entry.secret,
-                in_keyring,
-            ) {
+            if let Err(e) = ctx.settle_secret(crate::secrets::Fallback::Credential(id), in_keyring)
+            {
                 db.delete_credential(id).ok();
                 summary
                     .warnings
@@ -615,11 +602,7 @@ pub(crate) fn apply_bundle_with(
         if let Some(cache) = ctx.password_cache {
             cache.lock().unwrap().insert(new_id, secret.to_owned());
         }
-        if let Err(e) = ctx.settle_secret(
-            crate::secrets::Fallback::Session(new_id),
-            secret,
-            in_keyring,
-        ) {
+        if let Err(e) = ctx.settle_secret(crate::secrets::Fallback::Session(new_id), in_keyring) {
             summary
                 .warnings
                 .push(format!("session «{}»: {e}", session.name));
@@ -713,11 +696,7 @@ fn update_session_credential(
             if let Some(cache) = ctx.password_cache {
                 cache.lock().unwrap().insert(session.id, secret.to_owned());
             }
-            match ctx.settle_secret(
-                crate::secrets::Fallback::Session(session.id),
-                secret,
-                in_keyring,
-            ) {
+            match ctx.settle_secret(crate::secrets::Fallback::Session(session.id), in_keyring) {
                 Ok(()) => summary.credentials_linked += 1,
                 Err(e) => summary
                     .warnings
@@ -799,7 +778,7 @@ pub async fn backup_export(
     passphrase: String,
 ) -> Result<BackupExportSummary, AppError> {
     validate_passphrase(&passphrase)?;
-    let store = KeyringStore;
+    let store = state.secret_store();
     let ctx = BackupCtx::from_state(&state, &store);
     let version = app.package_info().version.to_string();
     let mut warnings = Vec::new();
@@ -825,7 +804,7 @@ pub async fn backup_restore(
     passphrase: String,
 ) -> Result<RestoreSummary, AppError> {
     let bundle = read_bundle(Path::new(&path), &passphrase)?;
-    let store = KeyringStore;
+    let store = state.secret_store();
     let ctx = BackupCtx::from_state(&state, &store);
     // Not while the background sync is fingerprinting/pushing or a pull is
     // applying: it would publish a half-restored state, or both could create
@@ -900,7 +879,6 @@ mod tests {
                 secrets: &self.store,
                 vault_seed: "test-seed",
                 password_cache: Some(&self.cache),
-                portable: false,
                 known_hosts_path: Some(self.dir.join("known_hosts")),
                 cmdlists_dir: Some(self.dir.join("cmdlists")),
             }
@@ -1240,7 +1218,8 @@ mod tests {
         bundle.zapx_bundle = BUNDLE_VERSION + 1;
         assert!(apply_bundle(&f.ctx(), &bundle).is_err());
         assert!(validate_passphrase("short").is_err());
-        assert!(validate_passphrase("long enough").is_ok());
+        assert!(validate_passphrase("thirteen char").is_err());
+        assert!(validate_passphrase("fourteen chars").is_ok());
         assert!(matches!(
             read_bundle(&f.dir.join("nope.zapxb"), "whatever!"),
             Err(AppError::Internal(_))

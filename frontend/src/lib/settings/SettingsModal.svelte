@@ -10,6 +10,7 @@
   import SshPanel from './SshPanel.svelte'
   import DataPanel from './DataPanel.svelte'
   import BackupPanel from './BackupPanel.svelte'
+  import VaultPanel from './VaultPanel.svelte'
   import {
     SHORTCUT_ACTIONS,
     bindings,
@@ -34,6 +35,7 @@
     | 'ssh'
     | 'data'
     | 'backup'
+    | 'vault'
     | 'shortcuts'
   let activeTab = $state<Tab>('appearance')
 
@@ -152,6 +154,13 @@
         </button>
         <button
           class="tab-btn"
+          class:active={activeTab === 'vault'}
+          onclick={() => (activeTab = 'vault')}
+        >
+          Vault
+        </button>
+        <button
+          class="tab-btn"
           class:active={activeTab === 'shortcuts'}
           onclick={() => (activeTab = 'shortcuts')}
         >
@@ -176,6 +185,8 @@
           <DataPanel />
         {:else if activeTab === 'backup'}
           <BackupPanel />
+        {:else if activeTab === 'vault'}
+          <VaultPanel />
         {:else}
           <div class="shortcuts-list">
             <p class="hint">

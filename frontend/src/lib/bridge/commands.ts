@@ -866,7 +866,7 @@ export async function getDataDirInfo(): Promise<DataDirInfo> {
 /** File extension of a sealed bundle. */
 export const BACKUP_EXTENSION = 'zapxb'
 /** Minimum passphrase length the backend accepts (mirrors Rust). */
-export const BACKUP_MIN_PASSPHRASE = 8
+export const BACKUP_MIN_PASSPHRASE = 14
 
 export interface BundleInfo {
   app_version: string
@@ -1104,4 +1104,45 @@ export async function bulkAddSessions(rows: BulkRow[], apply: boolean): Promise<
 /** A device list file as text (UTF-8, UTF-16 or Windows-1252). */
 export async function readDeviceListFile(path: string): Promise<string> {
   return invoke<string>('read_device_list_file', { path })
+}
+
+// ── Vault (master password) ─────────────────────────────────────────────────
+
+export interface VaultStatus {
+  /** A master password has been set. */
+  exists: boolean
+  unlocked: boolean
+  /** The vault key is kept in this computer's keyring, so it opens by itself. */
+  remember: boolean
+  /** Portable install: "remember" is never offered. */
+  portable: boolean
+  min_password_chars: number
+}
+
+// Current state; also opens a vault that is remembered on this device.
+export async function masterStatus(): Promise<VaultStatus> {
+  return invoke<VaultStatus>('master_status')
+}
+
+export async function masterCreate(password: string, remember: boolean): Promise<VaultStatus> {
+  return invoke<VaultStatus>('master_create', { password, remember })
+}
+
+export async function masterUnlock(password: string): Promise<VaultStatus> {
+  return invoke<VaultStatus>('master_unlock', { password })
+}
+
+export async function masterLock(): Promise<VaultStatus> {
+  return invoke<VaultStatus>('master_lock')
+}
+
+export async function masterChangePassword(
+  oldPassword: string,
+  newPassword: string,
+): Promise<void> {
+  return invoke<void>('master_change_password', { oldPassword, newPassword })
+}
+
+export async function masterSetRemember(remember: boolean): Promise<VaultStatus> {
+  return invoke<VaultStatus>('master_set_remember', { remember })
 }

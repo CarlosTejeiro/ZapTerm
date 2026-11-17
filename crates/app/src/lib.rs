@@ -5,11 +5,13 @@ mod events;
 mod hint_watcher;
 mod importers;
 mod login_script;
+mod master;
 mod menu;
 mod scripting;
 mod secrets;
 mod state;
 mod triggers;
+mod vault_store;
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
@@ -92,7 +94,6 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(
             tauri_plugin_window_state::Builder::default()
                 .with_filename(WINDOW_STATE_FILE)
@@ -177,22 +178,19 @@ pub fn run() {
                     .collect(),
             )));
 
-            // Local-fallback vault seed: a random per-install key in
-            // `vault.key` (mode 0600), not the predictable data-dir path the
-            // older builds used. If the keyfile didn't exist yet, this is the
-            // first launch on the new scheme — migrate any secrets written
-            // under the legacy seed so the user isn't re-prompted. If the
-            // keyfile can't be created (read-only dir), degrade to the legacy
-            // seed so credentials still resolve.
-            let legacy_seed = resolved.legacy_vault_seed();
-            let vault_key_existed = data_dir.join("vault.key").exists();
-            let vault_seed = core_vault::load_or_create_seed(&data_dir).unwrap_or_else(|e| {
-                tracing::warn!("vault keyfile unavailable ({e}); falling back to legacy seed");
-                legacy_seed.clone()
-            });
-            if !vault_key_existed && vault_seed != legacy_seed {
-                data_dir::migrate_session_secrets(&db, &legacy_seed, &vault_seed);
-            }
+            // The seed older versions encrypted database copies of secrets
+            // with: `vault.key` if one is still there, else the value builds
+            // before it used. Nothing is encrypted with it any more — it only
+            // reads those copies while they are moved into the vault — so no
+            // key file is created.
+            let vault_seed = match core_vault::load_seed(&data_dir) {
+                Ok(Some(seed)) => seed,
+                Ok(None) => resolved.legacy_vault_seed(),
+                Err(e) => {
+                    tracing::warn!("{e}; secrets saved under it can't be read");
+                    resolved.legacy_vault_seed()
+                }
+            };
 
             // The SSH library used to keep `known_hosts` under
             // `%USERPROFILE%\ssh\` on Windows; it now uses the standard
@@ -211,6 +209,7 @@ pub fn run() {
                 forwards: Mutex::new(HashMap::new()),
                 password_cache: Arc::new(Mutex::new(HashMap::new())),
                 vault_seed,
+                master_vault: Default::default(),
                 sftp_cancellations: Arc::new(Mutex::new(HashMap::new())),
                 hint_watcher,
                 scripts: Default::default(),
@@ -218,6 +217,8 @@ pub fn run() {
 
             // Sync folder: periodic push of local changes + notification of
             // remote ones. No-op until the user configures a folder.
+            commands::master::open_at_start(&app.state::<AppState>());
+
             commands::sync::spawn(app.handle().clone());
             Ok(())
         })
@@ -329,6 +330,12 @@ pub fn run() {
             commands::transfer::save_text_file,
             commands::bulk::bulk_add_sessions,
             commands::bulk::read_device_list_file,
+            commands::master::master_status,
+            commands::master::master_create,
+            commands::master::master_unlock,
+            commands::master::master_lock,
+            commands::master::master_change_password,
+            commands::master::master_set_remember,
             commands::backup::backup_export,
             commands::backup::backup_inspect,
             commands::backup::backup_restore,

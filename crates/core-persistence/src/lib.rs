@@ -167,7 +167,7 @@ pub struct SavedSession {
 
 // rusqlite::Connection is Send; Mutex<Connection> is therefore Send + Sync.
 /// Highest schema version this build knows (the last migration file).
-pub const LATEST_SCHEMA: i64 = 26;
+pub const LATEST_SCHEMA: i64 = 27;
 
 pub struct Database {
     conn: Mutex<Connection>,
@@ -407,6 +407,12 @@ impl Database {
             version,
             26,
             include_str!("migrations/026_richer_highlight_rules.sql"),
+        )?;
+        apply(
+            &conn,
+            version,
+            27,
+            include_str!("migrations/027_vault_secrets.sql"),
         )?;
         Ok(())
     }
@@ -998,6 +1004,57 @@ impl Database {
         conn.execute(
             "DELETE FROM credential_secrets WHERE credential_id = ?1",
             rusqlite::params![credential_id],
+        )?;
+        Ok(())
+    }
+
+    // -----------------------------------------------------------------------
+    // Vault secrets — every stored secret, encrypted under the vault key
+    // (migration 027). `key` is the reference held elsewhere in the schema.
+    // -----------------------------------------------------------------------
+
+    /// How many secrets are still in the pre-vault tables (`session_secrets`,
+    /// `credential_secrets`), i.e. encrypted under the old `vault.key` seed.
+    pub fn count_legacy_secret_copies(&self) -> Result<i64, Error> {
+        let conn = self.conn.lock().unwrap();
+        let n = conn.query_row(
+            "SELECT (SELECT COUNT(*) FROM session_secrets)
+                  + (SELECT COUNT(*) FROM credential_secrets)",
+            [],
+            |row| row.get::<_, i64>(0),
+        )?;
+        Ok(n)
+    }
+
+    pub fn set_vault_secret(&self, key: &str, ciphertext: &[u8]) -> Result<(), Error> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "INSERT INTO vault_secrets (key, ciphertext) VALUES (?1, ?2)
+             ON CONFLICT(key) DO UPDATE SET ciphertext = excluded.ciphertext",
+            rusqlite::params![key, ciphertext],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_vault_secret(&self, key: &str) -> Result<Option<Vec<u8>>, Error> {
+        let conn = self.conn.lock().unwrap();
+        let result = conn.query_row(
+            "SELECT ciphertext FROM vault_secrets WHERE key = ?1",
+            rusqlite::params![key],
+            |row| row.get::<_, Vec<u8>>(0),
+        );
+        match result {
+            Ok(v) => Ok(Some(v)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    pub fn delete_vault_secret(&self, key: &str) -> Result<(), Error> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "DELETE FROM vault_secrets WHERE key = ?1",
+            rusqlite::params![key],
         )?;
         Ok(())
     }

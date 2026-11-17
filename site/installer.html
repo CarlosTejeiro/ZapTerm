@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Windows installer — ZapTerm</title>
+  <meta name="description" content="ZapTerm's Windows installers: silent installation switches and installer exit codes.">
+  <meta name="theme-color" content="#0b0d14">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="index.html"><img src="icon.svg" alt="" width="28" height="28"><span>ZapTerm</span></a>
+    <nav class="nav-links" aria-label="Sections">
+      <a href="index.html#features">Features</a>
+      <a href="index.html#vendors">Vendors</a>
+      <a href="automation.html">Automation</a>
+      <a href="faq.html">Q&amp;A</a>
+      <a href="index.html#download">Download</a>
+      <a href="index.html#feedback">Feedback</a>
+      <a href="index.html#donate">Donate</a>
+    </nav>
+    <a class="btn btn-ghost btn-sm" href="https://github.com/CarlosTejeiro/ZapTerm">GitHub</a>
+  </div>
+</header>
+
+<main id="top" class="faq-page">
+  <div class="wrap legal">
+    <header class="section-head">
+      <p class="kicker">Windows</p>
+      <h1>Windows installer</h1>
+      <p>Silent installation and exit codes, for administrators and deployment tools.</p>
+    </header>
+
+    <p>ZapTerm for Windows comes as two installers, built from the same release:</p>
+    <ul>
+      <li><b>EXE</b> — <code>ZapTerm_&lt;version&gt;_x64-setup.exe</code>, an NSIS installer.</li>
+      <li><b>MSI</b> — <code>ZapTerm_&lt;version&gt;_x64_en-US.msi</code>, a Windows Installer package.</li>
+    </ul>
+    <p>Both install the same 64-bit (x64) application and need the Microsoft Edge WebView2 Runtime,
+      which Windows 11 and updated Windows 10 already include.</p>
+
+    <h2 id="silent">Silent installation</h2>
+    <ul>
+      <li>EXE: <code>ZapTerm_&lt;version&gt;_x64-setup.exe /S</code> (capital S).</li>
+      <li>MSI: <code>msiexec /i ZapTerm_&lt;version&gt;_x64_en-US.msi /qn</code></li>
+    </ul>
+
+    <h2 id="exit-codes">Exit codes of the EXE installer</h2>
+    <p>These are the standard exit codes of NSIS installers:</p>
+    <ul>
+      <li><code>0</code> — Installation completed successfully.</li>
+      <li><code>1</code> — Installation cancelled by the user.</li>
+      <li><code>2</code> — Installation aborted by the installer (an error occurred).</li>
+    </ul>
+    <p>The MSI package returns the standard Windows Installer exit codes (for example
+      <code>0</code> for success and <code>1602</code> when the user cancels), documented by
+      Microsoft for <code>msiexec</code>.</p>
+
+    <h2>Help</h2>
+    <p>If an installation fails, open an issue on
+      <a href="https://github.com/CarlosTejeiro/ZapTerm/issues">GitHub</a> with the exit code and
+      your Windows version.</p>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <span class="brand"><img src="icon.svg" alt="" width="20" height="20"> ZapTerm</span>
+    <span>Free software · <a href="https://github.com/CarlosTejeiro/ZapTerm/blob/main/LICENSE">GPL-3.0-or-later</a></span>
+    <span><a href="https://github.com/CarlosTejeiro/ZapTerm">GitHub</a> · <a href="https://github.com/CarlosTejeiro/ZapTerm/issues">Issues</a> · <a href="index.html#donate">Donate</a> · <a href="https://github.com/CarlosTejeiro/ZapTerm/tree/main/docs/user-guide">User guide</a> · <a href="privacy.html">Privacy</a> · <a href="installer.html" aria-current="page">Windows installer</a></span>
+  </div>
+</footer>
+
+<script src="main.js" defer></script>
+</body>
+</html>
