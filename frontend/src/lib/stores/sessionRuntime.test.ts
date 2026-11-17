@@ -11,6 +11,9 @@ const {
   broadcastTargets,
   claimBroadcastScope,
   releaseBroadcastScope,
+  registerFocus,
+  unregisterFocus,
+  focusPane,
 } = await import('./sessionRuntime.svelte')
 
 describe('pane ↔ session registry', () => {
@@ -50,5 +53,22 @@ describe('grid broadcast scope', () => {
     releaseBroadcastScope(b) // B closed → all panes again
     expect(broadcastGroup.activeSessionIds).toBeNull()
     for (const p of [21, 22, 23]) unregisterSession(p)
+  })
+})
+
+describe('focusPane', () => {
+  it('focuses the terminal of the pane, and nothing for a pane without a session', () => {
+    const focused: string[] = []
+    registerSession(21, 's21')
+    registerFocus('s21', () => focused.push('s21'))
+    registerFocus('s22', () => focused.push('s22'))
+
+    focusPane(21)
+    focusPane(22) // pane 22 has no session (an empty split, a closed tab)
+    expect(focused).toEqual(['s21'])
+
+    unregisterFocus('s21')
+    unregisterFocus('s22')
+    unregisterSession(21)
   })
 })

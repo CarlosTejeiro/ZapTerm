@@ -93,6 +93,12 @@ export function focusSession(sessionId: string): void {
   focusCallbacks.get(sessionId)?.()
 }
 
+/** Focus the terminal of `paneId`, if it has a live session. */
+export function focusPane(paneId: number): void {
+  const sessionId = paneToSession.get(paneId)
+  if (sessionId) focusSession(sessionId)
+}
+
 /** Live session id for the currently focused pane, or null. */
 export function getFocusedSessionId(): string | null {
   return paneToSession.get(sessionRuntime.focusedPaneId) ?? null

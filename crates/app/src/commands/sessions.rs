@@ -630,13 +630,7 @@ fn build_ssh_auth(
                 .get_credential_keyring_key(credential_id)
                 .ok()
                 .and_then(|key| {
-                    crate::secrets::resolve(
-                        &state.db,
-                        &state.vault_seed,
-                        &key,
-                        crate::secrets::Fallback::Credential(credential_id),
-                        state.data_dir.is_portable(),
-                    )
+                    crate::secrets::resolve(&state.secret_store(), &state.db, &state.vault_seed, &key, crate::secrets::Fallback::Credential(credential_id))
                 })
                 .ok_or_else(|| {
                     AppError::Internal(format!(
@@ -1015,9 +1009,6 @@ pub async fn create_saved_session(
             )));
         }
     }
-    // Portable installs deliberately don't depend on the OS keyring (see
-    // data_dir docs); the AES-256-GCM `session_secrets` fallback is the store.
-    let portable = state.data_dir.is_portable();
 
     // Whether the OS keyring took the secret (else the encrypted database copy
     // below holds it).
@@ -1031,7 +1022,8 @@ pub async fn create_saved_session(
     ) = match auth {
         AuthMethodArg::Password { password } => {
             let keyring_key = format!("ssh:{}", Uuid::new_v4());
-            in_keyring = crate::secrets::keyring_put(&keyring_key, &password);
+            in_keyring =
+                crate::secrets::keyring_put(&state.secret_store(), &keyring_key, &password);
             let cred_id = state
                 .db
                 .create_credential(&name, "ssh_password", Some(&username), &keyring_key)
@@ -1046,7 +1038,8 @@ pub async fn create_saved_session(
             let (cred_id, pp_to_persist) = match passphrase {
                 Some(pp) if !pp.is_empty() => {
                     let keyring_key = format!("ssh:{}", Uuid::new_v4());
-                    in_keyring = crate::secrets::keyring_put(&keyring_key, &pp);
+                    in_keyring =
+                        crate::secrets::keyring_put(&state.secret_store(), &keyring_key, &pp);
                     let id = state
                         .db
                         .create_credential(&name, "ssh_key", Some(&username), &keyring_key)
@@ -1093,12 +1086,10 @@ pub async fn create_saved_session(
     if let Some(pw) = password_to_cache {
         state.password_cache.lock().unwrap().insert(id, pw.clone());
         crate::secrets::settle_fallback(
+            &state.secret_store(),
             &state.db,
-            &state.vault_seed,
             crate::secrets::Fallback::Session(id),
-            &pw,
             in_keyring,
-            portable,
         )
         .map_err(AppError::Internal)?;
     }
@@ -1193,7 +1184,6 @@ pub async fn set_session_credential(
         .map_err(|e| AppError::Internal(e.to_string()))?;
     let old_cred_id = session.credential_id;
     let username = session.username.as_deref();
-    let portable = state.data_dir.is_portable();
 
     // Derive the new (auth_method, credential_id, password_to_cache) using the
     // same rules as create_saved_session. `key_path` is not a secret and keeps
@@ -1204,7 +1194,8 @@ pub async fn set_session_credential(
         match auth {
             AuthMethodArg::Password { password } => {
                 let keyring_key = format!("ssh:{}", Uuid::new_v4());
-                in_keyring = crate::secrets::keyring_put(&keyring_key, &password);
+                in_keyring =
+                    crate::secrets::keyring_put(&state.secret_store(), &keyring_key, &password);
                 let cred_id = state
                     .db
                     .create_credential(&session.name, "ssh_password", username, &keyring_key)
@@ -1218,7 +1209,8 @@ pub async fn set_session_credential(
                 let cred_id = match passphrase {
                     Some(pp) if !pp.is_empty() => {
                         let keyring_key = format!("ssh:{}", Uuid::new_v4());
-                        in_keyring = crate::secrets::keyring_put(&keyring_key, &pp);
+                        in_keyring =
+                            crate::secrets::keyring_put(&state.secret_store(), &keyring_key, &pp);
                         Some(
                             state
                                 .db
@@ -1253,7 +1245,7 @@ pub async fn set_session_credential(
                 .unwrap_or(false);
             if !reusable {
                 if let Ok(key) = state.db.get_credential_keyring_key(old_id) {
-                    core_vault::Vault::delete(&key).ok();
+                    crate::commands::backup::SecretStore::delete(&state.secret_store(), &key);
                 }
                 state.db.delete_credential_secret(old_id).ok();
                 state.db.delete_credential(old_id).ok();
@@ -1268,12 +1260,10 @@ pub async fn set_session_credential(
     if let Some(pw) = password_to_cache {
         state.password_cache.lock().unwrap().insert(id, pw.clone());
         crate::secrets::settle_fallback(
+            &state.secret_store(),
             &state.db,
-            &state.vault_seed,
             crate::secrets::Fallback::Session(id),
-            &pw,
             in_keyring,
-            portable,
         )
         .map_err(AppError::Internal)?;
     } else {
@@ -1334,7 +1324,7 @@ pub async fn delete_saved_session(state: State<'_, AppState>, id: i64) -> Result
             .unwrap_or(false);
         if !reusable {
             if let Ok(key) = state.db.get_credential_keyring_key(cred_id) {
-                core_vault::Vault::delete(&key).ok();
+                crate::commands::backup::SecretStore::delete(&state.secret_store(), &key);
                 state.db.delete_credential(cred_id).ok();
             }
         }
@@ -1366,11 +1356,20 @@ pub async fn clone_saved_session(state: State<'_, AppState>, id: i64) -> Result<
         .and_then(|cid| state.db.get_credential(cid).ok())
     {
         Some(c) if c.reusable => Some(c.id),
-        Some(c) => crate::secrets::keyring_get(&c.keyring_key)
-            .or_else(|| typed_password(&state.db, &state.password_cache, &state.vault_seed, src.id))
+        Some(c) => crate::secrets::keyring_get(&state.secret_store(), &c.keyring_key)
+            .or_else(|| {
+                typed_password(
+                    &state.secret_store(),
+                    &state.db,
+                    &state.password_cache,
+                    &state.vault_seed,
+                    src.id,
+                )
+            })
             .and_then(|secret| {
                 let new_key = format!("ssh:{}", Uuid::new_v4());
-                let in_keyring = crate::secrets::keyring_put(&new_key, &secret);
+                let in_keyring =
+                    crate::secrets::keyring_put(&state.secret_store(), &new_key, &secret);
                 let id = state
                     .db
                     .create_credential(&c.name, &c.kind, c.username.as_deref(), &new_key)
@@ -1411,14 +1410,12 @@ pub async fn clone_saved_session(state: State<'_, AppState>, id: i64) -> Result<
     }
     // The copied secret: an encrypted database copy too when the keyring
     // couldn't take it (or on a portable install).
-    if let Some((secret, in_keyring)) = cloned {
+    if let Some((_, in_keyring)) = cloned {
         if let Err(e) = crate::secrets::settle_fallback(
+            &state.secret_store(),
             &state.db,
-            &state.vault_seed,
             crate::secrets::Fallback::Session(new_id),
-            &secret,
             in_keyring,
-            state.data_dir.is_portable(),
         ) {
             tracing::warn!(new_id, "{e}");
         }
@@ -1431,6 +1428,7 @@ pub async fn clone_saved_session(state: State<'_, AppState>, id: i64) -> Result<
 /// in-memory cache, else from the encrypted copy in the database (which then
 /// warms the cache).
 fn typed_password(
+    store: &dyn crate::commands::backup::SecretStore,
     db: &core_persistence::Database,
     cache: &crate::state::PasswordCache,
     seed: &str,
@@ -1443,11 +1441,12 @@ fn typed_password(
     if cached.is_some() {
         return cached;
     }
-    let pw = db
-        .get_session_secret(session_id)
-        .ok()
-        .flatten()
-        .and_then(|blob| core_vault::decrypt_with_seed(seed, &blob).ok());
+    let pw = crate::secrets::read_fallback(
+        store,
+        db,
+        seed,
+        crate::secrets::Fallback::Session(session_id),
+    );
     if let Some(ref pw) = pw {
         cache.lock().unwrap().insert(session_id, pw.clone());
     }
@@ -1481,7 +1480,7 @@ fn resolve_ssh_auth_for_session(
             .and_then(|id| state.db.get_credential(id).ok());
         if let Some(s) = cred
             .as_ref()
-            .and_then(|c| secrets::keyring_get(&c.keyring_key))
+            .and_then(|c| secrets::keyring_get(&state.secret_store(), &c.keyring_key))
         {
             return Some(s);
         }
@@ -1491,6 +1490,7 @@ fn resolve_ssh_auth_for_session(
         // Typed in a pane, or the session's own encrypted copy. With a private
         // credential and a working keyring, that copy moves into the keyring.
         if let Some(pw) = typed_password(
+            &state.secret_store(),
             &state.db,
             &state.password_cache,
             &state.vault_seed,
@@ -1498,6 +1498,7 @@ fn resolve_ssh_auth_for_session(
         ) {
             if let Some(c) = cred.as_ref().filter(|c| !c.reusable && !portable) {
                 if secrets::read_fallback(
+                    &state.secret_store(),
                     &state.db,
                     &state.vault_seed,
                     Fallback::Session(session.id),
@@ -1505,6 +1506,7 @@ fn resolve_ssh_auth_for_session(
                 .is_some()
                 {
                     secrets::migrate_to_keyring(
+                        &state.secret_store(),
                         &state.db,
                         &c.keyring_key,
                         Fallback::Session(session.id),
@@ -1518,11 +1520,11 @@ fn resolve_ssh_auth_for_session(
         // works). Before, a vault-backed session never looked here.
         cred.as_ref().filter(|c| c.reusable).and_then(|c| {
             secrets::resolve(
+                &state.secret_store(),
                 &state.db,
                 &state.vault_seed,
                 &c.keyring_key,
                 Fallback::Credential(c.id),
-                portable,
             )
         })
     };
@@ -1592,18 +1594,17 @@ pub async fn cache_session_password(
     match private_cred {
         Some(c) => {
             if let Err(e) = secrets::persist(
+                &state.secret_store(),
                 &state.db,
-                &state.vault_seed,
                 &c.keyring_key,
                 target,
                 &password,
-                state.data_dir.is_portable(),
             ) {
                 tracing::warn!(saved_session_id, "{e}");
             }
         }
         None => {
-            secrets::write_fallback(&state.db, &state.vault_seed, target, &password);
+            secrets::write_fallback(&state.secret_store(), &state.db, target, &password);
         }
     }
     Ok(())
@@ -1628,13 +1629,14 @@ pub async fn session_password_source(
             .db
             .get_credential_keyring_key(cred_id)
             .ok()
-            .and_then(|key| core_vault::Vault::retrieve(&key).ok())
+            .and_then(|key| crate::secrets::keyring_get(&state.secret_store(), &key))
             .is_some()
     });
     if in_keyring {
         return Ok("keyring");
     }
     let typed = typed_password(
+        &state.secret_store(),
         &state.db,
         &state.password_cache,
         &state.vault_seed,
@@ -1667,12 +1669,14 @@ pub async fn forget_session_password(
         .and_then(|id| state.db.get_credential(id).ok())
         .filter(|c| !c.reusable)
     {
-        core_vault::Vault::delete(&c.keyring_key).ok();
+        crate::commands::backup::SecretStore::delete(&state.secret_store(), &c.keyring_key);
     }
-    state
-        .db
-        .delete_session_secret(saved_session_id)
-        .map_err(|e| AppError::Internal(e.to_string()))
+    crate::secrets::delete_fallback(
+        &state.secret_store(),
+        &state.db,
+        crate::secrets::Fallback::Session(saved_session_id),
+    );
+    Ok(())
 }
 
 /// The host and port an open of `saved_session_id` dials directly: the first
@@ -2629,7 +2633,10 @@ mod tests {
         let (tx, rx) = mpsc::channel();
         let (db2, cache2) = (db, Arc::clone(&cache));
         std::thread::spawn(move || {
-            let _ = tx.send(typed_password(&db2, &cache2, seed, id));
+            // An open vault with nothing in it yet: the password is still
+            // in the copy an older version left in the database.
+            let store = crate::vault_store::tests::MemSecrets::default();
+            let _ = tx.send(typed_password(&store, &db2, &cache2, seed, id));
         });
         let got = rx
             .recv_timeout(Duration::from_secs(5))

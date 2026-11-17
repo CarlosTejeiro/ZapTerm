@@ -10,6 +10,7 @@ on:
     paths:
       - 'site/**'
       - '.github/workflows/pages.yml'
+      - '.github/store-installers.txt'
   workflow_dispatch:
 
 # One deployment at a time; a newer push replaces a queued one.
@@ -25,6 +26,26 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+      # The Microsoft Store needs a package URL that doesn't redirect, which a
+      # GitHub release download always does. The installers of the versions
+      # listed in .github/store-installers.txt are copied from their releases
+      # into the site, under downloads/<version>/. A missing file fails the
+      # deployment instead of publishing a site without it.
+      - name: Add the Windows installers for the Microsoft Store
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          while read -r v; do
+            case "$v" in ''|'#'*) continue ;; esac
+            mkdir -p "site/downloads/$v"
+            gh release download "v$v" --repo "$GITHUB_REPOSITORY" \
+              --dir "site/downloads/$v" \
+              --pattern "ZapTerm_${v}_x64_en-US.msi" \
+              --pattern "ZapTerm_${v}_x64-setup.exe"
+            test -s "site/downloads/$v/ZapTerm_${v}_x64_en-US.msi"
+            test -s "site/downloads/$v/ZapTerm_${v}_x64-setup.exe"
+            (cd "site/downloads/$v" && sha256sum ZapTerm_* > SHA256SUMS.txt && cat SHA256SUMS.txt)
+          done < .github/store-installers.txt
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site/

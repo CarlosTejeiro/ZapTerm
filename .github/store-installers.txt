@@ -1,0 +1,10 @@
+# Versions whose Windows installers the website serves directly, at
+#   https://carlostejeiro.github.io/ZapTerm/downloads/<version>/<file>
+# for the Microsoft Store, which refuses a package URL that redirects
+# (GitHub release downloads always redirect to a temporary signed URL).
+#
+# One version per line. Keep every version that was submitted to the Store:
+# its URL must keep serving the same file. Don't re-run the release workflow
+# for a version listed here, or the file served would change.
+1.5.9
+1.7.1

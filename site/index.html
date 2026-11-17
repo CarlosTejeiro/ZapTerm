@@ -40,7 +40,7 @@
   <section class="hero">
     <div class="glow glow-a"></div><div class="glow glow-b"></div>
     <div class="wrap hero-inner">
-      <p class="eyebrow"><span class="dot"></span> Latest <span data-version>v1.5.2</span> · free &amp; open source</p>
+      <p class="eyebrow"><span class="dot"></span> Latest <span data-version>v1.7.1</span> · free &amp; open source</p>
       <h1>The terminal built for<br><span class="grad">network engineers</span></h1>
       <p class="lede">SSH, Telnet and Serial in one fast app. Command lists for every vendor you touch,
         hints as you type, split panes, broadcast to many devices, a credential vault and
@@ -167,9 +167,9 @@
         <div class="feature-text">
           <span class="tag">Credential vault</span>
           <h3>Secrets stay secret</h3>
-          <p>Reusable credentials live in your OS keyring (Windows Credential Manager, macOS Keychain,
-            Secret Service), with an AES-256-GCM fallback. Sessions and macros reference them by name —
-            the secret is resolved in the backend and never reaches the UI, exports or logs.</p>
+          <p>Saved passwords live in an encrypted vault (AES-256-GCM) that only your master password
+            opens. Sessions and macros reference them by name — the secret is resolved in the backend
+            and never reaches the UI, exports or logs.</p>
         </div>
         <figure class="shot"><img src="img/vault.webp" width="1000" height="520" alt="The Credential vault with two entries, 'FortiGate admin' and 'NetOps (TACACS+)', each with Edit and Delete." data-zoom></figure>
       </article>
@@ -280,7 +280,7 @@
       <header class="section-head">
         <p class="kicker">Q&amp;A</p>
         <h2>Questions people ask</h2>
-        <p>Answers describe the latest version, <b data-version>v1.5.2</b>, and are updated with every release.</p>
+        <p>Answers describe the latest version, <b data-version>v1.7.1</b>, and are updated with every release.</p>
       </header>
       <div class="faq-list">
         <form class="faq-search" action="faq.html" method="get" role="search">
@@ -289,8 +289,8 @@
         </form>
         <details id="passwords">
           <summary>Where are my passwords stored, and how safe are they?</summary>
-          <p>In your operating system's keyring — Windows Credential Manager, macOS Keychain or the Linux Secret Service — so they are protected by your OS account like any other app's secrets. When the keyring isn't available, and on the Windows portable build, ZapTerm keeps an AES-256-GCM encrypted copy in its database instead, with a key created for that install. Passwords never appear in the interface, in session exports or in logs: sessions and macros refer to them by name and the backend types them for you.</p>
-          <p>There is no separate master password: whoever can use your OS account can use your saved credentials, just as with the keyring itself. With the portable build the key travels with the folder, so keep that folder (or USB stick) safe.</p>
+          <p>In an encrypted vault inside ZapTerm's data folder: every saved password is encrypted with AES-256-GCM under a random key, and that key is protected by your master password (Argon2id). A copy of ZapTerm's data — or of a whole portable folder — is useless without it. Passwords never appear in the interface, in session exports or in logs: sessions and macros refer to them by name and the backend types them for you.</p>
+          <p>You choose the master password the first time ZapTerm starts: at least 14 characters (a few unrelated words work well). It cannot be recovered, so keep an encrypted backup as a way back. On an installed copy, <i>Remember on this computer</i> keeps the vault key in your operating system's keyring so ZapTerm opens without asking; turn it off in Settings → Vault to type the master password at every start. The portable build always asks, and leaves nothing on the computer it runs on.</p>
         </details>
         <details id="push-config">
           <summary>Can I push configuration to many devices at once?</summary>
@@ -446,7 +446,7 @@
   <div class="wrap footer-inner">
     <span class="brand"><img src="icon.svg" alt="" width="20" height="20"> ZapTerm</span>
     <span>Free software · <a href="https://github.com/CarlosTejeiro/ZapTerm/blob/main/LICENSE">GPL-3.0-or-later</a></span>
-    <span><a href="https://github.com/CarlosTejeiro/ZapTerm">GitHub</a> · <a href="https://github.com/CarlosTejeiro/ZapTerm/issues">Issues</a> · <a href="#donate">Donate</a> · <a href="https://github.com/CarlosTejeiro/ZapTerm/tree/main/docs/user-guide">User guide</a></span>
+    <span><a href="https://github.com/CarlosTejeiro/ZapTerm">GitHub</a> · <a href="https://github.com/CarlosTejeiro/ZapTerm/issues">Issues</a> · <a href="#donate">Donate</a> · <a href="https://github.com/CarlosTejeiro/ZapTerm/tree/main/docs/user-guide">User guide</a> · <a href="privacy.html">Privacy</a></span>
   </div>
   <p class="wrap fine">Screenshots show simulated lab devices; host names and addresses are fictional.</p>
 </footer>
