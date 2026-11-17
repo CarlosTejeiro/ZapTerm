@@ -1134,14 +1134,10 @@
     }
   }
 
-  /// Check the configured update endpoint, ask the user, and install on confirm.
-  /// Requires the updater plugin to be `active` in tauri.conf.json with a valid
-  /// signing pubkey + endpoint — until then this surfaces a clear error.
-  /// In-app auto-update isn't wired (the repo/releases are private, so there's
-  /// no public manifest a client could read). Open the releases page instead,
-  /// where the latest build can be downloaded.
+  /// ZapTerm doesn't update itself (no update server is contacted): open the
+  /// releases page, where the latest build can be downloaded.
   async function handleCheckUpdates() {
-    const releasesUrl = 'https://github.com/CarlosTejeiro/zapterm/releases'
+    const releasesUrl = 'https://github.com/CarlosTejeiro/ZapTerm/releases'
     try {
       await openExternal(releasesUrl)
       showToast({
