@@ -8,6 +8,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.7.6] - 2026-11-17
+
+Fixes from a review of the app.
+
+### Security
+- **SFTP "Edit" no longer runs the file.** The remote file was opened with
+  its default application, which on Windows *runs* a `.bat`, `.vbs`, `.js`
+  or `.py` instead of showing it, and the file name went through `cmd`,
+  where a `&` in it could start another command. Now nothing goes through a
+  shell: macOS opens the default text editor, Windows opens Notepad for
+  anything that would run (the default application for the rest), and the
+  local copy's name is cleaned of characters a shell acts on.
+- The temporary copy of a file being edited is readable only by you
+  (Linux and macOS).
+
+### Fixed
+- **The unlock screen really locks the keyboard.** With the vault locked,
+  shortcuts (Ctrl+K, new tab, macros…) still reached the app behind the
+  unlock screen. They no longer do.
+- **The unlock screen can be moved, minimised and closed.** It covered the
+  title bar, so with the vault locked the window had no controls.
+- **Deleting a session removes its typed password.** A password typed in a
+  pane and kept for the session stayed in the vault (encrypted) after the
+  session was deleted. Same when a session is switched to a vault entry,
+  a key or the agent, and when a vault entry is deleted.
+- **Opening the vault no longer asks the system keyring once per saved
+  session.** It looked there for passwords of older versions under names
+  the keyring never held.
+
 ## [1.7.5] - 2026-11-17
 
 ### Removed
