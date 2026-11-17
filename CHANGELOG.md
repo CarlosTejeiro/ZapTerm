@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.7.2] - 2026-11-17
+
+### Security
+- **Removed the unused update plugin.** In-app updates were never switched on
+  (ZapTerm doesn't contact an update server; *Check for updates* opens the
+  releases page), but the plugin was still built in and brought a ZIP library
+  with two newly published advisories (RUSTSEC-2026-0545, RUSTSEC-2026-0548).
+  Removing it removes that library from the app.
+- The four earlier exceptions for that ZIP library in the dependency audit
+  are gone with it.
+
 ## [1.7.1] - 2026-11-16
 
 ### Fixed
