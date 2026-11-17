@@ -28,3 +28,5 @@ cd site && python3 -m http.server 8000
   installers of the versions listed in `.github/store-installers.txt` from their
   releases, for the Microsoft Store, which needs a package URL that doesn't
   redirect. Keep every version submitted to the Store in that list.
+- `installer.html` — silent-install switches and exit codes of the Windows installers
+  (the Microsoft Store asks for a page documenting the EXE installer's exit codes).
