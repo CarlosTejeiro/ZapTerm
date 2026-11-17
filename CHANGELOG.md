@@ -15,7 +15,7 @@ Betas are the 1.8.x versions: 1.8.0, 1.8.1… tagged `v1.8.0-beta`, `v1.8.1-beta
 The app version itself carries no suffix, because the MSI and RPM bundlers
 disagree on which suffixes they accept.
 
-Includes everything up to 1.7.1 (the encrypted vault), plus:
+Includes everything up to 1.7.2 (the encrypted vault), plus:
 
 ### Added
 - **Add devices in bulk** (File menu and command palette). Paste one device
@@ -39,6 +39,17 @@ Includes everything up to 1.7.1 (the encrypted vault), plus:
   Refused, declined and approved commands are logged in the panel.
 - `Session.run(..., strict=True)` raises instead of returning an empty string
   when read-only keeps a command from being sent.
+
+## [1.7.2] - 2026-11-17
+
+### Security
+- **Removed the unused update plugin.** In-app updates were never switched on
+  (ZapTerm doesn't contact an update server; *Check for updates* opens the
+  releases page), but the plugin was still built in and brought a ZIP library
+  with two newly published advisories (RUSTSEC-2026-0545, RUSTSEC-2026-0548).
+  Removing it removes that library from the app.
+- The four earlier exceptions for that ZIP library in the dependency audit
+  are gone with it.
 
 ## [1.7.1] - 2026-11-16
 
