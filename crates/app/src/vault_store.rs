@@ -41,6 +41,14 @@ impl LegacyKeyring for OsKeyring {
     }
 }
 
+/// Names introduced with the vault (`typed:session:<id>`,
+/// `typed:credential:<id>`, see `crate::secrets::Fallback`). Older versions
+/// kept those secrets in the database under `vault.key`, never in the OS
+/// keyring, so the keyring has nothing under them.
+fn is_vault_only(key: &str) -> bool {
+    key.starts_with("typed:")
+}
+
 pub(crate) struct VaultStore<'a> {
     pub db: &'a Database,
     pub vault: &'a MasterVault,
@@ -88,6 +96,12 @@ impl SecretStore for VaultStore<'_> {
         // Locked: don't even look at the keyring. Handing out a secret while
         // the vault is locked would make the lock meaningless.
         self.vault.key()?;
+        // Names that only ever existed in the vault were never in the OS
+        // keyring: don't ask it. This is what keeps opening the vault from
+        // costing one keyring lookup per saved session.
+        if is_vault_only(key) {
+            return None;
+        }
         // A row that exists but didn't decrypt is damaged; the keyring copy,
         // if one is still there, may overwrite it below.
         let secret = self.legacy.get(key)?;
@@ -104,13 +118,17 @@ impl SecretStore for VaultStore<'_> {
     fn put(&self, key: &str, secret: &str) -> Result<(), AppError> {
         self.write(key, secret)?;
         // An older copy in the keyring would be stale from now on.
-        self.legacy.delete(key);
+        if !is_vault_only(key) {
+            self.legacy.delete(key);
+        }
         Ok(())
     }
 
     fn delete(&self, key: &str) {
         let _ = self.db.delete_vault_secret(key);
-        self.legacy.delete(key);
+        if !is_vault_only(key) {
+            self.legacy.delete(key);
+        }
     }
 }
 
@@ -296,5 +314,18 @@ pub(crate) mod tests {
         s.delete("ssh:b");
         assert!(!f.legacy.has("ssh:b"));
         assert_eq!(s.get("ssh:b"), None);
+    }
+    #[test]
+    fn vault_only_names_never_reach_the_keyring() {
+        // Something under such a name in the keyring is not ours to read,
+        // move or delete.
+        let f = Fixture::new(MemLegacy::with(&[("typed:session:1", "stray")]));
+        let s = f.store();
+        assert_eq!(s.get("typed:session:1"), None);
+        s.put("typed:session:1", "pw").unwrap();
+        assert_eq!(s.get("typed:session:1").as_deref(), Some("pw"));
+        s.delete("typed:session:1");
+        assert_eq!(s.get("typed:session:1"), None);
+        assert!(f.legacy.has("typed:session:1"));
     }
 }

@@ -1268,8 +1268,13 @@ pub async fn set_session_credential(
         .map_err(AppError::Internal)?;
     } else {
         // No session-owned secret any more (vault entry, agent, key, or KI):
-        // drop a stale portable fallback blob so it can't shadow the new auth.
-        state.db.delete_session_secret(id).ok();
+        // drop a password kept for the session itself (typed in a pane) so
+        // it can't shadow the new auth.
+        crate::secrets::delete_fallback(
+            &state.secret_store(),
+            &state.db,
+            crate::secrets::Fallback::Session(id),
+        );
     }
 
     Ok(())
@@ -1333,7 +1338,20 @@ pub async fn delete_saved_session(state: State<'_, AppState>, id: i64) -> Result
     state
         .db
         .delete_session(id)
-        .map_err(|e| AppError::Internal(e.to_string()))
+        .map_err(|e| AppError::Internal(e.to_string()))?;
+
+    // A password typed in a pane and kept for this session lives under the
+    // session's own name, not a credential's: drop it too, and the copy in
+    // memory, so nothing of a deleted session stays in the vault.
+    crate::secrets::delete_fallback(
+        &state.secret_store(),
+        &state.db,
+        crate::secrets::Fallback::Session(id),
+    );
+    if let Ok(mut cache) = state.password_cache.lock() {
+        cache.remove(&id);
+    }
+    Ok(())
 }
 
 /// Duplicate a saved session into an independent copy: its credential is
