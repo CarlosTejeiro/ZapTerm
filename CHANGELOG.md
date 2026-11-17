@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.7.3] - 2026-11-17
+
+### Fixed
+- **FortiWiFi and FortiGate are recognised from their prompt.** A device
+  that still has its model as hostname (`FWF40F # `, `FGT60F (root) # `) is
+  now detected as FortiGate on its own, without waiting for a banner that
+  FortiOS doesn't print. "FortiWiFi" in the output also counts.
+- **A Fortinet prompt is no longer taken for Linux.** If a word such as
+  "kernel" appeared in the output, a prompt like `branch-fw # ` was detected
+  as Linux and the Linux command lists were shown. A session already saved
+  as Linux keeps that platform: change it to FortiGate in the session's
+  settings.
+
 ## [1.7.2] - 2026-11-17
 
 ### Security

@@ -60,6 +60,19 @@ impl PlatformDetector {
             self.recent.drain(..drop_n);
         }
         let text = String::from_utf8_lossy(&self.recent);
+        // A FortiGate/FortiWiFi with its model as hostname (`FWF40F # `,
+        // `FGT60F (root) # `) is recognisable from the prompt alone, and
+        // often that's all there is: FortiOS prints no banner by default.
+        // Banner-backed rules for FortiManager/FortiAnalyzer go first.
+        let candidate = last_non_empty_line(&text).unwrap_or(&text).trim_end();
+        let fmg_banner = {
+            let lower = text.to_ascii_lowercase();
+            lower.contains("fortimanager") || lower.contains("fortianalyzer")
+        };
+        if !fmg_banner && fortigate_model_prompt().is_match(candidate) {
+            self.locked = Some(Platform::Fortigate);
+            return Some(Platform::Fortigate);
+        }
         for rule in rules() {
             if rule.matches(&text) {
                 self.locked = Some(rule.platform);
@@ -114,6 +127,12 @@ impl Rule {
         // also tolerate a trailing partial prompt (no newline yet) — the
         // tail of the buffer.
         let candidate = last_non_empty_line(text).unwrap_or(text).trim_end();
+        // `name # ` / `name (vdom) # ` — a bare word, a space, then # — is how
+        // Fortinet devices prompt. A Linux clue elsewhere in the buffer
+        // ("kernel" in some output) must not turn that into a Linux shell.
+        if self.platform == Platform::Linux && fortinet_prompt_shape().is_match(candidate) {
+            return false;
+        }
         if strict_only {
             return linux_strict_prompt().is_match(candidate);
         }
@@ -141,6 +160,28 @@ fn linux_strict_prompt() -> &'static Regex {
             r"^(?:\([^)]*\)\s*)?(?:[\w.-]+@[\w.-]+(?:[:\s][^\n]*?)?\s*[$#]|\[[\w.-]+@[\w.-]+(?:\s[^\]]*)?\]\s*[$#])\s*$",
         )
         .expect("valid regex")
+    })
+}
+
+/// `hostname # ` or `hostname (vdom|section) # `: a single word, a space,
+/// an optional parenthesised context, then `#`. Fortinet's prompt shape;
+/// Linux shells put the `#` right after the host or path (`root@h:~#`,
+/// `/ #` starts with a path, `host ~ #` has the directory).
+fn fortinet_prompt_shape() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| {
+        Regex::new(r"^[A-Za-z][\w.-]*\s(?:\([\w-]+\)\s?)?#\s*$").expect("valid regex")
+    })
+}
+
+/// The Fortinet prompt shape with a FortiGate model as hostname — the
+/// factory default (`FGT60F`, `FWF40F`, `FGR60F`, `FFW…`) or a name built on
+/// it (`fgt-edge-01`).
+fn fortigate_model_prompt() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| {
+        Regex::new(r"^(?i:FGT|FWF|FGR|FFW|FortiGate|FortiWiFi)[\w.-]*\s(?:\([\w-]+\)\s?)?#\s*$")
+            .expect("valid regex")
     })
 }
 
@@ -238,7 +279,14 @@ fn rules() -> &'static [Rule] {
             r!(Platform::Fortimanager, &["FortiManager"]),
             r!(
                 Platform::Fortigate,
-                &["FortiGate", "FortiOS", "FGT", "Fortinet"]
+                &[
+                    "FortiGate",
+                    "FortiOS",
+                    "FGT",
+                    "Fortinet",
+                    "FortiWiFi",
+                    "FWF"
+                ]
             ),
             r!(Platform::PaloAlto, &["Palo Alto Networks", "PAN-OS"]),
             r!(Platform::Juniper, &["JUNOS", "Juniper"]),
@@ -601,6 +649,45 @@ mod tests {
         // for this case — otherwise we'd auto-write the wrong platform.
         assert_eq!(detect("router1#"), None);
         assert_eq!(detect("\n\nsw1-core#"), None);
+    }
+
+    #[test]
+    fn fortiwifi_prompt_alone_is_fortigate() {
+        // A FortiWiFi with the default hostname and no banner: nothing in the
+        // output says "FortiGate", only the prompt.
+        assert_eq!(detect("FWF40F # "), Some(Platform::Fortigate));
+        assert_eq!(detect("\nFWF40F (root) # "), Some(Platform::Fortigate));
+        assert_eq!(detect("FGT60F # "), Some(Platform::Fortigate));
+        assert_eq!(
+            detect("fgt-edge-01 (interface) # "),
+            Some(Platform::Fortigate)
+        );
+    }
+
+    #[test]
+    fn fortiwifi_status_output_is_fortigate() {
+        let text = "Version: FortiWiFi-40F v7.2.8,build1639,240313 (GA.M)\n\
+                    Hostname: branch-fw\nbranch-fw # ";
+        assert_eq!(detect(text), Some(Platform::Fortigate));
+    }
+
+    #[test]
+    fn fortinet_prompt_is_never_linux() {
+        // "kernel" is a Linux clue, but `name # ` (space before #) is how
+        // Fortinet devices prompt: it must not be taken for a Linux shell.
+        let text = "diagnose sys kernel ...\nFWF40F # ";
+        assert_eq!(detect(text), Some(Platform::Fortigate));
+        let text = "kernel messages\nbranch-fw # ";
+        assert_eq!(detect(text), None);
+        // Real Linux prompts with a space before # still are Linux.
+        assert_eq!(detect("BusyBox v1.36\n/ # "), Some(Platform::Linux));
+        assert_eq!(detect("Ubuntu 24.04\nweb ~ # "), Some(Platform::Linux));
+    }
+
+    #[test]
+    fn fortimanager_banner_still_wins_over_model_prompt() {
+        let text = "FortiManager 7.6\nFMG-VM64 # ";
+        assert_eq!(detect(text), Some(Platform::Fortimanager));
     }
 
     #[test]
