@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.7.4] - 2026-11-17
+
+### Fixed
+- **Restoring a backup or syncing no longer replaces this computer's vault.**
+  Since 1.7.0 a backup (and the synced copy) also carried the settings that
+  describe the vault of the computer it was made on: its id and its key
+  wrapped under the master password. Restoring it on another computer, or
+  syncing two computers, overwrote those on the receiving side, so after the
+  next start the saved passwords there could no longer be decrypted.
+  Restoring on the same computer could bring back an older master password.
+  Those settings now stay out of backups and are ignored when a backup made
+  by 1.7.0–1.7.3 is restored. The saved passwords themselves always
+  travelled, and still travel, inside the backup under its passphrase.
+
 ## [1.7.3] - 2026-11-17
 
 ### Fixed
