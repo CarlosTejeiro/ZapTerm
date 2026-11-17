@@ -19,16 +19,9 @@ const CISCO_IOSXR_JSON: &str = include_str!("../data/cisco_iosxr.json");
 const ARISTA_EOS_JSON: &str = include_str!("../data/arista_eos.json");
 const WINDOWS_JSON: &str = include_str!("../data/windows.json");
 const JUNIPER_JSON: &str = include_str!("../data/juniper.json");
-const MIKROTIK_JSON: &str = include_str!("../data/mikrotik.json");
-const ARUBA_JSON: &str = include_str!("../data/aruba.json");
 const FORTIGATE_JSON: &str = include_str!("../data/fortigate.json");
 const FORTIMANAGER_JSON: &str = include_str!("../data/fortimanager.json");
 const FORTIANALYZER_JSON: &str = include_str!("../data/fortianalyzer.json");
-const PALOALTO_JSON: &str = include_str!("../data/paloalto.json");
-const F5_BIGIP_JSON: &str = include_str!("../data/f5_bigip.json");
-const CHECKPOINT_GAIA_JSON: &str = include_str!("../data/checkpoint_gaia.json");
-const HP_COMWARE_JSON: &str = include_str!("../data/hp_comware.json");
-const BROCADE_FOS_JSON: &str = include_str!("../data/brocade_fos.json");
 
 struct Registry {
     /// Directory the user can drop `<platform>.json` overrides into. `None`
@@ -52,19 +45,9 @@ fn default_registry(user_dir: Option<PathBuf>) -> Registry {
     catalogs.insert(Platform::AristaEos, parse_bundled(ARISTA_EOS_JSON));
     catalogs.insert(Platform::Windows, parse_bundled(WINDOWS_JSON));
     catalogs.insert(Platform::Juniper, parse_bundled(JUNIPER_JSON));
-    catalogs.insert(Platform::Mikrotik, parse_bundled(MIKROTIK_JSON));
-    catalogs.insert(Platform::Aruba, parse_bundled(ARUBA_JSON));
     catalogs.insert(Platform::Fortigate, parse_bundled(FORTIGATE_JSON));
     catalogs.insert(Platform::Fortimanager, parse_bundled(FORTIMANAGER_JSON));
     catalogs.insert(Platform::Fortianalyzer, parse_bundled(FORTIANALYZER_JSON));
-    catalogs.insert(Platform::PaloAlto, parse_bundled(PALOALTO_JSON));
-    catalogs.insert(Platform::F5Bigip, parse_bundled(F5_BIGIP_JSON));
-    catalogs.insert(
-        Platform::CheckpointGaia,
-        parse_bundled(CHECKPOINT_GAIA_JSON),
-    );
-    catalogs.insert(Platform::HpComware, parse_bundled(HP_COMWARE_JSON));
-    catalogs.insert(Platform::BrocadeFos, parse_bundled(BROCADE_FOS_JSON));
     Registry { user_dir, catalogs }
 }
 
@@ -163,15 +146,8 @@ pub fn all_platforms() -> &'static [Platform] {
         Platform::AristaEos,
         Platform::Windows,
         Platform::Juniper,
-        Platform::Mikrotik,
-        Platform::Aruba,
         Platform::Fortigate,
         Platform::Fortimanager,
         Platform::Fortianalyzer,
-        Platform::PaloAlto,
-        Platform::F5Bigip,
-        Platform::CheckpointGaia,
-        Platform::HpComware,
-        Platform::BrocadeFos,
     ]
 }

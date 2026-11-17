@@ -227,7 +227,7 @@ connects (set in the New/Edit Session dialog).
 ## 8. Keyword highlighting
 
 Per-rule regex highlighting with true-colour ANSI, over user-overridable vendor
-catalogs (Cisco, Juniper, Fortinet, Palo Alto, F5…). Configure rules in Settings.
+catalogs (Cisco, Arista, Juniper, Fortinet…). Configure rules in Settings.
 
 ---
 

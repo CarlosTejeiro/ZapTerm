@@ -37,16 +37,9 @@ pub enum Platform {
     AristaEos,
     Windows,
     Juniper,
-    Mikrotik,
-    Aruba,
     Fortigate,
     Fortimanager,
     Fortianalyzer,
-    PaloAlto,
-    F5Bigip,
-    CheckpointGaia,
-    HpComware,
-    BrocadeFos,
 }
 
 impl Platform {
@@ -59,16 +52,9 @@ impl Platform {
             Platform::AristaEos => "arista_eos",
             Platform::Windows => "windows",
             Platform::Juniper => "juniper",
-            Platform::Mikrotik => "mikrotik",
-            Platform::Aruba => "aruba",
             Platform::Fortigate => "fortigate",
             Platform::Fortimanager => "fortimanager",
             Platform::Fortianalyzer => "fortianalyzer",
-            Platform::PaloAlto => "paloalto",
-            Platform::F5Bigip => "f5_bigip",
-            Platform::CheckpointGaia => "checkpoint_gaia",
-            Platform::HpComware => "hp_comware",
-            Platform::BrocadeFos => "brocade_fos",
         }
     }
 
@@ -81,16 +67,9 @@ impl Platform {
             Platform::AristaEos => "Arista EOS",
             Platform::Windows => "Windows (PowerShell)",
             Platform::Juniper => "Juniper Junos",
-            Platform::Mikrotik => "MikroTik RouterOS",
-            Platform::Aruba => "Aruba (HP ProCurve)",
             Platform::Fortigate => "Fortinet FortiGate (FortiOS)",
             Platform::Fortimanager => "Fortinet FortiManager",
             Platform::Fortianalyzer => "Fortinet FortiAnalyzer",
-            Platform::PaloAlto => "Palo Alto (PAN-OS)",
-            Platform::F5Bigip => "F5 BIG-IP (TMOS / tmsh)",
-            Platform::CheckpointGaia => "Check Point Gaia (CLISH)",
-            Platform::HpComware => "HPE Comware (HP / H3C)",
-            Platform::BrocadeFos => "Brocade Fabric OS",
         }
     }
 }
@@ -107,16 +86,9 @@ impl FromStr for Platform {
             "arista_eos" => Ok(Platform::AristaEos),
             "windows" => Ok(Platform::Windows),
             "juniper" => Ok(Platform::Juniper),
-            "mikrotik" => Ok(Platform::Mikrotik),
-            "aruba" => Ok(Platform::Aruba),
             "fortigate" => Ok(Platform::Fortigate),
             "fortimanager" => Ok(Platform::Fortimanager),
             "fortianalyzer" => Ok(Platform::Fortianalyzer),
-            "paloalto" => Ok(Platform::PaloAlto),
-            "f5_bigip" => Ok(Platform::F5Bigip),
-            "checkpoint_gaia" => Ok(Platform::CheckpointGaia),
-            "hp_comware" => Ok(Platform::HpComware),
-            "brocade_fos" => Ok(Platform::BrocadeFos),
             _ => Err(Error::InvalidPlatform(s.to_string())),
         }
     }
