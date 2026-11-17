@@ -2,8 +2,8 @@
   "format": "zapterm-command-lists",
   "version": 1,
   "platform": "fortigate",
-  "notes": "FortiGate (FortiOS 7.6) command lists. Every command below was checked against Fortinet's FortiOS 7.6 documentation — nothing was added from memory: • CLI troubleshooting cheat sheet (7.6.0) docs.fortinet.com/document/fortigate/7.6.0/cli-troubleshooting-cheat-sheet/420966 • Administration guide 7.6.6: \"Debugging the packet flow\" (54688), \"IPsec related diagnose commands\" (44240), \"Performing a sniffer trace or packet capture\" (680228: \"To stop the sniffer, type CTRL+C\"), \"Routing concepts\" (139692), \"Using a session table\" (562859), \"How the FortiGate firmware license works\" (7.6.4, 299518) • CLI reference 7.6.6: diagnose vpn ike (309172113), diagnose sys (235530229), diagnose ip router bgp (869760727) / ospf (929006518) Left out on purpose: commands that reset, format or reboot the device (factoryreset, formatlogdisk, execute reboot…), ones the docs warn can cause an outage (execute fsso refresh, diagnose sys ha reset-uptime), ones that put a password on the command line (diagnose test authserver), and ones whose 7.6 argument syntax the docs don't spell out. Safety review: every real-time debug and the packet sniffer carry a caution that is confirmed before sending, quoting the FortiGate CLI troubleshooting cheat sheet (“Real-time debugging is a CPU intensive task”; IPS debugs “with proper filters can result in high CPU usage”) and the sniffer reference (“Packet capture can be very resource intensive”; no count runs until Ctrl+C). Each real-time debug recipe sets diagnose debug duration (minutes, 1–30, default 5; FortiOS defaults to 30 and 0 means unlimited, per the diagnose debug reference), and packet counts are limited to 1–1000.",
-  "label": "FortiGate · FortiOS 7.6",
+  "notes": "FortiGate command lists for FortiOS 7.2, 7.4 and 7.6. Every command below was checked against Fortinet's FortiOS 7.6 documentation — nothing was added from memory: • CLI troubleshooting cheat sheet (7.6.0) docs.fortinet.com/document/fortigate/7.6.0/cli-troubleshooting-cheat-sheet/420966 • Administration guide 7.6.6: \"Debugging the packet flow\" (54688), \"IPsec related diagnose commands\" (44240), \"Performing a sniffer trace or packet capture\" (680228: \"To stop the sniffer, type CTRL+C\"), \"Routing concepts\" (139692), \"Using a session table\" (562859), \"How the FortiGate firmware license works\" (7.6.4, 299518) • CLI reference 7.6.6: diagnose vpn ike (309172113), diagnose sys (235530229), diagnose ip router bgp (869760727) / ospf (929006518) Left out on purpose: commands that reset, format or reboot the device (factoryreset, formatlogdisk, execute reboot…), ones the docs warn can cause an outage (execute fsso refresh, diagnose sys ha reset-uptime), ones that put a password on the command line (diagnose test authserver), and ones whose 7.6 argument syntax the docs don't spell out. Safety review: every real-time debug and the packet sniffer carry a caution that is confirmed before sending, quoting the FortiGate CLI troubleshooting cheat sheet (“Real-time debugging is a CPU intensive task”; IPS debugs “with proper filters can result in high CPU usage”) and the sniffer reference (“Packet capture can be very resource intensive”; no count runs until Ctrl+C). Each real-time debug recipe sets diagnose debug duration (minutes, 1–30, default 5; FortiOS defaults to 30 and 0 means unlimited, per the diagnose debug reference), and packet counts are limited to 1–1000. Releases: the lists were written for 7.6 and then checked against the 7.4 and 7.2 documentation — administration guide 7.4.9 and 7.2.13, CLI reference 7.4.9 and 7.2.13 (diagnose and execute pages), and the 7.4.0 CLI troubleshooting cheat sheet (there is none for 7.2). Items marked \"since\" are not shown on older devices: on 7.2, diagnose sys sdwan service replaces service4/service6, diagnose sys ha status replaces diagnose system ha status, and the IKE debug filters with dst-addr4 instead of rem-addr4, as the 7.2.13 CLI reference has them. Commands the 7.2 documentation does not show in full (test levels of lnkmtd, ipsmonitor and wad, wlac -c, a few get commands) are left out on 7.2 rather than assumed; get system interface physical is only in the 7.6 guide. The diagnose CLI reference is published from 7.2.13, 7.4.7 and 7.6.1 on, so the exact patch where a command changed is not known: the marks are per train.",
+  "label": "FortiGate · FortiOS 7.2 – 7.6",
   "osVersion": "7.6",
   "stopDebug": ["diagnose debug disable", "diagnose debug reset"],
   "stopKeys": "\u0003",
@@ -150,7 +150,8 @@
             {
               "kind": "command",
               "cmd": "get system interface physical",
-              "desc": "Physical interfaces: status, speed, IP"
+              "desc": "Physical interfaces: status, speed, IP",
+              "since": "7.6"
             },
             {
               "kind": "command",
@@ -274,7 +275,8 @@
             {
               "kind": "command",
               "cmd": "get router info protocols",
-              "desc": "Routing protocols running"
+              "desc": "Routing protocols running",
+              "since": "7.4"
             },
             {
               "kind": "command",
@@ -317,13 +319,21 @@
             },
             {
               "kind": "command",
+              "cmd": "diagnose sys sdwan service",
+              "desc": "SD-WAN rules in the control plane",
+              "until": "7.2"
+            },
+            {
+              "kind": "command",
               "cmd": "diagnose sys sdwan service4",
-              "desc": "SD-WAN rules in the control plane (IPv4)"
+              "desc": "SD-WAN rules in the control plane (IPv4)",
+              "since": "7.4"
             },
             {
               "kind": "command",
               "cmd": "diagnose sys sdwan service6",
-              "desc": "SD-WAN rules in the control plane (IPv6)"
+              "desc": "SD-WAN rules in the control plane (IPv6)",
+              "since": "7.4"
             },
             {
               "kind": "command",
@@ -348,17 +358,20 @@
             {
               "kind": "command",
               "cmd": "diagnose test application lnkmtd 1",
-              "desc": "Link monitor daemon statistics (1)"
+              "desc": "Link monitor daemon statistics (1)",
+              "since": "7.4"
             },
             {
               "kind": "command",
               "cmd": "diagnose test application lnkmtd 2",
-              "desc": "Link monitor daemon statistics (2)"
+              "desc": "Link monitor daemon statistics (2)",
+              "since": "7.4"
             },
             {
               "kind": "command",
               "cmd": "diagnose test application lnkmtd 3",
-              "desc": "Link monitor daemon statistics (3)"
+              "desc": "Link monitor daemon statistics (3)",
+              "since": "7.4"
             }
           ]
         }
@@ -397,7 +410,8 @@
             {
               "kind": "command",
               "cmd": "get router info bgp neighbors <peer-ip> received-routes",
-              "desc": "Routes received from the peer"
+              "desc": "Routes received from the peer",
+              "since": "7.4"
             },
             {
               "kind": "command",
@@ -452,7 +466,8 @@
             {
               "kind": "command",
               "cmd": "get router info ospf neighbor all",
-              "desc": "OSPF neighbor information in detail"
+              "desc": "OSPF neighbor information in detail",
+              "since": "7.4"
             },
             {
               "kind": "command",
@@ -462,7 +477,8 @@
             {
               "kind": "command",
               "cmd": "get router info ospf database brief",
-              "desc": "OSPF database in brief"
+              "desc": "OSPF database in brief",
+              "since": "7.4"
             },
             {
               "kind": "command",
@@ -491,7 +507,8 @@
             {
               "kind": "command",
               "cmd": "get vpn ipsec tunnel details",
-              "desc": "Detailed information of every tunnel"
+              "desc": "Detailed information of every tunnel",
+              "since": "7.4"
             },
             {
               "kind": "command",
@@ -591,8 +608,15 @@
             },
             {
               "kind": "command",
+              "cmd": "diagnose sys ha status",
+              "desc": "HA status and information",
+              "until": "7.2"
+            },
+            {
+              "kind": "command",
               "cmd": "diagnose system ha status",
-              "desc": "HA status and information"
+              "desc": "HA status and information",
+              "since": "7.4"
             },
             {
               "kind": "command",
@@ -629,7 +653,8 @@
               "kind": "command",
               "cmd": "execute ha synchronize start",
               "desc": "Start HA synchronization manually",
-              "action": true
+              "action": true,
+              "since": "7.4"
             }
           ]
         }
@@ -648,7 +673,8 @@
             {
               "kind": "command",
               "cmd": "diagnose test application ipsmonitor 1",
-              "desc": "IPS engine information"
+              "desc": "IPS engine information",
+              "since": "7.4"
             },
             {
               "kind": "command",
@@ -658,13 +684,15 @@
             {
               "kind": "command",
               "cmd": "diagnose test application ipsmonitor 13",
-              "desc": "IPS sessions in each engine (monitor)"
+              "desc": "IPS sessions in each engine (monitor)",
+              "since": "7.4"
             },
             {
               "kind": "command",
               "cmd": "diagnose test application ipsmonitor 99",
               "desc": "Restart all IPS engines and monitor",
-              "action": true
+              "action": true,
+              "since": "7.4"
             }
           ]
         },
@@ -720,7 +748,8 @@
             {
               "kind": "command",
               "cmd": "diagnose test application wad 1000",
-              "desc": "All WAD processes"
+              "desc": "All WAD processes",
+              "since": "7.4"
             },
             {
               "kind": "command",
@@ -894,22 +923,26 @@
             {
               "kind": "command",
               "cmd": "diagnose wireless-controller wlac -c wtp",
-              "desc": "Managed FortiAPs"
+              "desc": "Managed FortiAPs",
+              "since": "7.4"
             },
             {
               "kind": "command",
               "cmd": "diagnose wireless-controller wlac -c sta",
-              "desc": "Wireless clients"
+              "desc": "Wireless clients",
+              "since": "7.4"
             },
             {
               "kind": "command",
               "cmd": "diagnose wireless-controller wlac -c vap",
-              "desc": "Virtual APs: SSID, BSSID, interface"
+              "desc": "Virtual APs: SSID, BSSID, interface",
+              "since": "7.4"
             },
             {
               "kind": "command",
               "cmd": "diagnose wireless-controller wlac help",
-              "desc": "Wireless controller debug options"
+              "desc": "Wireless controller debug options",
+              "since": "7.4"
             }
           ]
         }
@@ -1033,13 +1066,44 @@
               "lines": [
                 "diagnose debug reset",
                 "diagnose vpn ike log filter clear",
+                "diagnose vpn ike log filter dst-addr4 {{peer}}",
+                "diagnose debug console timestamp enable",
+                "diagnose debug application ike -1",
+                "diagnose debug duration {{minutes}}",
+                "diagnose debug enable"
+              ],
+              "caution": "Fortinet: “Real-time debugging is a CPU intensive task. Use it with caution.” On a busy unit check get system performance status first, and press Stop debug as soon as you have the output; it stops by itself after the minutes you set.",
+              "until": "7.2"
+            },
+            {
+              "kind": "recipe",
+              "name": "IKE debug of a peer",
+              "desc": "Phase 1 and phase 2 negotiation with one remote gateway",
+              "fields": [
+                {
+                  "key": "peer",
+                  "label": "Remote gateway IP",
+                  "placeholder": "203.0.113.2"
+                },
+                {
+                  "key": "minutes",
+                  "label": "Stop after (minutes)",
+                  "default": "5",
+                  "min": 1,
+                  "max": 30
+                }
+              ],
+              "lines": [
+                "diagnose debug reset",
+                "diagnose vpn ike log filter clear",
                 "diagnose vpn ike log filter rem-addr4 {{peer}}",
                 "diagnose debug console timestamp enable",
                 "diagnose debug application ike -1",
                 "diagnose debug duration {{minutes}}",
                 "diagnose debug enable"
               ],
-              "caution": "Fortinet: “Real-time debugging is a CPU intensive task. Use it with caution.” On a busy unit check get system performance status first, and press Stop debug as soon as you have the output; it stops by itself after the minutes you set."
+              "caution": "Fortinet: “Real-time debugging is a CPU intensive task. Use it with caution.” On a busy unit check get system performance status first, and press Stop debug as soon as you have the output; it stops by itself after the minutes you set.",
+              "since": "7.4"
             },
             {
               "kind": "recipe",
@@ -1317,7 +1381,8 @@
                 "diagnose debug duration {{minutes}}",
                 "diagnose debug enable"
               ],
-              "caution": "Fortinet: “Real-time debugging is a CPU intensive task. Use it with caution.” On a busy unit check get system performance status first, and press Stop debug as soon as you have the output; it stops by itself after the minutes you set."
+              "caution": "Fortinet: “Real-time debugging is a CPU intensive task. Use it with caution.” On a busy unit check get system performance status first, and press Stop debug as soon as you have the output; it stops by itself after the minutes you set.",
+              "since": "7.4"
             }
           ]
         }

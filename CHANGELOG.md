@@ -17,10 +17,16 @@ ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
   shows the command lists written for that release — switching as soon as
   the command is run, and again after an upgrade. When there are no lists for
   the exact release it uses the newest ones written for an older one.
-  This version brings the mechanism; the built-in FortiGate lists are still
-  the FortiOS 7.6 ones (the 7.2 and 7.4 lists come next). Your own files can
-  already use it: see "Lists for another OS release" in the command lists
-  README (`"osVersion"`, `"variantOf"`).
+  Your own files can use it too: see "Lists for another OS release" in the
+  command lists README (`"osVersion"`, `"variantOf"`).
+- **The FortiGate lists now cover FortiOS 7.2, 7.4 and 7.6.** They were
+  checked against Fortinet's 7.4 and 7.2 documentation (administration guide
+  and CLI reference 7.4.9 and 7.2.13, and the 7.4.0 troubleshooting cheat
+  sheet). 7.4 uses the same commands as 7.6. On a 7.2 device:
+  `diagnose sys sdwan service` replaces `service4` / `service6`, the IKE
+  debug filters with `dst-addr4` instead of `rem-addr4`, and the commands the
+  7.2 documentation doesn't show in full (17 of them, mostly numbered test
+  levels) are left out rather than assumed.
 - **Commands can depend on the exact release.** Inside a list, a command or
   recipe can state the first or last release that has it (`"since": "7.6.5"`,
   `"until": "7.6.4"`): a device on 7.6.4 sees the old form and one on 7.6.8
