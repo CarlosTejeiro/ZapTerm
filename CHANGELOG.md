@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.7.5] - 2026-11-17
+
+### Removed
+- **Seven platforms that had no command list**: MikroTik, Check Point Gaia,
+  Brocade Fabric OS, Palo Alto, F5 BIG-IP, Aruba and HPE Comware. They only
+  had prompt detection, command hints and a few example macros, and are gone
+  from the *Platform* choice. The platforms left are the ones with a command
+  list: Cisco IOS, Cisco IOS XR, Arista EOS, Juniper Junos, FortiGate,
+  FortiManager, FortiAnalyzer, Linux, macOS and Windows. A session that had
+  one of the removed platforms saved uses the default platform; those
+  devices are no longer detected, and are not taken for another platform.
+
 ## [1.7.4] - 2026-11-17
 
 ### Fixed

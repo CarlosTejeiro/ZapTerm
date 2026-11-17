@@ -107,8 +107,8 @@ impl Rule {
             .get_or_init(|| Regex::new(self.prompt_src()).expect("valid regex"));
         // Quick reject on the buffer-wide signature check before running the
         // (potentially expensive) regex over the tail. Case-insensitive: a
-        // server's MOTD might say "ubuntu" or "Ubuntu", a banner "PAN-OS" or
-        // "pan-os" — we want both forms to count.
+        // server's MOTD might say "ubuntu" or "Ubuntu", a banner "FortiOS" or
+        // "fortios" — we want both forms to count.
         let mut strict_only = false;
         if !self.signatures.is_empty() {
             let haystack = text.to_ascii_lowercase();
@@ -204,16 +204,9 @@ fn prompt_regex(p: Platform) -> &'static Regex {
             AristaEos,
             Windows,
             Juniper,
-            Mikrotik,
-            Aruba,
             Fortigate,
             Fortimanager,
             Fortianalyzer,
-            PaloAlto,
-            F5Bigip,
-            CheckpointGaia,
-            HpComware,
-            BrocadeFos,
         ]
         .into_iter()
         .map(|pl| (pl, Regex::new(prompt_src_for(pl)).expect("valid regex")))
@@ -261,20 +254,14 @@ fn rules() -> &'static [Rule] {
         }
         vec![
             // ── Highly distinctive prompts (no signature needed) ─────────────
-            r!(Platform::F5Bigip, &[]),
-            r!(Platform::Mikrotik, &[]),
-            r!(Platform::BrocadeFos, &[]),
-            r!(Platform::CheckpointGaia, &["Check Point", "Gaia"]),
-            r!(Platform::HpComware, &[]),
             // IOS XR names the node in the prompt (RP/0/RSP0/CPU0:host#),
             // which no other vendor here does.
             r!(Platform::CiscoIosXr, &[]),
             // A drive path before `>` (`PS C:\Users\me>` or `C:\Users\me>`)
             // is a Windows shell; nothing else here prompts like that.
             r!(Platform::Windows, &[]),
-            r!(Platform::Aruba, &["ArubaOS", "ProCurve", "Aruba"]),
             // ── Cisco-style `hostname#` prompt — needs a banner clue to
-            //    pick the right vendor (Cisco vs Fortigate vs PAN-OS).
+            //    pick the right vendor (Cisco vs Fortigate vs Arista).
             r!(Platform::Fortianalyzer, &["FortiAnalyzer"]),
             r!(Platform::Fortimanager, &["FortiManager"]),
             r!(
@@ -288,7 +275,6 @@ fn rules() -> &'static [Rule] {
                     "FWF"
                 ]
             ),
-            r!(Platform::PaloAlto, &["Palo Alto Networks", "PAN-OS"]),
             r!(Platform::Juniper, &["JUNOS", "Juniper"]),
             // EOS prompts look like IOS (`switch#`, `switch(config-if-Et1)#`);
             // `show version` starts with "Arista <model>".
@@ -341,25 +327,6 @@ fn rules() -> &'static [Rule] {
 /// the user is sitting at, not echoes of historical prompts.
 fn prompt_src_for(p: Platform) -> &'static str {
     match p {
-        // (Active)(/Common)(tmos)# — the (tmos) marker is the giveaway.
-        Platform::F5Bigip => r"\(tmos\)\s*[#>]\s*$",
-
-        // [admin@MikroTik] >  — username@host bracketed, very distinctive.
-        Platform::Mikrotik => r"^\[[^]@]+@[^]]+\]\s*>\s*$",
-
-        // switch:admin>  or  switch:user>  — the `:role>` is unusual.
-        Platform::BrocadeFos => r"^[A-Za-z][\w.-]*:(admin|user|root)>\s*$",
-
-        // CLISH `hostname> ` — banner clue narrows from generic Junos prompt.
-        Platform::CheckpointGaia => r"^[A-Za-z][\w.-]*>\s*$",
-
-        // <hostname> (operator) or [hostname] (system-view) — bracket types
-        // are Comware-specific.
-        Platform::HpComware => r"^(?:<[\w.-]+>|\[[\w.-]+\])\s*$",
-
-        // Aruba CX-style:  hostname#  — but always with the banner clue.
-        Platform::Aruba => r"^[A-Za-z][\w.-]*#\s*$",
-
         // FortiManager top-level looks like `hostname #` (space before #)
         // and the welcome banner says FortiManager.
         // FortiAnalyzer shares the FortiManager CLI and prompt.
@@ -367,9 +334,6 @@ fn prompt_src_for(p: Platform) -> &'static str {
 
         // FortiGate: `hostname # ` or `hostname (vdom) # ` — space before #.
         Platform::Fortigate => r"^[A-Za-z][\w.-]*\s?(?:\([\w-]+\)\s?)?#\s*$",
-
-        // PAN-OS CLI:  user@hostname> (operational) or # (configure).
-        Platform::PaloAlto => r"^[\w.-]+@[\w.-]+\s*[#>]\s*$",
 
         // Junos operational `user@host> ` or config `user@host# `.
         Platform::Juniper => r"^[\w.-]+@[\w.-]+\s*[#>]\s*$",
@@ -520,47 +484,22 @@ mod tests {
         assert_eq!(detect(text), Some(Platform::Fortianalyzer));
     }
 
+    /// Platforms ZapTerm no longer knows are left undetected, not handed to
+    /// a lookalike.
     #[test]
-    fn paloalto() {
-        // Real PAN-OS login banner advertises PAN-OS by name.
-        let text = "PAN-OS 11.2.3\nadmin@PA-3220> ";
-        assert_eq!(detect(text), Some(Platform::PaloAlto));
+    fn removed_platforms_are_not_mistaken_for_another() {
+        assert_eq!(detect("PAN-OS 11.2.3\nadmin@PA-3220> "), None);
+        assert_eq!(detect("PAN-OS 11.2.3\nadmin@PA-3220# "), None);
+        assert_eq!(detect("MikroTik RouterOS\n[admin@MikroTik] > "), None);
+        assert_eq!(detect("Comware Software\n<HP-5130>"), None);
+        assert_eq!(detect("ArubaOS\nsw1# "), None);
+        assert_eq!(detect("Fabric OS\nsanswitch:admin> "), None);
     }
 
     #[test]
     fn juniper() {
         let text = "JUNOS 23.4R1\nroot@mx-edge> ";
         assert_eq!(detect(text), Some(Platform::Juniper));
-    }
-
-    #[test]
-    fn mikrotik() {
-        let text = "MikroTik RouterOS\n[admin@MikroTik] > ";
-        assert_eq!(detect(text), Some(Platform::Mikrotik));
-    }
-
-    #[test]
-    fn comware_operator() {
-        let text = "Comware Software\n<HP-5130>";
-        assert_eq!(detect(text), Some(Platform::HpComware));
-    }
-
-    #[test]
-    fn comware_system_view() {
-        let text = "Comware Software\n[HP-5130]";
-        assert_eq!(detect(text), Some(Platform::HpComware));
-    }
-
-    #[test]
-    fn brocade() {
-        let text = "Fabric OS\nsanswitch:admin> ";
-        assert_eq!(detect(text), Some(Platform::BrocadeFos));
-    }
-
-    #[test]
-    fn f5_tmos() {
-        let text = "Welcome to the BIG-IP\n(Active)(/Common)(tmos)# ";
-        assert_eq!(detect(text), Some(Platform::F5Bigip));
     }
 
     #[test]
@@ -776,12 +715,6 @@ mod tests {
     #[test]
     fn prompt_per_vendor_tails() {
         assert!(ends_with_prompt(Platform::Juniper, "root@mx> "));
-        assert!(ends_with_prompt(
-            Platform::F5Bigip,
-            "(Active)(/Common)(tmos)# "
-        ));
-        assert!(ends_with_prompt(Platform::Mikrotik, "[admin@MikroTik] > "));
-        assert!(ends_with_prompt(Platform::HpComware, "<HP-5130>"));
         assert!(ends_with_prompt(Platform::Linux, "carlos@bastion:~/work$ "));
         assert!(ends_with_prompt(
             Platform::AristaEos,
