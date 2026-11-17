@@ -71,6 +71,21 @@ function strings(o: Record<string, unknown>, key: string, at: string): string[] 
   })
 }
 
+/** `since` / `until` of an item: a release such as "7.6.5" or "7.6". */
+function releaseBounds(v: Record<string, unknown>, at: string): { since?: string; until?: string } {
+  const out: { since?: string; until?: string } = {}
+  for (const key of ['since', 'until'] as const) {
+    if (v[key] === undefined) continue
+    const text = str(v, key, at)
+    if (!parseRelease(text))
+      throw new Invalid(`${at}.${key} must be a release like "7.6.5" or "7.6", not "${text}"`)
+    out[key] = text
+  }
+  if (out.since && out.until && compareReleases(out.since, out.until) > 0)
+    throw new Invalid(`${at}: since is later than until`)
+  return out
+}
+
 function item(v: unknown, at: string): ListItem {
   if (!isObj(v)) throw new Invalid(`${at} must be an object`)
   if (v.kind === 'command') {
@@ -88,6 +103,7 @@ function item(v: unknown, at: string): ListItem {
     if (v.keys !== undefined) c.keys = str(v, 'keys', at)
     const caution = str(v, 'caution', at, true).trim()
     if (caution) c.caution = caution
+    Object.assign(c, releaseBounds(v, at))
     return c
   }
   if (v.kind === 'recipe') {
@@ -132,6 +148,7 @@ function item(v: unknown, at: string): ListItem {
         if (!keys.has(m[1]!)) throw new Invalid(`${at}: {{${m[1]}}} has no field`)
       }
     }
+    Object.assign(r, releaseBounds(v, at))
     return r
   }
   throw new Invalid(`${at}.kind must be "command" or "recipe"`)
@@ -232,14 +249,70 @@ export const BUILTIN: Record<string, VendorLists> = Object.fromEntries(
   }),
 )
 
+/** A release as numbers: "7.6.5" → [7, 6, 5], "7.6" → [7, 6]. */
+function parseRelease(text: string | null | undefined): number[] | null {
+  const m = /^(\d+)\.(\d+)(?:\.(\d+))?/.exec(text ?? '')
+  if (!m) return null
+  return m[3] === undefined
+    ? [Number(m[1]), Number(m[2])]
+    : [Number(m[1]), Number(m[2]), Number(m[3])]
+}
+
+/** Order two releases. A release without a patch number stands for the
+ *  whole train: "7.6" is not after "7.6.3" nor before it (they compare equal
+ *  on what both state). */
+function compareReleases(a: string, b: string): number {
+  const x = parseRelease(a) ?? []
+  const y = parseRelease(b) ?? []
+  for (let i = 0; i < Math.min(x.length, y.length); i++) {
+    if (x[i] !== y[i]) return x[i]! - y[i]!
+  }
+  return 0
+}
+
 /** `major.minor` of a version ("7.4.3" → [7, 4]); null when it isn't one. */
 function train(version: string | null | undefined): [number, number] | null {
-  const m = /^(\d+)\.(\d+)/.exec(version ?? '')
-  return m ? [Number(m[1]), Number(m[2])] : null
+  const r = parseRelease(version)
+  return r ? [r[0]!, r[1]!] : null
 }
 
 function compareTrains(a: [number, number], b: [number, number]): number {
   return a[0] - b[0] || a[1] - b[1]
+}
+
+/** Whether an item exists on a device running `osVersion`. Unknown version:
+ *  the item as of the newest release (nothing that has an `until`). */
+function itemApplies(item: ListItem, osVersion: string | null): boolean {
+  if (!osVersion) return item.until === undefined
+  if (item.since && compareReleases(osVersion, item.since) < 0) return false
+  if (item.until && compareReleases(osVersion, item.until) > 0) return false
+  return true
+}
+
+/** `lists` without the items that don't exist on `osVersion`. With the
+ *  version unknown, an item that needs a minimum release says so in its
+ *  description. Lists with no release-bound item come back untouched. */
+function forRelease(lists: VendorLists, osVersion: string | null): VendorLists {
+  const bound = lists.lists.some((l) =>
+    l.sections.some((s) => s.items.some((i) => i.since !== undefined || i.until !== undefined)),
+  )
+  if (!bound) return lists
+  return {
+    ...lists,
+    lists: lists.lists.map((l) => ({
+      ...l,
+      sections: l.sections
+        .map((s) => ({
+          ...s,
+          items: s.items
+            .filter((i) => itemApplies(i, osVersion))
+            .map((i) =>
+              !osVersion && i.since ? { ...i, desc: `${i.desc} (${i.since}+)`.trim() } : i,
+            ),
+        }))
+        .filter((s) => s.items.length > 0),
+    })),
+  }
 }
 
 /** The lists for a platform: the user's copy when there is one (it replaces
@@ -251,10 +324,22 @@ function compareTrains(a: [number, number], b: [number, number]): number {
  *  lists for its release are used; failing that, the newest ones written for
  *  an older release (commands rarely disappear in a patch train, they appear),
  *  and for a device older than all of them, the oldest. With no version, or
- *  no lists that state one, it is the platform's own file as before. */
+ *  no lists that state one, it is the platform's own file as before.
+ *
+ *  Inside a file, an item may be bound to releases (`since`, `until`): only
+ *  the ones that exist on the device's exact version are returned. */
 export function listsForPlatform(
   platform: string | null | undefined,
   userLists: Record<string, VendorLists> = {},
+  osVersion?: string | null,
+): VendorLists | null {
+  const picked = pickLists(platform, userLists, osVersion)
+  return picked ? forRelease(picked, parseRelease(osVersion) ? (osVersion ?? null) : null) : null
+}
+
+function pickLists(
+  platform: string | null | undefined,
+  userLists: Record<string, VendorLists>,
   osVersion?: string | null,
 ): VendorLists | null {
   if (!platform) return null

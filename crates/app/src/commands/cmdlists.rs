@@ -72,6 +72,15 @@ When the device says its version (FortiOS: `get system status`), ZapTerm
 uses the lists for that release; if there are none, the newest ones written
 for an older release.
 
+A command or recipe that only exists in some releases says so:
+
+    { "kind": "command", "cmd": "old command", "desc": "…", "until": "7.6.4" },
+    { "kind": "command", "cmd": "new command", "desc": "…", "since": "7.6.5" }
+
+It is shown when the device's version is in that range (`"7.6"` means the
+whole 7.6 train). Before the device has said its version, the newest form is
+shown, with the release it needs in its description.
+
 - `<name>` in a command is a part you fill in before it runs.
 - `"action": true` asks before sending (commands that change things).
 - A recipe sends its `lines` in order after a small form fills `{{key}}`.

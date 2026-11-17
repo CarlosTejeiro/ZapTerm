@@ -258,3 +258,69 @@ describe('lists per OS release', () => {
     expect(parseVendorLists(file({ variantOf: 'fortigate' })).ok).toBe(false)
   })
 })
+
+describe('commands bound to releases', () => {
+  const cmd = (name: string, extra: object = {}) => ({
+    kind: 'command' as const,
+    cmd: name,
+    desc: 'd',
+    ...extra,
+  })
+  const withItems = (items: object[]): VendorLists => {
+    const r = parseVendorLists({
+      format: 'zapterm-command-lists',
+      version: 1,
+      platform: 'fortigate',
+      osVersion: '7.6',
+      lists: [
+        { id: 'a', name: 'A', sections: [{ title: 'S', items }] },
+        {
+          id: 'b',
+          name: 'B',
+          sections: [{ title: 'Only old', items: [cmd('gone', { until: '7.6.2' })] }],
+        },
+      ],
+    })
+    if (!r.ok) throw new Error(r.error)
+    return r.value
+  }
+  const mine = {
+    fortigate: withItems([
+      cmd('always'),
+      cmd('old way', { until: '7.6.4' }),
+      cmd('new way', { since: '7.6.5' }),
+      cmd('whole train', { since: '7.6' }),
+    ]),
+  }
+  const shown = (v?: string) =>
+    listsForPlatform('fortigate', mine, v)!.lists.flatMap((l) =>
+      l.sections.flatMap((s) => s.items.map((i) => (i.kind === 'command' ? i.cmd : i.name))),
+    )
+
+  it('shows what exists on the device release', () => {
+    expect(shown('7.6.4')).toEqual(['always', 'old way', 'whole train'])
+    expect(shown('7.6.5')).toEqual(['always', 'new way', 'whole train'])
+    expect(shown('7.6.8')).toEqual(['always', 'new way', 'whole train'])
+    expect(shown('7.6.10')).toEqual(['always', 'new way', 'whole train'])
+    expect(shown('7.6.1')).toEqual(['always', 'old way', 'whole train', 'gone'])
+  })
+
+  it('with the version unknown shows the newest form and says what it needs', () => {
+    expect(shown()).toEqual(['always', 'new way', 'whole train'])
+    const items = listsForPlatform('fortigate', mine)!.lists[0]!.sections[0]!.items
+    expect(items.find((i) => i.kind === 'command' && i.cmd === 'new way')?.desc).toBe('d (7.6.5+)')
+    expect(items.find((i) => i.kind === 'command' && i.cmd === 'always')?.desc).toBe('d')
+  })
+
+  it('drops a section left empty', () => {
+    const titles = listsForPlatform('fortigate', mine, '7.6.8')!.lists.map((l) =>
+      l.sections.map((s) => s.title),
+    )
+    expect(titles).toEqual([['S'], []])
+  })
+
+  it('rejects a bound that is not a release, or an inverted range', () => {
+    expect(() => withItems([cmd('x', { since: 'soon' })])).toThrow(/since/)
+    expect(() => withItems([cmd('x', { since: '7.6.5', until: '7.6.4' })])).toThrow(/later/)
+  })
+})

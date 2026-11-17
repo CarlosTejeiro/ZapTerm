@@ -30,6 +30,10 @@ export interface CommandItem {
   /** Raw keys sent instead of `cmd` (e.g. "\x03" for Ctrl+C); `cmd` is then
    *  only the label. */
   keys?: string
+  /** First release that has it, e.g. "7.6.5" (or "7.6"). */
+  since?: string
+  /** Last release that has it; from the next one on it is gone or changed. */
+  until?: string
 }
 
 export interface RecipeField {
@@ -52,6 +56,10 @@ export interface RecipeItem {
   lines: string[]
   /** As for commands: a warning confirmed before the lines are sent. */
   caution?: string
+  /** First release that has it, e.g. "7.6.5" (or "7.6"). */
+  since?: string
+  /** Last release that has it; from the next one on it is gone or changed. */
+  until?: string
 }
 
 export type ListItem = CommandItem | RecipeItem

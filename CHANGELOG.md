@@ -21,6 +21,11 @@ ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
   the FortiOS 7.6 ones (the 7.2 and 7.4 lists come next). Your own files can
   already use it: see "Lists for another OS release" in the command lists
   README (`"osVersion"`, `"variantOf"`).
+- **Commands can depend on the exact release.** Inside a list, a command or
+  recipe can state the first or last release that has it (`"since": "7.6.5"`,
+  `"until": "7.6.4"`): a device on 7.6.4 sees the old form and one on 7.6.8
+  the new one. Before the version is known the newest form is shown, with
+  the release it needs in its description.
 - **A FortiGate first taken for Linux corrects itself.** That same status
   line proves what the device is: a session whose platform was a guess
   (none, generic or Linux) becomes FortiGate. A platform you chose yourself
