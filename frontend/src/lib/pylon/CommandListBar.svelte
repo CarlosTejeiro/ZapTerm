@@ -8,6 +8,7 @@
   import { sendInputText, writeUserCmdlist } from '$lib/bridge/commands'
   import { errorText } from '$lib/bridge/errors'
   import { barContext, recents, loadRecents } from '$lib/stores/snippets.svelte'
+  import { osVersions } from '$lib/cmdlists/osVersions.svelte'
   import Icon from '$lib/icons/Icon.svelte'
   import type { RecentCommand } from '$lib/bridge/types'
   import {
@@ -56,7 +57,14 @@
   }
   let { theme }: Props = $props()
 
-  const vendor = $derived(listsForPlatform(barContext.platform, userLists.lists))
+  // The focused device's OS version, when it has said it (FortiOS
+  // `get system status`): picks the lists written for that release.
+  const deviceVersion = $derived(
+    barContext.savedSessionId != null
+      ? (osVersions.bySaved[barContext.savedSessionId] ?? null)
+      : null,
+  )
+  const vendor = $derived(listsForPlatform(barContext.platform, userLists.lists, deviceVersion))
 
   // ── Open panel ────────────────────────────────────────────────────────
   let openId = $state<string | null>(null)
@@ -678,7 +686,12 @@
           <span class="head-title">{openList.name}</span>
           <span class="head-sub">{openList.summary} · {count(openList)}</span>
         </div>
-        <span class="vendor">{customOpen ? 'All platforms' : vendor?.label}</span>
+        <span
+          class="vendor"
+          title={!customOpen && deviceVersion
+            ? `This device reported version ${deviceVersion}`
+            : ''}>{customOpen ? 'All platforms' : vendor?.label}</span
+        >
         {#if openList.debug}
           <button
             type="button"

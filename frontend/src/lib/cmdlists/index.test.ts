@@ -10,6 +10,7 @@ import {
   listsForPlatform,
   parseVendorLists,
   placeholderNames,
+  type VendorLists,
   typedPrefix,
 } from './index'
 import type { CommandItem, RecipeItem } from './types'
@@ -195,5 +196,156 @@ describe('command lists', () => {
       expect(r.value.lists[0]!.icon).toBe('system')
       expect(r.value.stopDebug).toEqual([])
     }
+  })
+})
+
+describe('lists per OS release', () => {
+  const lists = (osVersion: string, variantOf?: string): VendorLists => ({
+    label: `fgt ${osVersion}`,
+    stopDebug: [],
+    lists: [],
+    osVersion,
+    ...(variantOf ? { variantOf } : {}),
+  })
+  const files = {
+    fortigate: lists('7.6'),
+    fortigate_7_4: lists('7.4', 'fortigate'),
+    fortigate_7_2: lists('7.2', 'fortigate'),
+    other_7_4: lists('7.4', 'cisco_ios'),
+  }
+  const pick = (v?: string | null) => listsForPlatform('fortigate', files, v)?.label
+
+  it('uses the platform file when the version is unknown', () => {
+    expect(pick()).toBe('fgt 7.6')
+    expect(pick(null)).toBe('fgt 7.6')
+    expect(pick('garbage')).toBe('fgt 7.6')
+  })
+
+  it('uses the lists of the device release', () => {
+    expect(pick('7.2.8')).toBe('fgt 7.2')
+    expect(pick('7.4.3')).toBe('fgt 7.4')
+    expect(pick('7.6.0')).toBe('fgt 7.6')
+  })
+
+  it('falls back to the newest older release, or the oldest there is', () => {
+    expect(pick('8.0.1')).toBe('fgt 7.6')
+    expect(pick('7.5.0')).toBe('fgt 7.4')
+    expect(pick('7.10.0')).toBe('fgt 7.6') // 10 > 6, not "1" < "6"
+    expect(pick('7.0.14')).toBe('fgt 7.2')
+    expect(pick('6.4.15')).toBe('fgt 7.2')
+  })
+
+  it('a platform whose lists state no release is unaffected', () => {
+    expect(listsForPlatform('linux', {}, '7.4.3')).toBe(BUILTIN.linux)
+  })
+
+  it('the built-in FortiGate lists follow the device release', () => {
+    const texts = (v?: string) =>
+      listsForPlatform('fortigate', {}, v)!.lists.flatMap((l) =>
+        l.sections.flatMap((s) =>
+          s.items.flatMap((i) => (i.kind === 'command' ? [i.cmd] : i.lines)),
+        ),
+      )
+    // 7.2 (per the 7.2.13 CLI reference and administration guide).
+    const v72 = texts('7.2.8')
+    expect(v72).toContain('diagnose sys sdwan service')
+    expect(v72).not.toContain('diagnose sys sdwan service4')
+    expect(v72).toContain('diagnose vpn ike log filter dst-addr4 {{peer}}')
+    expect(v72).not.toContain('diagnose vpn ike log filter rem-addr4 {{peer}}')
+    expect(v72).toContain('diagnose sys ha status')
+    expect(v72).not.toContain('diagnose test application ipsmonitor 99')
+    // 7.4 and 7.6.
+    for (const v of ['7.4.5', '7.6.8']) {
+      const t = texts(v)
+      expect(t).toContain('diagnose sys sdwan service4')
+      expect(t).not.toContain('diagnose sys sdwan service')
+      expect(t).toContain('diagnose vpn ike log filter rem-addr4 {{peer}}')
+      expect(t).not.toContain('diagnose vpn ike log filter dst-addr4 {{peer}}')
+      expect(t).toContain('diagnose test application ipsmonitor 99')
+    }
+    expect(texts('7.4.5')).not.toContain('get system interface physical')
+    expect(texts('7.6.8')).toContain('get system interface physical')
+    // Version unknown: the newest forms.
+    expect(texts()).toEqual(texts('7.6.8'))
+  })
+
+  it('checks osVersion and variantOf in a file', () => {
+    const file = (extra: object) => ({
+      format: 'zapterm-command-lists',
+      version: 1,
+      platform: 'fortigate_7_4',
+      lists: [],
+      ...extra,
+    })
+    const ok = parseVendorLists(file({ osVersion: '7.4', variantOf: 'fortigate' }))
+    expect(ok.ok && ok.value.variantOf).toBe('fortigate')
+    expect(parseVendorLists(file({ osVersion: '7.4.3' })).ok).toBe(false)
+    expect(parseVendorLists(file({ variantOf: 'fortigate' })).ok).toBe(false)
+  })
+})
+
+describe('commands bound to releases', () => {
+  const cmd = (name: string, extra: object = {}) => ({
+    kind: 'command' as const,
+    cmd: name,
+    desc: 'd',
+    ...extra,
+  })
+  const withItems = (items: object[]): VendorLists => {
+    const r = parseVendorLists({
+      format: 'zapterm-command-lists',
+      version: 1,
+      platform: 'fortigate',
+      osVersion: '7.6',
+      lists: [
+        { id: 'a', name: 'A', sections: [{ title: 'S', items }] },
+        {
+          id: 'b',
+          name: 'B',
+          sections: [{ title: 'Only old', items: [cmd('gone', { until: '7.6.2' })] }],
+        },
+      ],
+    })
+    if (!r.ok) throw new Error(r.error)
+    return r.value
+  }
+  const mine = {
+    fortigate: withItems([
+      cmd('always'),
+      cmd('old way', { until: '7.6.4' }),
+      cmd('new way', { since: '7.6.5' }),
+      cmd('whole train', { since: '7.6' }),
+    ]),
+  }
+  const shown = (v?: string) =>
+    listsForPlatform('fortigate', mine, v)!.lists.flatMap((l) =>
+      l.sections.flatMap((s) => s.items.map((i) => (i.kind === 'command' ? i.cmd : i.name))),
+    )
+
+  it('shows what exists on the device release', () => {
+    expect(shown('7.6.4')).toEqual(['always', 'old way', 'whole train'])
+    expect(shown('7.6.5')).toEqual(['always', 'new way', 'whole train'])
+    expect(shown('7.6.8')).toEqual(['always', 'new way', 'whole train'])
+    expect(shown('7.6.10')).toEqual(['always', 'new way', 'whole train'])
+    expect(shown('7.6.1')).toEqual(['always', 'old way', 'whole train', 'gone'])
+  })
+
+  it('with the version unknown shows the newest form and says what it needs', () => {
+    expect(shown()).toEqual(['always', 'new way', 'whole train'])
+    const items = listsForPlatform('fortigate', mine)!.lists[0]!.sections[0]!.items
+    expect(items.find((i) => i.kind === 'command' && i.cmd === 'new way')?.desc).toBe('d (7.6.5+)')
+    expect(items.find((i) => i.kind === 'command' && i.cmd === 'always')?.desc).toBe('d')
+  })
+
+  it('drops a section left empty', () => {
+    const titles = listsForPlatform('fortigate', mine, '7.6.8')!.lists.map((l) =>
+      l.sections.map((s) => s.title),
+    )
+    expect(titles).toEqual([['S'], []])
+  })
+
+  it('rejects a bound that is not a release, or an inverted range', () => {
+    expect(() => withItems([cmd('x', { since: 'soon' })])).toThrow(/since/)
+    expect(() => withItems([cmd('x', { since: '7.6.5', until: '7.6.4' })])).toThrow(/later/)
   })
 })

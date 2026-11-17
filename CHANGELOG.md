@@ -8,6 +8,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.7.8] - 2026-11-17
+
+### Added
+- **Command lists can follow the device's OS release.** ZapTerm now reads the
+  version a FortiGate or FortiWiFi states in `get system status`
+  (`Version: FortiGate-60F v7.4.3,…`), remembers it for the session, and
+  shows the command lists written for that release — switching as soon as
+  the command is run, and again after an upgrade. When there are no lists for
+  the exact release it uses the newest ones written for an older one.
+  Your own files can use it too: see "Lists for another OS release" in the
+  command lists README (`"osVersion"`, `"variantOf"`).
+- **The FortiGate lists now cover FortiOS 7.2, 7.4 and 7.6.** They were
+  checked against Fortinet's 7.4 and 7.2 documentation (administration guide
+  and CLI reference 7.4.9 and 7.2.13, and the 7.4.0 troubleshooting cheat
+  sheet). 7.4 uses the same commands as 7.6. On a 7.2 device:
+  `diagnose sys sdwan service` replaces `service4` / `service6`, the IKE
+  debug filters with `dst-addr4` instead of `rem-addr4`, and the commands the
+  7.2 documentation doesn't show in full (17 of them, mostly numbered test
+  levels) are left out rather than assumed.
+- **Commands can depend on the exact release.** Inside a list, a command or
+  recipe can state the first or last release that has it (`"since": "7.6.5"`,
+  `"until": "7.6.4"`): a device on 7.6.4 sees the old form and one on 7.6.8
+  the new one. Before the version is known the newest form is shown, with
+  the release it needs in its description.
+- **A FortiGate first taken for Linux corrects itself.** That same status
+  line proves what the device is: a session whose platform was a guess
+  (none, generic or Linux) becomes FortiGate. A platform you chose yourself
+  is never changed.
+
+### Changed
+- The database gains a column for the version (schema 28). Older ZapTerm
+  versions cannot open a data folder once this one has.
+
 ## [1.7.7] - 2026-11-17
 
 ### Added
