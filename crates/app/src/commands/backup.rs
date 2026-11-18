@@ -48,7 +48,11 @@ pub const MIN_PASSPHRASE_CHARS: usize = 14;
 pub const DEVICE_ID_KEY: &str = "backup.device_id";
 /// Settings that describe *this* install and must neither travel in a bundle
 /// nor be overwritten by one.
-const LOCAL_SETTING_PREFIXES: &[&str] = &["backup."];
+///
+/// `vault.` is this install's vault: its id, its key wrapped under the master
+/// password and whether the key is remembered here. Every install has its own
+/// key, so another install's values would lock this one out of its secrets.
+const LOCAL_SETTING_PREFIXES: &[&str] = &["backup.", "vault."];
 /// Settings that belong to this machine, not to the environment: a Python
 /// path (`C:\Python312\python.exe` means nothing on a Mac) and window
 /// layout (a sidebar drag would otherwise count as a change to sync and
@@ -1227,5 +1231,60 @@ mod tests {
         std::fs::write(f.dir.join("junk.zapxb"), b"not a bundle at all").unwrap();
         let err = read_bundle(&f.dir.join("junk.zapxb"), "whatever!").unwrap_err();
         assert!(err.to_string().contains("not a ZapTerm backup"));
+    }
+    /// Each install has its own vault key. A bundle must neither carry the
+    /// settings that describe it nor replace them on restore: the restored
+    /// device would otherwise hold another vault's wrapped key and lose every
+    /// secret at the next start.
+    #[test]
+    fn the_vault_identity_stays_out_of_bundles() {
+        let src = Fixture::new("vid-src");
+        for k in [
+            "vault.wrapped_key",
+            "vault.id",
+            "vault.check",
+            "vault.remember",
+        ] {
+            src.db.set_setting(k, "src").unwrap();
+        }
+        let mut warnings = Vec::new();
+        let mut bundle = build_bundle(&src.ctx(), "9.9.9", &mut warnings).unwrap();
+        for k in [
+            "vault.wrapped_key",
+            "vault.id",
+            "vault.check",
+            "vault.remember",
+        ] {
+            assert!(
+                !bundle.settings.contains_key(k),
+                "{k} travels in the bundle"
+            );
+        }
+
+        // A bundle written by 1.7.0–1.7.3 does carry them: restoring it must
+        // leave this device's vault alone.
+        let dst = Fixture::new("vid-dst");
+        for k in [
+            "vault.wrapped_key",
+            "vault.id",
+            "vault.check",
+            "vault.remember",
+        ] {
+            dst.db.set_setting(k, "dst").unwrap();
+            bundle.settings.insert(k.into(), "src".into());
+        }
+        apply_bundle(&dst.ctx(), &bundle).unwrap();
+        for k in [
+            "vault.wrapped_key",
+            "vault.id",
+            "vault.check",
+            "vault.remember",
+        ] {
+            assert_eq!(
+                dst.db.get_setting(k).unwrap().as_deref(),
+                Some("dst"),
+                "{k}"
+            );
+        }
     }
 }

@@ -32,6 +32,13 @@ pub async fn set_setting(
     key: String,
     value: String,
 ) -> Result<(), AppError> {
+    // The vault's own rows (wrapped key, id) are written only by
+    // `crate::master`; a stray write would lock the vault for good.
+    if key.starts_with("vault.") {
+        return Err(AppError::Internal(format!(
+            "{key} is not a setting that can be changed"
+        )));
+    }
     state
         .db
         .set_setting(&key, &value)
