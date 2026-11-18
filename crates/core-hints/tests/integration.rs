@@ -303,3 +303,37 @@ fn catalogs_suggest_nothing_destructive() {
         }
     }
 }
+
+#[test]
+fn purge_removes_secrets_an_older_filter_recorded() {
+    let db = open_tmp_db();
+    // As an older version would have stored them: straight into the tables.
+    db.record_command(None, "set psksecret hunter2").unwrap();
+    db.record_command(None, "enable secret 0 hunter2").unwrap();
+    db.record_command(None, "show ip route").unwrap();
+    db.record_transition(
+        "fortigate",
+        "config vpn ipsec phase1",
+        "set psksecret hunter2",
+    )
+    .unwrap();
+    db.record_transition("cisco_ios", "show ip route", "show ip bgp")
+        .unwrap();
+
+    let engine = HintEngine::new(&db);
+    assert_eq!(engine.purge_sensitive().unwrap(), 3);
+    // Nothing left to remove; the harmless ones stay.
+    assert_eq!(engine.purge_sensitive().unwrap(), 0);
+    let left = engine
+        .suggest(None, Platform::Generic, "s", 10, None)
+        .unwrap();
+    assert!(left.iter().any(|h| h.text == "show ip route"));
+    assert!(!left.iter().any(|h| h.text.contains("hunter2")));
+
+    // And new ones are not recorded at all.
+    engine.record(None, "set password hunter2").unwrap();
+    let after = engine
+        .suggest(None, Platform::Generic, "set", 10, None)
+        .unwrap();
+    assert!(after.iter().all(|h| !h.text.contains("hunter2")));
+}

@@ -131,11 +131,77 @@ fn sensitive_regex() -> &'static Regex {
     static R: OnceLock<Regex> = OnceLock::new();
     R.get_or_init(|| {
         // Matches things like "password: hunter2", "api_key=...", "token =",
-        // "Bearer eyJ…". Conservative — we'd rather drop a legit command
-        // than persist a credential.
-        Regex::new(r"(?i)(password|passwd|secret|token|api[-_]?key|bearer)\s*[:=]")
+        // "Authorization: Bearer eyJ…". Conservative — we'd rather drop a
+        // legit command than persist a credential.
+        Regex::new(r"(?i)(password|passwd|secret|token|api[-_]?key|bearer)\s*[:=]|\bbearer\s+\S")
             .expect("static regex compiles")
     })
+}
+
+/// A secret given as an argument, the way device configuration takes it:
+/// a keyword, a space, the value. `enable secret X`, `username a password X`,
+/// `neighbor 10.0.0.1 password 7 X`, `snmp-server community X`,
+/// `tacacs-server key X`, `key-string X`, `pre-shared-key ascii-text X`,
+/// FortiOS `set psksecret X` / `set passwd X`, shell `--password X`.
+fn secret_argument_regex() -> &'static Regex {
+    static R: OnceLock<Regex> = OnceLock::new();
+    R.get_or_init(|| {
+        Regex::new(concat!(
+            r"(?i)(?:^|[\s-])(?:",
+            // Words that name a secret wherever they appear…
+            r"\S*passw\S*|\S*passwd|\S*pwd|\S*passphrase|\S*secret|\S*psk\S*|\S*token|",
+            r"community|key-string|\S*-key|key|md5|sha\d*|wpa\S*",
+            // …followed by a value.
+            r")\s+\S",
+        ))
+        .expect("static regex compiles")
+    })
+}
+
+/// Commands that only read: a secret keyword in them is a filter or a topic
+/// (`show run | include password`, `git commit -m "fix password reset"`),
+/// not a secret.
+fn reads_only(command: &str) -> bool {
+    const VERBS: &[&str] = &[
+        "show",
+        "get",
+        "display",
+        "diagnose",
+        "diag",
+        "do",
+        "run",
+        "ping",
+        "traceroute",
+        "tracert",
+        "ls",
+        "ll",
+        "cat",
+        "less",
+        "more",
+        "head",
+        "tail",
+        "grep",
+        "egrep",
+        "find",
+        "man",
+        "git",
+        "cd",
+        "pwd",
+        "which",
+        "type",
+        "file",
+        "stat",
+        "ps",
+        "top",
+        "df",
+        "du",
+    ];
+    let first = command
+        .split_whitespace()
+        .next()
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    VERBS.contains(&first.as_str())
 }
 
 /// Heuristic: should this command line be excluded from the history?
@@ -146,7 +212,7 @@ pub fn is_sensitive(command: &str) -> bool {
     if sensitive_regex().is_match(command) {
         return true;
     }
-    false
+    !reads_only(command) && secret_argument_regex().is_match(command)
 }
 
 // ---------------------------------------------------------------------------
@@ -171,6 +237,12 @@ impl<'a> HintEngine<'a> {
         }
         self.db.record_command(session_id, trimmed)?;
         Ok(())
+    }
+
+    /// Forget every remembered command that [`is_sensitive`] flags today:
+    /// what an older, laxer filter recorded. Returns how many were removed.
+    pub fn purge_sensitive(&self) -> Result<usize, Error> {
+        Ok(self.db.purge_commands(|c| is_sensitive(c.trim()))?)
     }
 
     /// Learn that `command` followed `prev` on `platform`. No-op for the
@@ -348,6 +420,65 @@ mod tests {
         assert!(!is_sensitive("ls -la"));
         assert!(!is_sensitive("show running-config"));
         assert!(!is_sensitive("git commit -m 'fix password reset bug'"));
+    }
+
+    #[test]
+    fn secrets_given_as_arguments_are_sensitive() {
+        for cmd in [
+            // FortiOS
+            "set psksecret hunter2",
+            "set password hunter2",
+            "set passwd hunter2",
+            "set secret hunter2",
+            "set ppk-secret hunter2",
+            "set auth-pwd hunter2",
+            "set private-key \"-----BEGIN",
+            // Cisco / Arista
+            "enable secret 0 hunter2",
+            "enable password hunter2",
+            "username admin privilege 15 secret hunter2",
+            "username admin password 0 hunter2",
+            "neighbor 10.0.0.1 password 7 094F471A1A0A",
+            "snmp-server community s3cr3t RO",
+            "tacacs-server key hunter2",
+            "crypto isakmp key hunter2 address 203.0.113.2",
+            "key-string hunter2",
+            "ip ospf message-digest-key 1 md5 hunter2",
+            "ip ospf authentication-key hunter2",
+            "wpa-psk ascii hunter2",
+            // Junos
+            "set system root-authentication plain-text-password-value hunter2",
+            "set security ike policy p pre-shared-key ascii-text hunter2",
+            "set protocols bgp group g authentication-key hunter2",
+            // Shell
+            "mysql --password hunter2",
+            "curl -H 'Authorization: Bearer eyJabc' https://x",
+        ] {
+            assert!(is_sensitive(cmd), "{cmd}");
+        }
+    }
+
+    #[test]
+    fn reading_about_secrets_is_not_sensitive() {
+        for cmd in [
+            "show running-config | include password",
+            "show snmp community",
+            "show key chain",
+            "get system admin",
+            "diagnose vpn ike gateway list",
+            "git commit -m 'fix password reset bug'",
+            "grep -r secret .",
+            "set hostname fw-01",
+            "set allowaccess ping https ssh",
+            "config system interface",
+            "execute ping 10.0.0.1",
+            "interface GigabitEthernet0/1",
+            "router ospf 1",
+            "ip address 10.0.0.1 255.255.255.0",
+            "commit confirmed 5",
+        ] {
+            assert!(!is_sensitive(cmd), "{cmd}");
+        }
     }
 
     #[test]

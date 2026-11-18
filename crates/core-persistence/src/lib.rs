@@ -1741,6 +1741,41 @@ impl Database {
     // Command history (powers the ghost-text / popup hints)
     // -----------------------------------------------------------------------
 
+    /// Delete every remembered command (history and learned sequences) that
+    /// `is_sensitive` flags. Returns how many rows went. Used to drop lines
+    /// an older, laxer filter let through.
+    pub fn purge_commands(&self, is_sensitive: impl Fn(&str) -> bool) -> Result<usize, Error> {
+        let conn = self.conn.lock().unwrap();
+        let mut removed = 0usize;
+        let history: Vec<(i64, String)> = {
+            let mut stmt = conn.prepare("SELECT id, command FROM command_history")?;
+            let rows = stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?;
+            rows.collect::<Result<_, _>>()?
+        };
+        for (id, command) in history {
+            if is_sensitive(&command) {
+                removed += conn.execute(
+                    "DELETE FROM command_history WHERE id = ?1",
+                    rusqlite::params![id],
+                )?;
+            }
+        }
+        let transitions: Vec<(i64, String, String)> = {
+            let mut stmt = conn.prepare("SELECT rowid, prev, next FROM command_transitions")?;
+            let rows = stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))?;
+            rows.collect::<Result<_, _>>()?
+        };
+        for (rowid, prev, next) in transitions {
+            if is_sensitive(&prev) || is_sensitive(&next) {
+                removed += conn.execute(
+                    "DELETE FROM command_transitions WHERE rowid = ?1",
+                    rusqlite::params![rowid],
+                )?;
+            }
+        }
+        Ok(removed)
+    }
+
     /// Insert-or-bump: if (session_id, command) already exists, increment
     /// freq and refresh last_used. Otherwise insert a new row.
     pub fn record_command(&self, session_id: Option<i64>, command: &str) -> Result<(), Error> {
