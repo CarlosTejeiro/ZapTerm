@@ -3,6 +3,7 @@
   // master password, afterwards to type it (never when the vault is
   // remembered on this device — the backend opens it by itself).
   import { onMount } from 'svelte'
+  import { getCurrentWindow } from '@tauri-apps/api/window'
   import { masterCreate, masterUnlock } from '$lib/bridge/commands'
   import { errorText } from '$lib/bridge/errors'
   import { passwordProblem } from './password'
@@ -16,6 +17,10 @@
   let error = $state('')
   let loadError = $state('')
   let inputEl = $state<HTMLInputElement | null>(null)
+
+  // The gate covers the app's own title bar (the window has no native one),
+  // so it carries what is needed to move, minimise and close the window.
+  const win = getCurrentWindow()
 
   const status = $derived(vault.status)
   const mode = $derived(
@@ -32,6 +37,48 @@
 
   $effect(() => {
     if (mode) inputEl?.focus()
+  })
+
+  // While the gate is up, the app behind it must not react to the keyboard:
+  // its shortcuts (Ctrl+K, new tab, macros…) and whatever element still has
+  // focus there would otherwise keep working, unseen. Keys aimed outside the
+  // gate are swallowed before anything else sees them, and focus is brought
+  // back; keys typed inside the gate are stopped from bubbling to the app's
+  // document-level shortcuts (`keepKeysInside`).
+  const blocking = $derived(loadError !== '' || !status || mode !== null)
+
+  /** Keys typed in the gate stop here, before the app's own shortcuts. */
+  function keepKeysInside(node: HTMLElement) {
+    const stop = (e: Event) => e.stopPropagation()
+    node.addEventListener('keydown', stop)
+    return { destroy: () => node.removeEventListener('keydown', stop) }
+  }
+
+  function insideGate(target: EventTarget | null): boolean {
+    return target instanceof Element && target.closest('.vault-gate') !== null
+  }
+
+  $effect(() => {
+    if (!blocking) return
+    const swallow = (e: KeyboardEvent) => {
+      if (insideGate(e.target)) return
+      e.stopPropagation()
+      e.preventDefault()
+      inputEl?.focus()
+    }
+    const refocus = (e: FocusEvent) => {
+      if (!insideGate(e.target)) inputEl?.focus()
+    }
+    window.addEventListener('keydown', swallow, true)
+    window.addEventListener('keyup', swallow, true)
+    window.addEventListener('keypress', swallow, true)
+    window.addEventListener('focusin', refocus, true)
+    return () => {
+      window.removeEventListener('keydown', swallow, true)
+      window.removeEventListener('keyup', swallow, true)
+      window.removeEventListener('keypress', swallow, true)
+      window.removeEventListener('focusin', refocus, true)
+    }
   })
 
   async function submit() {
@@ -59,8 +106,29 @@
   }
 </script>
 
+{#snippet windowBar()}
+  <div class="window-bar">
+    <div class="drag" data-tauri-drag-region></div>
+    <button type="button" class="ctrl" title="Minimize" onclick={() => win.minimize()}>
+      &#x2013;
+    </button>
+    <button type="button" class="ctrl" title="Maximize" onclick={() => win.toggleMaximize()}>
+      &#x25A1;
+    </button>
+    <button type="button" class="ctrl close" title="Close" onclick={() => win.close()}>
+      &#x2715;
+    </button>
+  </div>
+{/snippet}
+
 {#if loadError}
-  <div class="overlay" role="alertdialog" aria-modal="true" aria-label="Vault unavailable">
+  <div
+    class="overlay vault-gate"
+    role="alertdialog"
+    aria-modal="true"
+    aria-label="Vault unavailable"
+  >
+    {@render windowBar()}
     <div class="dialog">
       <h2>The vault could not be read</h2>
       <p class="message">{loadError}</p>
@@ -68,14 +136,16 @@
   </div>
 {:else if !status}
   <!-- Until the vault's state is known, nothing behind is reachable. -->
-  <div class="overlay" aria-hidden="true"></div>
+  <div class="overlay vault-gate">{@render windowBar()}</div>
 {:else if mode}
   <div
-    class="overlay"
+    class="overlay vault-gate"
     role="dialog"
     aria-modal="true"
     aria-label={mode === 'create' ? 'Create master password' : 'Unlock vault'}
+    use:keepKeysInside
   >
+    {@render windowBar()}
     <form
       class="dialog"
       onsubmit={(e) => {
@@ -170,6 +240,36 @@
     justify-content: center;
     /* Above every other dialog: nothing is usable until the vault is open. */
     z-index: 5000;
+  }
+  .window-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 38px;
+    display: flex;
+    color: var(--zx-text-muted);
+  }
+  .window-bar .drag {
+    flex: 1;
+  }
+  .window-bar .ctrl {
+    width: 44px;
+    height: 38px;
+    background: none;
+    border: 0;
+    color: inherit;
+    font-size: 0.8rem;
+    font-family: var(--zx-font-ui);
+    cursor: pointer;
+  }
+  .window-bar .ctrl:hover {
+    background: var(--zx-hover-bg);
+    color: var(--zx-text);
+  }
+  .window-bar .ctrl.close:hover {
+    background: #e81123;
+    color: #ffffff;
   }
   .dialog {
     width: 30rem;

@@ -8,14 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
-## [1.8.0-beta] - beta of the automation work (branch `claude/automation`, not on main yet)
+## [1.8.1-beta] - beta of the automation work (branch `claude/automation`, not on main yet)
 
 Betas are the 1.8.x versions: 1.8.0, 1.8.1… tagged `v1.8.0-beta`, `v1.8.1-beta`…
 (1.6.0 was the first beta, before the encrypted vault reached main as 1.7.)
 The app version itself carries no suffix, because the MSI and RPM bundlers
 disagree on which suffixes they accept.
 
-Includes everything up to 1.7.2 (the encrypted vault), plus:
+Includes everything up to 1.7.8 (the sections below), plus:
 
 ### Added
 - **Add devices in bulk** (File menu and command palette). Paste one device
@@ -39,6 +39,116 @@ Includes everything up to 1.7.2 (the encrypted vault), plus:
   Refused, declined and approved commands are logged in the panel.
 - `Session.run(..., strict=True)` raises instead of returning an empty string
   when read-only keeps a command from being sent.
+## [1.7.8] - 2026-11-17
+
+### Added
+- **Command lists can follow the device's OS release.** ZapTerm now reads the
+  version a FortiGate or FortiWiFi states in `get system status`
+  (`Version: FortiGate-60F v7.4.3,…`), remembers it for the session, and
+  shows the command lists written for that release — switching as soon as
+  the command is run, and again after an upgrade. When there are no lists for
+  the exact release it uses the newest ones written for an older one.
+  Your own files can use it too: see "Lists for another OS release" in the
+  command lists README (`"osVersion"`, `"variantOf"`).
+- **The FortiGate lists now cover FortiOS 7.2, 7.4 and 7.6.** They were
+  checked against Fortinet's 7.4 and 7.2 documentation (administration guide
+  and CLI reference 7.4.9 and 7.2.13, and the 7.4.0 troubleshooting cheat
+  sheet). 7.4 uses the same commands as 7.6. On a 7.2 device:
+  `diagnose sys sdwan service` replaces `service4` / `service6`, the IKE
+  debug filters with `dst-addr4` instead of `rem-addr4`, and the commands the
+  7.2 documentation doesn't show in full (17 of them, mostly numbered test
+  levels) are left out rather than assumed.
+- **Commands can depend on the exact release.** Inside a list, a command or
+  recipe can state the first or last release that has it (`"since": "7.6.5"`,
+  `"until": "7.6.4"`): a device on 7.6.4 sees the old form and one on 7.6.8
+  the new one. Before the version is known the newest form is shown, with
+  the release it needs in its description.
+- **A FortiGate first taken for Linux corrects itself.** That same status
+  line proves what the device is: a session whose platform was a guess
+  (none, generic or Linux) becomes FortiGate. A platform you chose yourself
+  is never changed.
+
+### Changed
+- The database gains a column for the version (schema 28). Older ZapTerm
+  versions cannot open a data folder once this one has.
+
+## [1.7.7] - 2026-11-17
+
+### Added
+- **Junos is detected without its login banner.** The role line Junos
+  prints above the prompt (`{master:0}`, `{backup:1}`, `{master}`,
+  `{primary:node0}`…) now identifies a Juniper device, so an EX/QFX virtual
+  chassis, a dual routing-engine MX or an SRX cluster shows the Junos
+  command lists even when the banner has scrolled away. A device that
+  prints neither is detected after `show version`, as before.
+
+## [1.7.6] - 2026-11-17
+
+Fixes from a review of the app.
+
+### Security
+- **SFTP "Edit" no longer runs the file.** The remote file was opened with
+  its default application, which on Windows *runs* a `.bat`, `.vbs`, `.js`
+  or `.py` instead of showing it, and the file name went through `cmd`,
+  where a `&` in it could start another command. Now nothing goes through a
+  shell: macOS opens the default text editor, Windows opens Notepad for
+  anything that would run (the default application for the rest), and the
+  local copy's name is cleaned of characters a shell acts on.
+- The temporary copy of a file being edited is readable only by you
+  (Linux and macOS).
+
+### Fixed
+- **The unlock screen really locks the keyboard.** With the vault locked,
+  shortcuts (Ctrl+K, new tab, macros…) still reached the app behind the
+  unlock screen. They no longer do.
+- **The unlock screen can be moved, minimised and closed.** It covered the
+  title bar, so with the vault locked the window had no controls.
+- **Deleting a session removes its typed password.** A password typed in a
+  pane and kept for the session stayed in the vault (encrypted) after the
+  session was deleted. Same when a session is switched to a vault entry,
+  a key or the agent, and when a vault entry is deleted.
+- **Opening the vault no longer asks the system keyring once per saved
+  session.** It looked there for passwords of older versions under names
+  the keyring never held.
+
+## [1.7.5] - 2026-11-17
+
+### Removed
+- **Seven platforms that had no command list**: MikroTik, Check Point Gaia,
+  Brocade Fabric OS, Palo Alto, F5 BIG-IP, Aruba and HPE Comware. They only
+  had prompt detection, command hints and a few example macros, and are gone
+  from the *Platform* choice. The platforms left are the ones with a command
+  list: Cisco IOS, Cisco IOS XR, Arista EOS, Juniper Junos, FortiGate,
+  FortiManager, FortiAnalyzer, Linux, macOS and Windows. A session that had
+  one of the removed platforms saved uses the default platform; those
+  devices are no longer detected, and are not taken for another platform.
+
+## [1.7.4] - 2026-11-17
+
+### Fixed
+- **Restoring a backup or syncing no longer replaces this computer's vault.**
+  Since 1.7.0 a backup (and the synced copy) also carried the settings that
+  describe the vault of the computer it was made on: its id and its key
+  wrapped under the master password. Restoring it on another computer, or
+  syncing two computers, overwrote those on the receiving side, so after the
+  next start the saved passwords there could no longer be decrypted.
+  Restoring on the same computer could bring back an older master password.
+  Those settings now stay out of backups and are ignored when a backup made
+  by 1.7.0–1.7.3 is restored. The saved passwords themselves always
+  travelled, and still travel, inside the backup under its passphrase.
+
+## [1.7.3] - 2026-11-17
+
+### Fixed
+- **FortiWiFi and FortiGate are recognised from their prompt.** A device
+  that still has its model as hostname (`FWF40F # `, `FGT60F (root) # `) is
+  now detected as FortiGate on its own, without waiting for a banner that
+  FortiOS doesn't print. "FortiWiFi" in the output also counts.
+- **A Fortinet prompt is no longer taken for Linux.** If a word such as
+  "kernel" appeared in the output, a prompt like `branch-fw # ` was detected
+  as Linux and the Linux command lists were shown. A session already saved
+  as Linux keeps that platform: change it to FortiGate in the session's
+  settings.
 
 ## [1.7.2] - 2026-11-17
 

@@ -30,6 +30,10 @@ export interface CommandItem {
   /** Raw keys sent instead of `cmd` (e.g. "\x03" for Ctrl+C); `cmd` is then
    *  only the label. */
   keys?: string
+  /** First release that has it, e.g. "7.6.5" (or "7.6"). */
+  since?: string
+  /** Last release that has it; from the next one on it is gone or changed. */
+  until?: string
 }
 
 export interface RecipeField {
@@ -52,6 +56,10 @@ export interface RecipeItem {
   lines: string[]
   /** As for commands: a warning confirmed before the lines are sent. */
   caution?: string
+  /** First release that has it, e.g. "7.6.5" (or "7.6"). */
+  since?: string
+  /** Last release that has it; from the next one on it is gone or changed. */
+  until?: string
 }
 
 export type ListItem = CommandItem | RecipeItem
@@ -83,4 +91,10 @@ export interface VendorLists {
    *  trace still printing doesn't swallow the lines). */
   stopKeys?: string
   lists: CommandList[]
+  /** The OS release these lists were written for, as `major.minor`
+   *  ("7.4"). Lets a platform have one file per release. */
+  osVersion?: string
+  /** Set on a file for another release of a platform that already has
+   *  lists: the platform it belongs to ("fortigate" in `fortigate_7_4`). */
+  variantOf?: string
 }

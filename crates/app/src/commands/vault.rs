@@ -199,7 +199,11 @@ pub async fn delete_vault_entry(state: State<'_, AppState>, id: i64) -> Result<(
         .delete_credential(id)
         .map_err(|e| AppError::Internal(e.to_string()))?;
     crate::commands::backup::SecretStore::delete(&state.secret_store(), &cred.keyring_key);
-    state.db.delete_credential_secret(id).ok();
+    crate::secrets::delete_fallback(
+        &state.secret_store(),
+        &state.db,
+        crate::secrets::Fallback::Credential(id),
+    );
     Ok(())
 }
 

@@ -760,6 +760,11 @@ export async function getSessionPlatform(savedSessionId: number): Promise<string
   return invoke<string | null>('get_session_platform', { savedSessionId })
 }
 
+/** The OS version the session's device last reported ("7.4.3"), if any. */
+export async function getSessionOsVersion(savedSessionId: number): Promise<string | null> {
+  return invoke<string | null>('get_session_os_version', { savedSessionId })
+}
+
 export async function listPlatforms(): Promise<PlatformInfo[]> {
   return invoke<PlatformInfo[]>('list_platforms')
 }

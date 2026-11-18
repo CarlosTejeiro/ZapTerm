@@ -167,7 +167,7 @@ pub struct SavedSession {
 
 // rusqlite::Connection is Send; Mutex<Connection> is therefore Send + Sync.
 /// Highest schema version this build knows (the last migration file).
-pub const LATEST_SCHEMA: i64 = 27;
+pub const LATEST_SCHEMA: i64 = 28;
 
 pub struct Database {
     conn: Mutex<Connection>,
@@ -413,6 +413,12 @@ impl Database {
             version,
             27,
             include_str!("migrations/027_vault_secrets.sql"),
+        )?;
+        apply(
+            &conn,
+            version,
+            28,
+            include_str!("migrations/028_session_os_version.sql"),
         )?;
         Ok(())
     }
@@ -1931,6 +1937,51 @@ impl Database {
         Ok(())
     }
 
+    /// Record the OS version a session's device reported. `platform` is what
+    /// that report proves the device is: it is stored when the session has no
+    /// platform yet, and replaces one in `replaceable` (a guess the report
+    /// contradicts); any other stored platform is the user's choice and stays.
+    pub fn set_session_os_version(
+        &self,
+        session_id: i64,
+        platform: &str,
+        replaceable: &[&str],
+        os_version: &str,
+    ) -> Result<(), Error> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "INSERT INTO session_platforms (session_id, platform, os_version)
+             VALUES (?1, ?2, ?3)
+             ON CONFLICT(session_id) DO UPDATE SET
+                 os_version = excluded.os_version,
+                 updated_at = datetime('now')",
+            rusqlite::params![session_id, platform, os_version],
+        )?;
+        for old in replaceable {
+            conn.execute(
+                "UPDATE session_platforms SET platform = ?2
+                 WHERE session_id = ?1 AND platform = ?3",
+                rusqlite::params![session_id, platform, old],
+            )?;
+        }
+        Ok(())
+    }
+
+    /// The OS version last reported by a session's device, if any.
+    pub fn get_session_os_version(&self, session_id: i64) -> Result<Option<String>, Error> {
+        let conn = self.conn.lock().unwrap();
+        let result = conn.query_row(
+            "SELECT os_version FROM session_platforms WHERE session_id = ?1",
+            rusqlite::params![session_id],
+            |row| row.get::<_, Option<String>>(0),
+        );
+        match result {
+            Ok(v) => Ok(v),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(e.into()),
+        }
+    }
+
     pub fn get_session_platform(&self, session_id: i64) -> Result<Option<String>, Error> {
         let conn = self.conn.lock().unwrap();
         let result = conn.query_row(
@@ -2028,8 +2079,38 @@ mod tests {
             db.get_session_platform(sid).unwrap().as_deref(),
             Some("fortigate")
         );
+        // The device reports its version: stored next to the platform.
+        assert_eq!(db.get_session_os_version(sid).unwrap(), None);
+        db.set_session_os_version(sid, "fortigate", &["linux", "generic", ""], "7.4.3")
+            .unwrap();
+        assert_eq!(
+            db.get_session_os_version(sid).unwrap().as_deref(),
+            Some("7.4.3")
+        );
+        // A wrong guess is corrected by the report; a platform the user chose
+        // is not.
+        db.set_session_platform(sid, "linux").unwrap();
+        db.set_session_os_version(sid, "fortigate", &["linux", "generic", ""], "7.4.4")
+            .unwrap();
+        assert_eq!(
+            db.get_session_platform(sid).unwrap().as_deref(),
+            Some("fortigate")
+        );
+        db.set_session_platform(sid, "cisco_ios").unwrap();
+        db.set_session_os_version(sid, "fortigate", &["linux", "generic", ""], "7.4.5")
+            .unwrap();
+        assert_eq!(
+            db.get_session_platform(sid).unwrap().as_deref(),
+            Some("cisco_ios")
+        );
+        // Setting the platform keeps the version; clearing drops both.
+        assert_eq!(
+            db.get_session_os_version(sid).unwrap().as_deref(),
+            Some("7.4.5")
+        );
         db.clear_session_platform(sid).unwrap();
         assert_eq!(db.get_session_platform(sid).unwrap(), None);
+        assert_eq!(db.get_session_os_version(sid).unwrap(), None);
         db.clear_session_platform(sid).unwrap(); // nothing stored: still fine
         drop(db);
         let _ = std::fs::remove_file(path);

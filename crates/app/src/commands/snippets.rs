@@ -485,17 +485,6 @@ fn default_snippets_for(platform: &str) -> Vec<(&'static str, &'static str)> {
             ("show chassis hardware", "show chassis hardware\n"),
             ("commit confirmed", "commit confirmed\n"),
         ]),
-        "mikrotik" => nl(&[
-            ("/interface print", "/interface print\n"),
-            ("/ip address print", "/ip address print\n"),
-            ("/ip route print", "/ip route print\n"),
-            ("/log print", "/log print\n"),
-        ]),
-        "aruba" => nl(&[
-            ("show vlan", "show vlan\n"),
-            ("show ip route", "show ip route\n"),
-            ("show interfaces brief", "show interfaces brief\n"),
-        ]),
         "fortigate" => nl(&[
             ("get system status", "get system status\n"),
             (
@@ -522,43 +511,6 @@ fn default_snippets_for(platform: &str) -> Vec<(&'static str, &'static str)> {
                 "execute backup all-settings ftp",
                 "execute backup all-settings ftp ",
             ),
-        ]),
-        "paloalto" => nl(&[
-            ("show system info", "show system info\n"),
-            ("show session info", "show session info\n"),
-            (
-                "show running resource-monitor minute",
-                "show running resource-monitor minute\n",
-            ),
-            ("show routing route", "show routing route\n"),
-            ("commit", "commit\n"),
-        ]),
-        "f5_bigip" => nl(&[
-            ("tmsh show sys version", "tmsh show sys version\n"),
-            ("tmsh show ltm virtual", "tmsh show ltm virtual\n"),
-            ("tmsh show net interface", "tmsh show net interface\n"),
-            ("tmsh save sys config", "tmsh save sys config\n"),
-        ]),
-        "checkpoint_gaia" => nl(&[
-            ("show configuration", "show configuration\n"),
-            ("cphaprob state", "cphaprob state\n"),
-            ("fw stat", "fw stat\n"),
-            ("save config", "save config\n"),
-        ]),
-        "hp_comware" => nl(&[
-            (
-                "display current-configuration",
-                "display current-configuration\n",
-            ),
-            ("display interface brief", "display interface brief\n"),
-            ("display ip routing-table", "display ip routing-table\n"),
-            ("save force", "save force\n"),
-        ]),
-        "brocade_fos" => nl(&[
-            ("switchshow", "switchshow\n"),
-            ("cfgshow", "cfgshow\n"),
-            ("nsshow", "nsshow\n"),
-            ("portshow", "portshow\n"),
         ]),
         _ => Vec::new(),
     }

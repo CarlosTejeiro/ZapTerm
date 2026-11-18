@@ -60,6 +60,19 @@ impl PlatformDetector {
             self.recent.drain(..drop_n);
         }
         let text = String::from_utf8_lossy(&self.recent);
+        // A FortiGate/FortiWiFi with its model as hostname (`FWF40F # `,
+        // `FGT60F (root) # `) is recognisable from the prompt alone, and
+        // often that's all there is: FortiOS prints no banner by default.
+        // Banner-backed rules for FortiManager/FortiAnalyzer go first.
+        let candidate = last_non_empty_line(&text).unwrap_or(&text).trim_end();
+        let fmg_banner = {
+            let lower = text.to_ascii_lowercase();
+            lower.contains("fortimanager") || lower.contains("fortianalyzer")
+        };
+        if !fmg_banner && fortigate_model_prompt().is_match(candidate) {
+            self.locked = Some(Platform::Fortigate);
+            return Some(Platform::Fortigate);
+        }
         for rule in rules() {
             if rule.matches(&text) {
                 self.locked = Some(rule.platform);
@@ -94,8 +107,8 @@ impl Rule {
             .get_or_init(|| Regex::new(self.prompt_src()).expect("valid regex"));
         // Quick reject on the buffer-wide signature check before running the
         // (potentially expensive) regex over the tail. Case-insensitive: a
-        // server's MOTD might say "ubuntu" or "Ubuntu", a banner "PAN-OS" or
-        // "pan-os" — we want both forms to count.
+        // server's MOTD might say "ubuntu" or "Ubuntu", a banner "FortiOS" or
+        // "fortios" — we want both forms to count.
         let mut strict_only = false;
         if !self.signatures.is_empty() {
             let haystack = text.to_ascii_lowercase();
@@ -114,6 +127,12 @@ impl Rule {
         // also tolerate a trailing partial prompt (no newline yet) — the
         // tail of the buffer.
         let candidate = last_non_empty_line(text).unwrap_or(text).trim_end();
+        // `name # ` / `name (vdom) # ` — a bare word, a space, then # — is how
+        // Fortinet devices prompt. A Linux clue elsewhere in the buffer
+        // ("kernel" in some output) must not turn that into a Linux shell.
+        if self.platform == Platform::Linux && fortinet_prompt_shape().is_match(candidate) {
+            return false;
+        }
         if strict_only {
             return linux_strict_prompt().is_match(candidate);
         }
@@ -144,6 +163,28 @@ fn linux_strict_prompt() -> &'static Regex {
     })
 }
 
+/// `hostname # ` or `hostname (vdom|section) # `: a single word, a space,
+/// an optional parenthesised context, then `#`. Fortinet's prompt shape;
+/// Linux shells put the `#` right after the host or path (`root@h:~#`,
+/// `/ #` starts with a path, `host ~ #` has the directory).
+fn fortinet_prompt_shape() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| {
+        Regex::new(r"^[A-Za-z][\w.-]*\s(?:\([\w-]+\)\s?)?#\s*$").expect("valid regex")
+    })
+}
+
+/// The Fortinet prompt shape with a FortiGate model as hostname — the
+/// factory default (`FGT60F`, `FWF40F`, `FGR60F`, `FFW…`) or a name built on
+/// it (`fgt-edge-01`).
+fn fortigate_model_prompt() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| {
+        Regex::new(r"^(?i:FGT|FWF|FGR|FFW|FortiGate|FortiWiFi)[\w.-]*\s(?:\([\w-]+\)\s?)?#\s*$")
+            .expect("valid regex")
+    })
+}
+
 fn last_non_empty_line(text: &str) -> Option<&str> {
     text.lines().rev().find(|l| !l.trim().is_empty())
 }
@@ -163,16 +204,9 @@ fn prompt_regex(p: Platform) -> &'static Regex {
             AristaEos,
             Windows,
             Juniper,
-            Mikrotik,
-            Aruba,
             Fortigate,
             Fortimanager,
             Fortianalyzer,
-            PaloAlto,
-            F5Bigip,
-            CheckpointGaia,
-            HpComware,
-            BrocadeFos,
         ]
         .into_iter()
         .map(|pl| (pl, Regex::new(prompt_src_for(pl)).expect("valid regex")))
@@ -220,28 +254,45 @@ fn rules() -> &'static [Rule] {
         }
         vec![
             // ── Highly distinctive prompts (no signature needed) ─────────────
-            r!(Platform::F5Bigip, &[]),
-            r!(Platform::Mikrotik, &[]),
-            r!(Platform::BrocadeFos, &[]),
-            r!(Platform::CheckpointGaia, &["Check Point", "Gaia"]),
-            r!(Platform::HpComware, &[]),
             // IOS XR names the node in the prompt (RP/0/RSP0/CPU0:host#),
             // which no other vendor here does.
             r!(Platform::CiscoIosXr, &[]),
             // A drive path before `>` (`PS C:\Users\me>` or `C:\Users\me>`)
             // is a Windows shell; nothing else here prompts like that.
             r!(Platform::Windows, &[]),
-            r!(Platform::Aruba, &["ArubaOS", "ProCurve", "Aruba"]),
             // ── Cisco-style `hostname#` prompt — needs a banner clue to
-            //    pick the right vendor (Cisco vs Fortigate vs PAN-OS).
+            //    pick the right vendor (Cisco vs Fortigate vs Arista).
             r!(Platform::Fortianalyzer, &["FortiAnalyzer"]),
             r!(Platform::Fortimanager, &["FortiManager"]),
             r!(
                 Platform::Fortigate,
-                &["FortiGate", "FortiOS", "FGT", "Fortinet"]
+                &[
+                    "FortiGate",
+                    "FortiOS",
+                    "FGT",
+                    "Fortinet",
+                    "FortiWiFi",
+                    "FWF"
+                ]
             ),
-            r!(Platform::PaloAlto, &["Palo Alto Networks", "PAN-OS"]),
-            r!(Platform::Juniper, &["JUNOS", "Juniper"]),
+            // Besides the banner, Junos prints the routing-engine / chassis
+            // role on its own line above the prompt: `{master:0}` on a
+            // virtual chassis, `{master}` with two routing engines,
+            // `{primary:node0}` on an SRX cluster. Nothing else here does.
+            r!(
+                Platform::Juniper,
+                &[
+                    "JUNOS",
+                    "Juniper",
+                    "{master}",
+                    "{master:",
+                    "{backup}",
+                    "{backup:",
+                    "{linecard:",
+                    "{primary:node",
+                    "{secondary:node",
+                ]
+            ),
             // EOS prompts look like IOS (`switch#`, `switch(config-if-Et1)#`);
             // `show version` starts with "Arista <model>".
             r!(Platform::AristaEos, &["Arista", "vEOS", "cEOS"]),
@@ -293,25 +344,6 @@ fn rules() -> &'static [Rule] {
 /// the user is sitting at, not echoes of historical prompts.
 fn prompt_src_for(p: Platform) -> &'static str {
     match p {
-        // (Active)(/Common)(tmos)# — the (tmos) marker is the giveaway.
-        Platform::F5Bigip => r"\(tmos\)\s*[#>]\s*$",
-
-        // [admin@MikroTik] >  — username@host bracketed, very distinctive.
-        Platform::Mikrotik => r"^\[[^]@]+@[^]]+\]\s*>\s*$",
-
-        // switch:admin>  or  switch:user>  — the `:role>` is unusual.
-        Platform::BrocadeFos => r"^[A-Za-z][\w.-]*:(admin|user|root)>\s*$",
-
-        // CLISH `hostname> ` — banner clue narrows from generic Junos prompt.
-        Platform::CheckpointGaia => r"^[A-Za-z][\w.-]*>\s*$",
-
-        // <hostname> (operator) or [hostname] (system-view) — bracket types
-        // are Comware-specific.
-        Platform::HpComware => r"^(?:<[\w.-]+>|\[[\w.-]+\])\s*$",
-
-        // Aruba CX-style:  hostname#  — but always with the banner clue.
-        Platform::Aruba => r"^[A-Za-z][\w.-]*#\s*$",
-
         // FortiManager top-level looks like `hostname #` (space before #)
         // and the welcome banner says FortiManager.
         // FortiAnalyzer shares the FortiManager CLI and prompt.
@@ -319,9 +351,6 @@ fn prompt_src_for(p: Platform) -> &'static str {
 
         // FortiGate: `hostname # ` or `hostname (vdom) # ` — space before #.
         Platform::Fortigate => r"^[A-Za-z][\w.-]*\s?(?:\([\w-]+\)\s?)?#\s*$",
-
-        // PAN-OS CLI:  user@hostname> (operational) or # (configure).
-        Platform::PaloAlto => r"^[\w.-]+@[\w.-]+\s*[#>]\s*$",
 
         // Junos operational `user@host> ` or config `user@host# `.
         Platform::Juniper => r"^[\w.-]+@[\w.-]+\s*[#>]\s*$",
@@ -472,47 +501,40 @@ mod tests {
         assert_eq!(detect(text), Some(Platform::Fortianalyzer));
     }
 
+    /// Platforms ZapTerm no longer knows are left undetected, not handed to
+    /// a lookalike.
     #[test]
-    fn paloalto() {
-        // Real PAN-OS login banner advertises PAN-OS by name.
-        let text = "PAN-OS 11.2.3\nadmin@PA-3220> ";
-        assert_eq!(detect(text), Some(Platform::PaloAlto));
+    fn removed_platforms_are_not_mistaken_for_another() {
+        assert_eq!(detect("PAN-OS 11.2.3\nadmin@PA-3220> "), None);
+        assert_eq!(detect("PAN-OS 11.2.3\nadmin@PA-3220# "), None);
+        assert_eq!(detect("MikroTik RouterOS\n[admin@MikroTik] > "), None);
+        assert_eq!(detect("Comware Software\n<HP-5130>"), None);
+        assert_eq!(detect("ArubaOS\nsw1# "), None);
+        assert_eq!(detect("Fabric OS\nsanswitch:admin> "), None);
+    }
+
+    #[test]
+    fn junos_role_line_is_enough_without_a_banner() {
+        for text in [
+            "{master:0}\ncarlos@ex4300> ",
+            "{backup:1}\ncarlos@ex4300> ",
+            "{master}\ncarlos@mx480> ",
+            "{master:0}[edit]\ncarlos@qfx5100# ",
+            "{primary:node0}\ncarlos@srx-a> ",
+            "{secondary:node1}[edit interfaces]\ncarlos@srx-b# ",
+        ] {
+            assert_eq!(detect(text), Some(Platform::Juniper), "{text:?}");
+        }
+        // The bare prompt is still not enough: `user@host>` is not only Junos.
+        assert_eq!(detect("carlos@mx-edge> "), None);
+        // And the role text in a Linux shell's output doesn't make it Junos.
+        assert_eq!(detect("{master:0}\nroot@web:~# "), None);
     }
 
     #[test]
     fn juniper() {
         let text = "JUNOS 23.4R1\nroot@mx-edge> ";
         assert_eq!(detect(text), Some(Platform::Juniper));
-    }
-
-    #[test]
-    fn mikrotik() {
-        let text = "MikroTik RouterOS\n[admin@MikroTik] > ";
-        assert_eq!(detect(text), Some(Platform::Mikrotik));
-    }
-
-    #[test]
-    fn comware_operator() {
-        let text = "Comware Software\n<HP-5130>";
-        assert_eq!(detect(text), Some(Platform::HpComware));
-    }
-
-    #[test]
-    fn comware_system_view() {
-        let text = "Comware Software\n[HP-5130]";
-        assert_eq!(detect(text), Some(Platform::HpComware));
-    }
-
-    #[test]
-    fn brocade() {
-        let text = "Fabric OS\nsanswitch:admin> ";
-        assert_eq!(detect(text), Some(Platform::BrocadeFos));
-    }
-
-    #[test]
-    fn f5_tmos() {
-        let text = "Welcome to the BIG-IP\n(Active)(/Common)(tmos)# ";
-        assert_eq!(detect(text), Some(Platform::F5Bigip));
     }
 
     #[test]
@@ -604,6 +626,45 @@ mod tests {
     }
 
     #[test]
+    fn fortiwifi_prompt_alone_is_fortigate() {
+        // A FortiWiFi with the default hostname and no banner: nothing in the
+        // output says "FortiGate", only the prompt.
+        assert_eq!(detect("FWF40F # "), Some(Platform::Fortigate));
+        assert_eq!(detect("\nFWF40F (root) # "), Some(Platform::Fortigate));
+        assert_eq!(detect("FGT60F # "), Some(Platform::Fortigate));
+        assert_eq!(
+            detect("fgt-edge-01 (interface) # "),
+            Some(Platform::Fortigate)
+        );
+    }
+
+    #[test]
+    fn fortiwifi_status_output_is_fortigate() {
+        let text = "Version: FortiWiFi-40F v7.2.8,build1639,240313 (GA.M)\n\
+                    Hostname: branch-fw\nbranch-fw # ";
+        assert_eq!(detect(text), Some(Platform::Fortigate));
+    }
+
+    #[test]
+    fn fortinet_prompt_is_never_linux() {
+        // "kernel" is a Linux clue, but `name # ` (space before #) is how
+        // Fortinet devices prompt: it must not be taken for a Linux shell.
+        let text = "diagnose sys kernel ...\nFWF40F # ";
+        assert_eq!(detect(text), Some(Platform::Fortigate));
+        let text = "kernel messages\nbranch-fw # ";
+        assert_eq!(detect(text), None);
+        // Real Linux prompts with a space before # still are Linux.
+        assert_eq!(detect("BusyBox v1.36\n/ # "), Some(Platform::Linux));
+        assert_eq!(detect("Ubuntu 24.04\nweb ~ # "), Some(Platform::Linux));
+    }
+
+    #[test]
+    fn fortimanager_banner_still_wins_over_model_prompt() {
+        let text = "FortiManager 7.6\nFMG-VM64 # ";
+        assert_eq!(detect(text), Some(Platform::Fortimanager));
+    }
+
+    #[test]
     fn linux_case_insensitive_signature() {
         // MOTD says "ubuntu" lowercase; signature is "Ubuntu". Should still match.
         let text = "Welcome to ubuntu 22.04\nuser@web:~$ ";
@@ -689,12 +750,6 @@ mod tests {
     #[test]
     fn prompt_per_vendor_tails() {
         assert!(ends_with_prompt(Platform::Juniper, "root@mx> "));
-        assert!(ends_with_prompt(
-            Platform::F5Bigip,
-            "(Active)(/Common)(tmos)# "
-        ));
-        assert!(ends_with_prompt(Platform::Mikrotik, "[admin@MikroTik] > "));
-        assert!(ends_with_prompt(Platform::HpComware, "<HP-5130>"));
         assert!(ends_with_prompt(Platform::Linux, "carlos@bastion:~/work$ "));
         assert!(ends_with_prompt(
             Platform::AristaEos,

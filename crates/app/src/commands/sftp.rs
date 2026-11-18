@@ -269,15 +269,18 @@ pub async fn sftp_edit_file(
     let sftp = sftp_for(&state, &session_id).await?;
 
     // Temp file in a per-edit subdir (keeps the original name for the editor).
-    let name = remote_path
-        .rsplit(['/', '\\'])
-        .next()
-        .filter(|s| !s.is_empty())
-        .unwrap_or("remote-file");
+    let name = local_edit_name(&remote_path);
     let dir = std::env::temp_dir()
         .join("zapterm-edits")
         .join(uuid::Uuid::new_v4().to_string());
     std::fs::create_dir_all(&dir).map_err(|e| AppError::Internal(e.to_string()))?;
+    // The copy can be a config file with passwords in it: on a shared
+    // machine the temp folder is readable by everyone unless told otherwise.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o700));
+    }
     let local = dir.join(name);
 
     let noop: core_transport::ProgressFn = Arc::new(|_: u64, _: Option<u64>| {});
@@ -333,7 +336,86 @@ pub async fn sftp_edit_file(
     Ok(local.to_string_lossy().into_owned())
 }
 
-/// Open a file with the OS default application (used as the editor).
+/// The local file name for editing `remote_path`: its last component, made
+/// safe as a file name on this computer. The name comes from the server, so
+/// it is not trusted: no path separators, no `.`/`..`, none of the characters
+/// Windows refuses or that mean something to a shell.
+fn local_edit_name(remote_path: &str) -> String {
+    let last = remote_path.rsplit(['/', '\\']).next().unwrap_or("");
+    let cleaned: String =
+        last.chars()
+            .map(|c| match c {
+                '<' | '>' | ':' | '"' | '|' | '?' | '*' | '&' | '^' | '%' | '!' | '`' | '$'
+                | ';' => '_',
+                c if c.is_control() => '_',
+                c => c,
+            })
+            .collect();
+    // Windows drops trailing dots and spaces; `.` and `..` end up empty.
+    let cleaned = cleaned
+        .trim_start()
+        .trim_end_matches([' ', '.'])
+        .to_string();
+    if cleaned.is_empty() {
+        "remote-file".to_string()
+    } else {
+        cleaned
+    }
+}
+
+/// Whether opening `path` with its default application on Windows would run
+/// it instead of showing it: programs, scripts and anything without an
+/// extension to tell.
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+fn runs_when_opened_on_windows(path: &std::path::Path) -> bool {
+    const RUNNABLE: &[&str] = &[
+        "exe",
+        "com",
+        "scr",
+        "pif",
+        "cpl",
+        "msi",
+        "msp",
+        "msc",
+        "bat",
+        "cmd",
+        "vbs",
+        "vbe",
+        "js",
+        "jse",
+        "wsf",
+        "wsh",
+        "hta",
+        "ps1",
+        "psm1",
+        "py",
+        "pyw",
+        "pl",
+        "rb",
+        "jar",
+        "lnk",
+        "url",
+        "reg",
+        "inf",
+        "appref-ms",
+        "application",
+        "gadget",
+        "scf",
+    ];
+    match path.extension().and_then(|e| e.to_str()) {
+        Some(ext) => RUNNABLE.contains(&ext.to_ascii_lowercase().as_str()),
+        None => true,
+    }
+}
+
+/// Open a file for editing. Never through a shell (the name comes from the
+/// server), and never in a way that would run it:
+///
+/// * macOS: `open -t` — the default *text editor*, whatever the file is.
+/// * Windows: Notepad for anything that would run if opened (scripts,
+///   programs); the default application for the rest.
+/// * Linux: `xdg-open`, which picks by content type and shows scripts in an
+///   editor.
 fn open_in_editor(path: &std::path::Path) -> Result<(), AppError> {
     let spawn = |cmd: &str, args: &[&std::ffi::OsStr]| {
         std::process::Command::new(cmd)
@@ -344,17 +426,13 @@ fn open_in_editor(path: &std::path::Path) -> Result<(), AppError> {
     };
     let p = path.as_os_str();
     #[cfg(target_os = "macos")]
-    return spawn("open", &[p]);
+    return spawn("open", &[std::ffi::OsStr::new("-t"), p]);
     #[cfg(target_os = "windows")]
-    return spawn(
-        "cmd",
-        &[
-            std::ffi::OsStr::new("/C"),
-            std::ffi::OsStr::new("start"),
-            std::ffi::OsStr::new(""),
-            p,
-        ],
-    );
+    return if runs_when_opened_on_windows(path) {
+        spawn("notepad.exe", &[p])
+    } else {
+        spawn("explorer.exe", &[p])
+    };
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     return spawn("xdg-open", &[p]);
 }
@@ -372,4 +450,41 @@ pub async fn sftp_cancel_transfer(
         token.store(true, Ordering::Relaxed);
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_local_name_is_the_last_component_made_safe() {
+        assert_eq!(local_edit_name("/etc/nginx/nginx.conf"), "nginx.conf");
+        assert_eq!(local_edit_name("C:\\temp\\a.txt"), "a.txt");
+        assert_eq!(local_edit_name("/srv/"), "remote-file");
+        assert_eq!(local_edit_name("/srv/.."), "remote-file");
+        assert_eq!(local_edit_name("/srv/."), "remote-file");
+        // Characters a shell or Windows would act on are neutralised.
+        assert_eq!(local_edit_name("/tmp/a&calc.txt"), "a_calc.txt");
+        assert_eq!(local_edit_name("/tmp/x|y?.log"), "x_y_.log");
+        assert_eq!(local_edit_name("/home/me/.bashrc"), ".bashrc");
+    }
+
+    #[test]
+    fn scripts_and_programs_are_not_opened_with_their_default_app() {
+        use std::path::Path;
+        for name in [
+            "run.bat",
+            "x.CMD",
+            "a.vbs",
+            "tool.py",
+            "setup.exe",
+            "s.ps1",
+            "Makefile",
+        ] {
+            assert!(runs_when_opened_on_windows(Path::new(name)), "{name}");
+        }
+        for name in ["nginx.conf", "notes.txt", "data.json", "site.yaml", "a.log"] {
+            assert!(!runs_when_opened_on_windows(Path::new(name)), "{name}");
+        }
+    }
 }

@@ -71,30 +71,78 @@ fn make_detection_callback(
     app: AppHandle,
     session_id: String,
     saved_session_id: Option<i64>,
-) -> Arc<dyn Fn(Platform) + Send + Sync + 'static> {
-    Arc::new(move |platform: Platform| {
-        if let Some(id) = saved_session_id {
-            let state = app.state::<AppState>();
-            let current = state.db.get_session_platform(id).ok().flatten();
-            let should_write = matches!(current.as_deref(), None | Some("") | Some("generic"));
-            if should_write {
-                if let Err(e) = state.db.set_session_platform(id, platform.as_str()) {
-                    tracing::warn!(
-                        saved_session_id = id,
-                        "persist detected platform failed: {e}"
-                    );
+) -> Arc<dyn Fn(Detected) + Send + Sync + 'static> {
+    Arc::new(move |detected: Detected| match detected {
+        Detected::Platform(platform) => {
+            if let Some(id) = saved_session_id {
+                let state = app.state::<AppState>();
+                let current = state.db.get_session_platform(id).ok().flatten();
+                let should_write = matches!(current.as_deref(), None | Some("") | Some("generic"));
+                if should_write {
+                    if let Err(e) = state.db.set_session_platform(id, platform.as_str()) {
+                        tracing::warn!(
+                            saved_session_id = id,
+                            "persist detected platform failed: {e}"
+                        );
+                    }
                 }
             }
+            let _ = app.emit(
+                "session-platform-detected",
+                SessionPlatformDetected {
+                    session_id: session_id.clone(),
+                    platform: platform.as_str().to_string(),
+                    display_name: platform.display_name().to_string(),
+                },
+            );
         }
-        let _ = app.emit(
-            "session-platform-detected",
-            SessionPlatformDetected {
-                session_id: session_id.clone(),
-                platform: platform.as_str().to_string(),
-                display_name: platform.display_name().to_string(),
-            },
-        );
+        Detected::OsVersion(v) => {
+            // The device said what it is and which release it runs. That
+            // outranks a guess from the prompt (none, generic, or Linux — a
+            // Fortinet prompt used to be taken for one), never a platform
+            // the user picked.
+            let mut platform = v.platform.as_str().to_string();
+            if let Some(id) = saved_session_id {
+                let state = app.state::<AppState>();
+                if let Err(e) = state.db.set_session_os_version(
+                    id,
+                    v.platform.as_str(),
+                    &["", "generic", "linux"],
+                    &v.version,
+                ) {
+                    tracing::warn!(saved_session_id = id, "persist OS version failed: {e}");
+                }
+                if let Ok(Some(stored)) = state.db.get_session_platform(id) {
+                    platform = stored;
+                }
+            }
+            let _ = app.emit(
+                "session-os-version-detected",
+                SessionOsVersionDetected {
+                    session_id: session_id.clone(),
+                    saved_session_id,
+                    platform,
+                    version: v.version.clone(),
+                },
+            );
+        }
     })
+}
+
+/// What a session's output revealed about the device.
+pub(crate) enum Detected {
+    Platform(Platform),
+    OsVersion(core_hints::os_version::OsVersion),
+}
+
+#[derive(serde::Serialize, Clone)]
+struct SessionOsVersionDetected {
+    session_id: String,
+    saved_session_id: Option<i64>,
+    /// The session's platform after this report.
+    platform: String,
+    /// `major.minor.patch`.
+    version: String,
 }
 
 /// Allocate the per-session detector. Cheap; one allocation + a small Vec.
@@ -228,7 +276,7 @@ fn make_on_data<F>(
     trigger_slot: TriggerRunnerSlot,
     rx_total: Arc<std::sync::atomic::AtomicU64>,
     detector: Option<crate::state::SharedPlatformDetector>,
-    on_platform_detected: Option<Arc<dyn Fn(core_hints::Platform) + Send + Sync + 'static>>,
+    on_platform_detected: Option<Arc<dyn Fn(Detected) + Send + Sync + 'static>>,
     inner: F,
 ) -> impl Fn(Vec<u8>) + Send + 'static
 where
@@ -236,6 +284,7 @@ where
 {
     let inner = Arc::new(Mutex::new(inner));
     let hold_arc = Arc::new(Mutex::new(LineHold::default()));
+    let version_sniffer = Mutex::new(core_hints::os_version::OsVersionSniffer::new());
     move |data: Vec<u8>| {
         let hold = &hold_arc;
         // Count raw bytes (pre-highlight) — the StatusBar shows the wire rate.
@@ -262,7 +311,16 @@ where
         if let Some(d) = detector.as_ref() {
             let latched = d.lock().ok().and_then(|mut d| d.feed(&data));
             if let (Some(p), Some(cb)) = (latched, on_platform_detected.as_ref()) {
-                cb(p);
+                cb(Detected::Platform(p));
+            }
+        }
+        // The OS version, whenever the device states it (FortiOS
+        // `get system status`). Unlike the platform this is watched for the
+        // whole session: an upgrade changes it.
+        if let Some(cb) = on_platform_detected.as_ref() {
+            let version = version_sniffer.lock().ok().and_then(|mut s| s.feed(&data));
+            if let Some(v) = version {
+                cb(Detected::OsVersion(v));
             }
         }
         // Highlight whole lines: rules can't match text split across reads
@@ -1268,8 +1326,13 @@ pub async fn set_session_credential(
         .map_err(AppError::Internal)?;
     } else {
         // No session-owned secret any more (vault entry, agent, key, or KI):
-        // drop a stale portable fallback blob so it can't shadow the new auth.
-        state.db.delete_session_secret(id).ok();
+        // drop a password kept for the session itself (typed in a pane) so
+        // it can't shadow the new auth.
+        crate::secrets::delete_fallback(
+            &state.secret_store(),
+            &state.db,
+            crate::secrets::Fallback::Session(id),
+        );
     }
 
     Ok(())
@@ -1333,7 +1396,20 @@ pub async fn delete_saved_session(state: State<'_, AppState>, id: i64) -> Result
     state
         .db
         .delete_session(id)
-        .map_err(|e| AppError::Internal(e.to_string()))
+        .map_err(|e| AppError::Internal(e.to_string()))?;
+
+    // A password typed in a pane and kept for this session lives under the
+    // session's own name, not a credential's: drop it too, and the copy in
+    // memory, so nothing of a deleted session stays in the vault.
+    crate::secrets::delete_fallback(
+        &state.secret_store(),
+        &state.db,
+        crate::secrets::Fallback::Session(id),
+    );
+    if let Ok(mut cache) = state.password_cache.lock() {
+        cache.remove(&id);
+    }
+    Ok(())
 }
 
 /// Duplicate a saved session into an independent copy: its credential is
