@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.7.9] - 2026-11-18
+
+### Security
+- **Configuration commands with a secret in them are no longer remembered.**
+  The command history behind *Recent* and the typing hints skipped lines
+  like `password: …` or `token=…`, but not a secret given as an argument,
+  which is how devices take it: `set psksecret …`, `set password …`,
+  `enable secret …`, `username admin password …`,
+  `neighbor … password …`, `snmp-server community …`, `tacacs-server key …`,
+  `key-string …`, Junos `authentication-key …` / `pre-shared-key …`,
+  `--password …`, `Authorization: Bearer …`. Those are now left out.
+  Commands that only read (`show run | include password`, `get …`,
+  `diagnose …`, `grep …`) are still remembered.
+- **Secrets already in the history are removed.** On start, ZapTerm deletes
+  from the history, and from the learned command sequences, every line the
+  new rule would not have stored. The history never left the computer: it is
+  not part of backups, sync or exports.
+
 ## [1.7.8] - 2026-11-17
 
 ### Added

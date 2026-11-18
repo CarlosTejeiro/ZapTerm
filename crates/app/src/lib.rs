@@ -215,6 +215,14 @@ pub fn run() {
                 scripts: Default::default(),
             });
 
+            // Commands with a secret in them that an older filter let into
+            // the history (`set psksecret …`, `enable secret …`): drop them.
+            match core_hints::HintEngine::new(&app.state::<AppState>().db).purge_sensitive() {
+                Ok(0) => {}
+                Ok(n) => tracing::info!(removed = n, "removed commands with secrets from history"),
+                Err(e) => tracing::warn!("could not check the command history for secrets: {e}"),
+            }
+
             // Sync folder: periodic push of local changes + notification of
             // remote ones. No-op until the user configures a folder.
             commands::master::open_at_start(&app.state::<AppState>());
