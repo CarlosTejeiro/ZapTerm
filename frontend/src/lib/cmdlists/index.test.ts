@@ -265,6 +265,18 @@ describe('lists per OS release', () => {
     }
     expect(texts('7.4.5')).not.toContain('get system interface physical')
     expect(texts('7.6.8')).toContain('get system interface physical')
+    // Per patch, from the release notes: the SD-WAN command was split in
+    // 7.4.4; commands appear with the patch that introduced them.
+    expect(texts('7.4.3')).toContain('diagnose sys sdwan service')
+    expect(texts('7.4.3')).not.toContain('diagnose sys sdwan service4')
+    expect(texts('7.4.4')).toContain('diagnose sys sdwan service4')
+    expect(texts('7.2.0')).not.toContain('diagnose sys ha checksum show-nonsync')
+    expect(texts('7.2.1')).toContain('diagnose sys ha checksum show-nonsync')
+    expect(texts('7.2.3')).not.toContain('diagnose nodejs logs list')
+    expect(texts('7.2.4')).toContain('diagnose nodejs logs list')
+    expect(texts('7.4.1')).not.toContain('diagnose sys tcp-auth-options')
+    expect(texts('7.4.2')).toContain('diagnose sys tcp-auth-options')
+    expect(texts('7.2.14')).not.toContain('diagnose sys tcp-auth-options')
     // Version unknown: the newest forms.
     expect(texts()).toEqual(texts('7.6.8'))
   })

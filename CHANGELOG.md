@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.7.10] - 2026-11-19
+
+### Added
+- **FortiGate commands by patch, from the release notes.** The *New
+  features* and *Changes in CLI* sections of every FortiOS patch (7.2.1 to
+  7.2.14, 7.4.1 to 7.4.13, 7.6.1 to 7.6.8) were read for operational
+  commands. New in the lists, each shown from the patch that introduced it:
+  - `diagnose sys ha checksum show-nonsync` (7.2.1)
+  - `diagnose sys sdwan health-check remote <name> <seq_num>` (7.2.4)
+  - `diagnose switch-controller telemetry show mac-stats switch <serial_number>` (7.2.4)
+  - `diagnose nodejs logs list` (7.2.4)
+  - `diagnose sys tcp-auth-options` (7.4.2)
+
+### Changed
+- **The SD-WAN rules command changes at 7.4.4, not 7.4.0.** The 7.4.4 release
+  notes date the split of `diagnose sys sdwan service` into `service4` and
+  `service6`: a device on 7.4.0–7.4.3 now gets the old command.
+
 ## [1.7.9] - 2026-11-18
 
 ### Security
