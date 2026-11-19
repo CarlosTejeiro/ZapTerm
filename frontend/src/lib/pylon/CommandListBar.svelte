@@ -686,12 +686,24 @@
           <span class="head-title">{openList.name}</span>
           <span class="head-sub">{openList.summary} · {count(openList)}</span>
         </div>
-        <span
-          class="vendor"
-          title={!customOpen && deviceVersion
-            ? `This device reported version ${deviceVersion}`
-            : ''}>{customOpen ? 'All platforms' : vendor?.label}</span
-        >
+        <span class="vendor">{customOpen ? 'All platforms' : vendor?.label}</span>
+        {#if !customOpen && vendor?.osVersion}
+          <!-- Lists that depend on the OS release say which one they are
+               showing: the device's, once it has stated it. -->
+          {#if deviceVersion}
+            <span
+              class="vendor device"
+              title="The version this device reported. The commands shown are the ones for it."
+              >This device: {deviceVersion}</span
+            >
+          {:else}
+            <span
+              class="vendor"
+              title="The device has not said its version yet (FortiOS: get system status). Showing the commands of the newest release."
+              >Version not read yet</span
+            >
+          {/if}
+        {/if}
         {#if openList.debug}
           <button
             type="button"
@@ -1148,6 +1160,11 @@
     background: color-mix(in srgb, var(--dim) 12%, transparent);
     white-space: nowrap;
     flex-shrink: 0;
+  }
+
+  .vendor.device {
+    color: var(--zx-accent);
+    background: color-mix(in srgb, var(--zx-accent) 14%, transparent);
   }
 
   /* Panel: opens upwards (the bar sits at the bottom of the window). */
