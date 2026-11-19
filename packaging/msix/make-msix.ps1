@@ -28,7 +28,7 @@ $layout = Join-Path ([IO.Path]::GetTempPath()) ("zapterm-msix-" + [guid]::NewGui
 New-Item -ItemType Directory -Path (Join-Path $layout 'Assets') | Out-Null
 try {
   Copy-Item $Exe (Join-Path $layout 'zapterm.exe')
-  foreach ($logo in 'StoreLogo', 'Square44x44Logo', 'Square71x71Logo', 'Square150x150Logo', 'Square310x310Logo') {
+  foreach ($logo in 'StoreLogo', 'Square44x44Logo', 'Square150x150Logo') {
     Copy-Item (Join-Path $repo "crates\app\icons\$logo.png") (Join-Path $layout "Assets\$logo.png")
   }
 
