@@ -1,0 +1,6 @@
+{
+  "_": "The package identity Partner Center assigns to the MSIX product (Product management > Product identity). Not secret. The Store rejects a package whose identity differs from these three values.",
+  "name": "CarlosTejeiro.ZapTerm",
+  "publisher": "CN=00000000-0000-0000-0000-000000000000",
+  "publisherDisplayName": "Carlos Tejeiro"
+}
