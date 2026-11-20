@@ -3,16 +3,36 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Message sent — ZapTerm</title>
-  <meta name="robots" content="noindex">
+  <title>Contact — ZapTerm</title>
+  <meta name="description" content="Write to the developer of ZapTerm: questions, problems and suggestions.">
   <meta name="theme-color" content="#0b0d14">
   <link rel="icon" href="../icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../style.css">
 </head>
 <body>
+  <!-- One address for both: the form, and (after sending) the thank-you
+       message. contact.js shows the second when the visitor has just sent. -->
   <main class="thanks">
     <div class="glow glow-a"></div>
-    <div class="wrap thanks-inner">
+
+    <div class="wrap contact-page" id="contact-form">
+      <img src="../icon.svg" alt="" width="56" height="56">
+      <h1>Contact</h1>
+      <p class="lede">A question, a problem or a suggestion about ZapTerm? Write to the developer.
+        Your message is delivered by Web3Forms, a form service; your email is only used to reply to you.</p>
+      <form class="contact-form" action="https://api.web3forms.com/submit" method="POST">
+        <input type="hidden" name="access_key" value="6bed0235-b976-4e93-ab55-06c57b31dd67">
+        <input type="hidden" name="redirect" value="https://carlostejeiro.github.io/ZapTerm/contact/?sent=1">
+        <label>Name<input type="text" name="name" autocomplete="name" required></label>
+        <label>Email<input type="email" name="email" autocomplete="email" required></label>
+        <label>Message<textarea name="message" rows="6" required></textarea></label>
+        <button class="btn btn-primary" type="submit">Send message</button>
+      </form>
+      <p class="contact-alt">Prefer it public? <a href="https://github.com/CarlosTejeiro/ZapTerm/issues">Open an issue on GitHub</a>
+        · <a href="../faq.html">Questions &amp; answers</a> · <a href="../">Back to ZapTerm</a></p>
+    </div>
+
+    <div class="wrap thanks-inner" id="contact-sent" hidden>
       <img src="../icon.svg" alt="" width="56" height="56">
       <h1>Thanks for writing!</h1>
       <p class="lede">Your message is on its way. If you asked something, the reply will go to the email you gave.</p>
@@ -22,5 +42,6 @@
       </div>
     </div>
   </main>
+  <script src="contact.js" defer></script>
 </body>
 </html>
