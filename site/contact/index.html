@@ -7,7 +7,13 @@
   <meta name="description" content="Write to the developer of ZapTerm: questions, problems and suggestions.">
   <meta name="theme-color" content="#0b0d14">
   <link rel="icon" href="../icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../style.css">
+  <!-- ?v=: a browser holding the previous style.css must fetch this one.
+       The rules below don't wait for it: only one of the two blocks shows. -->
+  <link rel="stylesheet" href="../style.css?v=2">
+  <style>
+    [hidden] { display: none !important; }
+    .contact-page { max-width: 620px; margin-inline: auto; }
+  </style>
 </head>
 <body>
   <!-- One address for both: the form, and (after sending) the thank-you
@@ -18,8 +24,7 @@
     <div class="wrap contact-page" id="contact-form">
       <img src="../icon.svg" alt="" width="56" height="56">
       <h1>Contact</h1>
-      <p class="lede">A question, a problem or a suggestion about ZapTerm? Write to the developer.
-        Your message is delivered by Web3Forms, a form service; your email is only used to reply to you.</p>
+      <p class="lede">A question, a problem or a suggestion about ZapTerm? Write to the developer.</p>
       <form class="contact-form" action="https://api.web3forms.com/submit" method="POST">
         <input type="hidden" name="access_key" value="6bed0235-b976-4e93-ab55-06c57b31dd67">
         <input type="hidden" name="redirect" value="https://carlostejeiro.github.io/ZapTerm/contact/?sent=1">
@@ -29,7 +34,7 @@
         <button class="btn btn-primary" type="submit">Send message</button>
       </form>
       <p class="contact-alt">Prefer it public? <a href="https://github.com/CarlosTejeiro/ZapTerm/issues">Open an issue on GitHub</a>
-        · <a href="../faq.html">Questions &amp; answers</a> · <a href="../">Back to ZapTerm</a></p>
+        · <a href="../faq.html">Questions &amp; answers</a> · <a href="../privacy.html">Privacy</a> · <a href="../">Back to ZapTerm</a></p>
     </div>
 
     <div class="wrap thanks-inner" id="contact-sent" hidden>
