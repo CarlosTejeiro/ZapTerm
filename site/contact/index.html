@@ -7,7 +7,13 @@
   <meta name="description" content="Write to the developer of ZapTerm: questions, problems and suggestions.">
   <meta name="theme-color" content="#0b0d14">
   <link rel="icon" href="../icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../style.css">
+  <!-- ?v=: a browser holding the previous style.css must fetch this one.
+       The rules below don't wait for it: only one of the two blocks shows. -->
+  <link rel="stylesheet" href="../style.css?v=2">
+  <style>
+    [hidden] { display: none !important; }
+    .contact-page { max-width: 620px; margin-inline: auto; }
+  </style>
 </head>
 <body>
   <!-- One address for both: the form, and (after sending) the thank-you
