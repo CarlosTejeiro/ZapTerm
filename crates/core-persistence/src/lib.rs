@@ -1305,8 +1305,9 @@ impl Database {
         Ok(conn.last_insert_rowid())
     }
 
-    /// Overwrite a rule's editable fields (its identity — pattern + regex
-    /// flag — stays). Used when a sync pull brings another device's edit.
+    /// Overwrite a rule's name, style and enabled flag. The pattern has its
+    /// own call, [`Self::set_highlight_rule_pattern`]: a sync pull finds the
+    /// rule by its pattern and only ever changes the rest.
     #[allow(clippy::too_many_arguments)]
     pub fn update_highlight_rule(
         &self,
@@ -1332,6 +1333,25 @@ impl Database {
                 enabled as i64,
                 id
             ],
+        )?;
+        if n == 0 {
+            return Err(Error::NotFound);
+        }
+        Ok(())
+    }
+
+    /// Change what a rule matches. Other devices know the rule by its pattern,
+    /// so to them this is a new rule.
+    pub fn set_highlight_rule_pattern(
+        &self,
+        id: i64,
+        pattern: &str,
+        is_regex: bool,
+    ) -> Result<(), Error> {
+        let conn = self.conn.lock().unwrap();
+        let n = conn.execute(
+            "UPDATE highlight_rules SET pattern=?1, is_regex=?2 WHERE id=?3",
+            rusqlite::params![pattern, is_regex as i64, id],
         )?;
         if n == 0 {
             return Err(Error::NotFound);

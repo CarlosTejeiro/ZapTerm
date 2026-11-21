@@ -8,6 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.7.14] - 2026-11-21
+
+### Changed
+- **A highlight rule's pattern can be edited.** Editing a rule used to lock the
+  pattern and the "Regular expression" box; changing what a rule matches meant
+  deleting it and adding another. Both are now editable. A pattern that
+  another rule already has is refused. If you sync between computers, the
+  other ones see a changed pattern as a new rule and keep the old one too —
+  delete it there.
+
+### Fixed
+- **Built-in rules that start with `(?i)` could not be saved after editing.**
+  The form checked the pattern with the browser's regex syntax, which is not
+  the one the terminal uses and rejects `(?i)`: "Status: good", "Status:
+  warning" and "Status: bad" showed "Invalid regex" and would not save even a
+  color change. The form now asks the same engine that colors the terminal,
+  so the check and the "Try it on sample output" preview match what you will
+  see.
+- A new rule with an invalid pattern is refused when saving, also when it
+  comes from outside the form.
+
 ## [1.7.13] - 2026-11-21
 
 ### Changed
