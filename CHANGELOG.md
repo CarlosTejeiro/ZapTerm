@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.7.13] - 2026-11-21
+
+### Changed
+- **"enable" and "disable" are highlighted.** The built-in highlight rules
+  coloured `enabled` and `disabled` but not the short forms FortiOS and others
+  print — `Private Encryption: Disable`, `FIPS-CC mode: disable`,
+  `set status enable`. Now `enable` / `Enable` is green like `enabled`, and
+  `disable` / `Disable` yellow like `disabled`. The two rules ("Status: good"
+  and "Status: warning") are updated only if you haven't edited them.
+- The database moves to schema 29 for this; older ZapTerm versions cannot
+  open a data folder once this one has.
+
 ## [1.7.12] - 2026-11-21
 
 ### Changed
