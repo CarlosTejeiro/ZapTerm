@@ -75,11 +75,13 @@ Never hunt for a host again:
 The little things that add up across a long day:
 
 - **Command hints** — autocomplete from your own history plus vendor catalogs
-  for **12 platforms**, with automatic platform detection from the prompt.
+  for **9 platforms**, with automatic platform detection from the prompt.
 - **Command lists per vendor** — grouped commands and recipes under the
   terminal for the detected platform (local tabs get the Windows, macOS or
   Linux lists for their shell). They are JSON files: make your own copy
   in **Settings → Command Lists** and edit it; updates never change your copy.
+  The FortiGate lists follow the device's FortiOS release (7.2, 7.4, 7.6),
+  read from `get system status`.
 - **★ Custom commands** — your own command list, the same on every platform,
   next to Recent in the command bar (add, edit, remove, or ☆ a Recent entry).
 - **Keyword highlighting** — per-rule regex in true-color ANSI, on every
@@ -109,7 +111,9 @@ The little things that add up across a long day:
   `{{vault:Name.Password}}`.
 - Secrets are resolved **in the backend** at run time — they never enter the UI,
   the JSON, exports or logs.
-- Passwords **typed at a prompt** are never recorded to history or recents.
+- Passwords **typed at a prompt** are never recorded to history or recents, and
+  neither are configuration commands that carry a secret (`set psksecret …`,
+  `enable secret …`).
 
 ### Transfer files
 
