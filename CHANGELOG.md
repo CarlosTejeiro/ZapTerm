@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.7.12] - 2026-11-21
+
+### Changed
+- **A session that uses a vault entry logs in as the entry's user.** Until
+  now choosing a vault entry only copied its username into the session;
+  changing the username in the vault later left the sessions on the old one.
+  Now the vault decides: change the user there and every session that uses
+  the entry follows. An entry without a username (a password shared by
+  several users) still leaves the user to each session.
+  **If a session uses a vault entry but had a different username typed in,
+  it now connects with the entry's.**
+- **The session dialog shows what comes from the vault.** With a vault entry
+  chosen, Username is greyed out showing the entry's user, and Password is
+  shown locked ("taken from the vault entry") instead of hidden. To give the
+  session its own password, choose "— type a password —".
+
 ## [1.7.11] - 2026-11-21
 
 ### Fixed
