@@ -501,6 +501,29 @@ mod tests {
         assert_eq!(texts(&f, "Usage 90–97%"), ["95%"]);
     }
 
+    /// FortiOS `get system status` reports settings as enable / disable.
+    #[test]
+    fn default_rules_colour_enable_and_disable() {
+        let rules = default_rules();
+        let f = colored(&rules, "Private Encryption: Disable\r\n");
+        assert_eq!(texts(&f, "Status: warning"), ["Disable"]);
+        let f = colored(&rules, "Virtual domain configuration: disable\r\n");
+        assert_eq!(texts(&f, "Status: warning"), ["disable"]);
+        let f = colored(&rules, "FIPS-CC mode: disable\r\n");
+        assert_eq!(texts(&f, "Status: warning"), ["disable"]);
+        let f = colored(&rules, "set status enable\r\n    set allowaccess ping\r\n");
+        assert_eq!(texts(&f, "Status: good"), ["enable"]);
+        let f = colored(&rules, "Log hard disk: Enable\r\n");
+        assert_eq!(texts(&f, "Status: good"), ["Enable"]);
+        // The longer forms still count, and longer words are left alone.
+        let f = colored(&rules, "port1 is enabled, port2 is disabled\n");
+        assert_eq!(texts(&f, "Status: good"), ["enabled"]);
+        assert_eq!(texts(&f, "Status: warning"), ["disabled"]);
+        let f = colored(&rules, "enablement disables\n");
+        assert!(texts(&f, "Status: good").is_empty());
+        assert!(texts(&f, "Status: warning").is_empty());
+    }
+
     #[test]
     fn default_rules_on_network_output() {
         let rules = default_rules();

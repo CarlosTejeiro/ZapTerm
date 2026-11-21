@@ -167,7 +167,7 @@ pub struct SavedSession {
 
 // rusqlite::Connection is Send; Mutex<Connection> is therefore Send + Sync.
 /// Highest schema version this build knows (the last migration file).
-pub const LATEST_SCHEMA: i64 = 28;
+pub const LATEST_SCHEMA: i64 = 29;
 
 pub struct Database {
     conn: Mutex<Connection>,
@@ -419,6 +419,12 @@ impl Database {
             version,
             28,
             include_str!("migrations/028_session_os_version.sql"),
+        )?;
+        apply(
+            &conn,
+            version,
+            29,
+            include_str!("migrations/029_enable_disable_highlight.sql"),
         )?;
         Ok(())
     }
@@ -2480,6 +2486,42 @@ mod migration_tests {
         drop(Database::open(&path).unwrap());
         drop(Database::open(&path).unwrap());
         let _ = std::fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    /// 029 teaches the built-in status rules "enable" / "disable", and leaves
+    /// a rule the user changed as it is.
+    #[test]
+    fn migration_029_extends_only_untouched_status_rules() {
+        let path = temp_db("m029");
+        let db = Database::open(&path).unwrap();
+        let pattern_of = |db: &Database, name: &str| {
+            db.list_highlight_rules()
+                .unwrap()
+                .into_iter()
+                .find(|r| r.name == name)
+                .map(|r| r.pattern)
+        };
+        // A new database ends up with the extended patterns.
+        assert!(pattern_of(&db, "Status: good")
+            .unwrap()
+            .contains("enabled?"));
+        assert!(pattern_of(&db, "Status: warning")
+            .unwrap()
+            .contains("disabled?"));
+
+        // A rule the user edited is not touched when the migration runs again.
+        let c = rusqlite::Connection::open(&path).unwrap();
+        c.execute(
+            "UPDATE highlight_rules SET pattern = 'mine' WHERE name = 'Status: good'",
+            [],
+        )
+        .unwrap();
+        c.execute_batch(include_str!("migrations/029_enable_disable_highlight.sql"))
+            .unwrap();
+        drop(c);
+        assert_eq!(pattern_of(&db, "Status: good").as_deref(), Some("mine"));
+        drop(db);
+        let _ = std::fs::remove_file(path);
     }
 
     /// 026 adds the richer highlight rules after the user's own, never twice,
