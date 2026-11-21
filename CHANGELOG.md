@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.7.11] - 2026-11-21
+
+### Fixed
+- **Editing a vault credential can no longer be dismissed by accident.** With
+  the edit form open, a click that landed outside the dialog closed it, and
+  Escape threw away what had been typed. Now a click outside does nothing
+  while the form is open, and Escape is ignored once something has been
+  typed: the form goes away only with Cancel, Save or Close.
+- The vault dialog said passwords "stay in the OS keyring"; since 1.7.0 they
+  are in the encrypted vault, and the text says so.
+
 ## [1.7.10] - 2026-11-19
 
 ### Added
