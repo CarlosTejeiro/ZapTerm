@@ -289,6 +289,15 @@ selector, Font family + size, cursor style. -->
 - **Shortcuts**: every keybinding is customizable (Settings → Shortcuts).
 - **Data folder**: where ZapTerm stores its database, logs and catalogs (Settings →
   Data), or force it with `ZAPTERM_DATA_DIR` / `--data-dir`.
+- **Updates** (Help → Check for updates…): ZapTerm never checks on its own.
+  When you open this dialog it asks GitHub for the newest release, shows it
+  with its notes and, if you want, downloads the installer that matches your
+  copy (setup EXE, MSI, portable EXE, DMG, DEB, RPM or AppImage) into your
+  Downloads folder, checked against the SHA-256 GitHub publishes. The setup
+  EXE and the MSI install with one click (ZapTerm closes for it); the others
+  open the installer or show the file. A copy from the Microsoft Store is
+  updated by the Store. Stable versions are offered to stable copies; a beta
+  copy is also offered newer betas.
 
 ---
 
