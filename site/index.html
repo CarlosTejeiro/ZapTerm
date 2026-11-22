@@ -10,7 +10,7 @@
   <meta property="og:image" content="img/hero.webp">
   <meta name="theme-color" content="#0b0d14">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
 
@@ -40,7 +40,7 @@
   <section class="hero">
     <div class="glow glow-a"></div><div class="glow glow-b"></div>
     <div class="wrap hero-inner">
-      <p class="eyebrow"><span class="dot"></span> Latest <span data-version>v1.7.8</span> · free &amp; open source</p>
+      <p class="eyebrow"><span class="dot"></span> Latest <span data-version>v1.7.12</span> · free &amp; open source</p>
       <h1>The terminal built for<br><span class="grad">network engineers</span></h1>
       <p class="lede">SSH, Telnet and Serial in one fast app. Command lists for every vendor you touch,
         hints as you type, split panes, broadcast to many devices, a credential vault and
@@ -280,7 +280,7 @@
       <header class="section-head">
         <p class="kicker">Q&amp;A</p>
         <h2>Questions people ask</h2>
-        <p>Answers describe the latest version, <b data-version>v1.7.8</b>, and are updated with every release.</p>
+        <p>Answers describe the latest version, <b data-version>v1.7.12</b>, and are updated with every release.</p>
       </header>
       <div class="faq-list">
         <form class="faq-search" action="faq.html" method="get" role="search">
@@ -376,16 +376,38 @@
       <div class="contact" id="contact">
         <div class="contact-text">
           <h3>Prefer to write privately?</h3>
-          <p>Send a suggestion or a question straight to the developer. Your message is delivered by
-            Web3Forms, a form service; your email is only used to reply to you.</p>
+          <p>Send a suggestion or a question straight to the developer.</p>
         </div>
         <form class="contact-form" action="https://api.web3forms.com/submit" method="POST">
           <input type="hidden" name="access_key" value="6bed0235-b976-4e93-ab55-06c57b31dd67">
+          <input type="hidden" name="redirect" value="https://carlostejeiro.github.io/ZapTerm/contact/?sent=1">
           <label>Name<input type="text" name="name" autocomplete="name" required></label>
           <label>Email<input type="email" name="email" autocomplete="email" required></label>
           <label>Message<textarea name="message" rows="5" required></textarea></label>
           <button class="btn btn-primary" type="submit">Send message</button>
         </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── As is ────────────────────────────────────────────────────────── -->
+  <section id="as-is" class="as-is">
+    <div class="wrap">
+      <div class="notice">
+        <p class="kicker">Good to know</p>
+        <h2>Made for the community, provided as is</h2>
+        <p>ZapTerm is a personal, non-profit project, shared for free with the simple hope of giving
+          network engineers one more good tool to work with.</p>
+        <p>It is in continuous development: new versions come out often, and bugs can and do appear.
+          It comes with no warranty of any kind, and its author cannot accept responsibility for
+          outages, data loss or any other damage arising from its use.</p>
+        <p>A terminal sends what you tell it to send: you are responsible for the commands you run and
+          the devices you run them on. Try things in a lab first, keep backups, and read before you
+          press Enter.</p>
+        <p class="fine">The exact terms are in the
+          <a href="https://github.com/CarlosTejeiro/ZapTerm/blob/main/LICENSE">GPL-3.0-or-later licence</a>
+          (sections 15 and 16). Found a bug or missing something?
+          <a href="#feedback">Tell us</a> — that is how ZapTerm gets better for everyone.</p>
       </div>
     </div>
   </section>

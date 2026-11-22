@@ -41,6 +41,58 @@ pub struct HighlightRule {
 }
 
 // ---------------------------------------------------------------------------
+// Compiling a pattern
+// ---------------------------------------------------------------------------
+
+/// Compile a rule's pattern exactly as the highlighter will: plain text is
+/// escaped, a regular expression goes to the `regex` crate with the size
+/// limits. The error is a message for the user.
+pub fn compile(pattern: &str, is_regex: bool) -> Result<Regex, String> {
+    if pattern.is_empty() {
+        return Err("the pattern is empty".into());
+    }
+    if pattern.len() > MAX_PATTERN_LEN {
+        return Err(format!(
+            "the pattern is longer than {MAX_PATTERN_LEN} characters"
+        ));
+    }
+    let source = if is_regex {
+        pattern.to_string()
+    } else {
+        regex::escape(pattern)
+    };
+    RegexBuilder::new(&source)
+        .size_limit(REGEX_SIZE_LIMIT)
+        .dfa_size_limit(REGEX_SIZE_LIMIT)
+        .build()
+        .map_err(|e| {
+            // A syntax error is several lines (the pattern, a caret, then
+            // "error: <what>"); the form shows one line.
+            let text = e.to_string();
+            let last = text.lines().last().unwrap_or(&text).trim();
+            last.strip_prefix("error: ").unwrap_or(last).to_string()
+        })
+}
+
+/// Where `pattern` matches in `sample`, as `(start, end)` pairs counted in
+/// UTF-16 code units — what a JavaScript string slices by. Empty matches are
+/// left out. Used by the rule form's preview, so it shows what the terminal
+/// will colour.
+pub fn match_ranges(
+    pattern: &str,
+    is_regex: bool,
+    sample: &str,
+) -> Result<Vec<(usize, usize)>, String> {
+    let regex = compile(pattern, is_regex)?;
+    let utf16 = |byte: usize| sample[..byte].encode_utf16().count();
+    Ok(regex
+        .find_iter(sample)
+        .filter(|m| !m.is_empty())
+        .map(|m| (utf16(m.start()), utf16(m.end())))
+        .collect())
+}
+
+// ---------------------------------------------------------------------------
 // Highlighter
 // ---------------------------------------------------------------------------
 
@@ -61,18 +113,7 @@ impl Highlighter {
             .into_iter()
             .filter(|r| r.enabled)
             .filter_map(|r| {
-                if r.pattern.is_empty() || r.pattern.len() > MAX_PATTERN_LEN {
-                    return None;
-                }
-                let pattern = if r.is_regex {
-                    r.pattern.clone()
-                } else {
-                    regex::escape(&r.pattern)
-                };
-                RegexBuilder::new(&pattern)
-                    .size_limit(REGEX_SIZE_LIMIT)
-                    .dfa_size_limit(REGEX_SIZE_LIMIT)
-                    .build()
+                compile(&r.pattern, r.is_regex)
                     .ok()
                     .map(|regex| CompiledRule { rule: r, regex })
             })
@@ -298,5 +339,25 @@ mod tests {
         let h = Highlighter::new(vec![r]);
         // Oversized pattern is dropped → input passes through untouched.
         assert_eq!(h.apply(b"aaa"), b"aaa");
+    }
+    #[test]
+    fn compile_accepts_inline_flags_and_reports_errors() {
+        assert!(compile(r"(?i)\b(?:ok|up)\b", true).is_ok());
+        assert_eq!(compile("(unclosed", true).unwrap_err(), "unclosed group");
+        // The same text is fine as plain text.
+        assert!(compile("(unclosed", false).is_ok());
+        assert!(compile("", false).is_err());
+        assert!(compile(&"a".repeat(MAX_PATTERN_LEN + 1), false).is_err());
+    }
+
+    #[test]
+    fn match_ranges_counts_utf16_units() {
+        // "ñ" is 2 bytes but 1 UTF-16 unit; "😀" is 4 bytes and 2 units.
+        let r = match_ranges("(?i)disable", true, "ñ😀 Disable, disable").unwrap();
+        assert_eq!(r, vec![(4, 11), (13, 20)]);
+        // Plain text is literal.
+        assert_eq!(match_ranges("a.c", false, "abc a.c").unwrap(), vec![(4, 7)]);
+        // An empty match is not a match.
+        assert!(match_ranges("x*", true, "abc").unwrap().is_empty());
     }
 }

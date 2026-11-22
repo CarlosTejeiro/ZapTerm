@@ -1,0 +1,95 @@
+name: MSIX
+
+# Builds the Microsoft Store package and checks that it installs and starts.
+# Runs when the packaging changes; the release workflow builds the real one.
+
+on:
+  pull_request:
+    paths:
+      - 'packaging/msix/**'
+      - '.github/workflows/msix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  msix:
+    name: Build, install and start the MSIX
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry & target
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: release-x86_64-pc-windows-msvc
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Build the app
+        shell: pwsh
+        run: |
+          # PowerShell carries on after a failed program: stop at the first.
+          pnpm --dir frontend install --frozen-lockfile
+          if ($LASTEXITCODE -ne 0) { throw 'pnpm install failed' }
+          pnpm --dir frontend build
+          if ($LASTEXITCODE -ne 0) { throw 'frontend build failed' }
+          cargo build --release -p app --features tauri/custom-protocol
+          if ($LASTEXITCODE -ne 0) { throw 'cargo build failed' }
+
+      # A package only installs when it is signed by its Publisher. The Store
+      # signs the real one; here a throwaway certificate stands in for it.
+      - name: Pack and sign with a test certificate
+        shell: pwsh
+        run: |
+          $publisher = 'CN=ZapTerm MSIX test'
+          $version = (Get-Content crates/app/tauri.conf.json -Raw | ConvertFrom-Json).version
+          pwsh packaging/msix/make-msix.ps1 -Exe target\release\zapterm.exe -Version $version -Out ZapTerm_test.msix -Publisher $publisher
+          if ($LASTEXITCODE -ne 0) { throw 'make-msix failed' }
+          $cert = New-SelfSignedCertificate -Type Custom -Subject $publisher -KeyUsage DigitalSignature `
+            -CertStoreLocation Cert:\CurrentUser\My -TextExtension @('2.5.29.37={text}1.3.6.1.5.5.7.3.3', '2.5.29.19={text}')
+          Export-Certificate -Cert $cert -FilePath test.cer | Out-Null
+          Import-Certificate -FilePath test.cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople | Out-Null
+          $signtool = Get-ChildItem 'C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe' |
+            Sort-Object FullName -Descending | Select-Object -First 1
+          & $signtool.FullName sign /fd SHA256 /sha1 $cert.Thumbprint ZapTerm_test.msix
+          if ($LASTEXITCODE -ne 0) { throw "signtool failed" }
+
+      - name: Install it and start the app
+        shell: pwsh
+        run: |
+          Add-AppxPackage -Path ZapTerm_test.msix
+          $pkg = Get-AppxPackage -Name (Get-Content packaging/msix/identity.json -Raw | ConvertFrom-Json).name
+          if (-not $pkg) { throw 'package not installed' }
+          Write-Host "installed $($pkg.PackageFullName) at $($pkg.InstallLocation)"
+          Start-Process "shell:AppsFolder\$($pkg.PackageFamilyName)!ZapTerm"
+          Start-Sleep -Seconds 20
+          $proc = Get-Process zapterm -ErrorAction SilentlyContinue
+          if (-not $proc) { throw 'zapterm is not running 20 s after start' }
+          Write-Host "running: pid $($proc.Id), from $($proc.Path)"
+          # Where the data went: inside the package's own folder (MSIX
+          # redirects AppData writes of a packaged app).
+          Get-ChildItem "$env:LOCALAPPDATA\Packages\$($pkg.PackageFamilyName)" -Recurse -Depth 4 -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -like 'zapterm.db*' -or $_.Name -eq 'app.zapterm.client' } |
+            ForEach-Object { Write-Host "data: $($_.FullName)" }
+          Stop-Process -Id $proc.Id -Force
+          Remove-AppxPackage -Package $pkg.PackageFullName
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ZapTerm-msix-test
+          path: ZapTerm_test.msix

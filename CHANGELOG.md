@@ -8,14 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
-## [1.8.2-beta] - beta of the automation work (branch `claude/automation`, not on main yet)
+## [1.8.3-beta] - beta of the automation work (branch `claude/automation`, not on main yet)
 
 Betas are the 1.8.x versions: 1.8.0, 1.8.1… tagged `v1.8.0-beta`, `v1.8.1-beta`…
 (1.6.0 was the first beta, before the encrypted vault reached main as 1.7.)
 The app version itself carries no suffix, because the MSI and RPM bundlers
 disagree on which suffixes they accept.
 
-Includes everything up to 1.7.9 (the sections below), plus:
+Includes everything up to 1.7.15 (the sections below), plus:
 
 ### Added
 - **Add devices in bulk** (File menu and command palette). Paste one device
@@ -39,6 +39,92 @@ Includes everything up to 1.7.9 (the sections below), plus:
   Refused, declined and approved commands are logged in the panel.
 - `Session.run(..., strict=True)` raises instead of returning an empty string
   when read-only keeps a command from being sent.
+## [1.7.15] - 2026-11-22
+
+### Security
+- **`url` updated to 2.5.9** (and `form_urlencoded` to 1.2.3), for
+  [RUSTSEC-2026-0592](https://rustsec.org/advisories/RUSTSEC-2026-0592): a
+  stack overflow in `Url::origin()` on nested `blob:` URLs. ZapTerm gets
+  `url` through Tauri; nothing in ZapTerm's own code changes.
+
+## [1.7.14] - 2026-11-21
+
+### Changed
+- **A highlight rule's pattern can be edited.** Editing a rule used to lock the
+  pattern and the "Regular expression" box; changing what a rule matches meant
+  deleting it and adding another. Both are now editable. A pattern that
+  another rule already has is refused. If you sync between computers, the
+  other ones see a changed pattern as a new rule and keep the old one too —
+  delete it there.
+
+### Fixed
+- **Built-in rules that start with `(?i)` could not be saved after editing.**
+  The form checked the pattern with the browser's regex syntax, which is not
+  the one the terminal uses and rejects `(?i)`: "Status: good", "Status:
+  warning" and "Status: bad" showed "Invalid regex" and would not save even a
+  color change. The form now asks the same engine that colors the terminal,
+  so the check and the "Try it on sample output" preview match what you will
+  see.
+- A new rule with an invalid pattern is refused when saving, also when it
+  comes from outside the form.
+
+## [1.7.13] - 2026-11-21
+
+### Changed
+- **"enable" and "disable" are highlighted.** The built-in highlight rules
+  coloured `enabled` and `disabled` but not the short forms FortiOS and others
+  print — `Private Encryption: Disable`, `FIPS-CC mode: disable`,
+  `set status enable`. Now `enable` / `Enable` is green like `enabled`, and
+  `disable` / `Disable` yellow like `disabled`. The two rules ("Status: good"
+  and "Status: warning") are updated only if you haven't edited them.
+- The database moves to schema 29 for this; older ZapTerm versions cannot
+  open a data folder once this one has.
+
+## [1.7.12] - 2026-11-21
+
+### Changed
+- **A session that uses a vault entry logs in as the entry's user.** Until
+  now choosing a vault entry only copied its username into the session;
+  changing the username in the vault later left the sessions on the old one.
+  Now the vault decides: change the user there and every session that uses
+  the entry follows. An entry without a username (a password shared by
+  several users) still leaves the user to each session.
+  **If a session uses a vault entry but had a different username typed in,
+  it now connects with the entry's.**
+- **The session dialog shows what comes from the vault.** With a vault entry
+  chosen, Username is greyed out showing the entry's user, and Password is
+  shown locked ("taken from the vault entry") instead of hidden. To give the
+  session its own password, choose "— type a password —".
+
+## [1.7.11] - 2026-11-21
+
+### Fixed
+- **Editing a vault credential can no longer be dismissed by accident.** With
+  the edit form open, a click that landed outside the dialog closed it, and
+  Escape threw away what had been typed. Now a click outside does nothing
+  while the form is open, and Escape is ignored once something has been
+  typed: the form goes away only with Cancel, Save or Close.
+- The vault dialog said passwords "stay in the OS keyring"; since 1.7.0 they
+  are in the encrypted vault, and the text says so.
+
+## [1.7.10] - 2026-11-19
+
+### Added
+- **FortiGate commands by patch, from the release notes.** The *New
+  features* and *Changes in CLI* sections of every FortiOS patch (7.2.1 to
+  7.2.14, 7.4.1 to 7.4.13, 7.6.1 to 7.6.8) were read for operational
+  commands. New in the lists, each shown from the patch that introduced it:
+  - `diagnose sys ha checksum show-nonsync` (7.2.1)
+  - `diagnose sys sdwan health-check remote <name> <seq_num>` (7.2.4)
+  - `diagnose switch-controller telemetry show mac-stats switch <serial_number>` (7.2.4)
+  - `diagnose nodejs logs list` (7.2.4)
+  - `diagnose sys tcp-auth-options` (7.4.2)
+
+### Changed
+- **The SD-WAN rules command changes at 7.4.4, not 7.4.0.** The 7.4.4 release
+  notes date the split of `diagnose sys sdwan service` into `service4` and
+  `service6`: a device on 7.4.0–7.4.3 now gets the old command.
+
 ## [1.7.9] - 2026-11-18
 
 ### Security

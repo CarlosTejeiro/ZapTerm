@@ -2,7 +2,7 @@
   "format": "zapterm-command-lists",
   "version": 1,
   "platform": "fortigate",
-  "notes": "FortiGate command lists for FortiOS 7.2, 7.4 and 7.6. Every command below was checked against Fortinet's FortiOS 7.6 documentation — nothing was added from memory: • CLI troubleshooting cheat sheet (7.6.0) docs.fortinet.com/document/fortigate/7.6.0/cli-troubleshooting-cheat-sheet/420966 • Administration guide 7.6.6: \"Debugging the packet flow\" (54688), \"IPsec related diagnose commands\" (44240), \"Performing a sniffer trace or packet capture\" (680228: \"To stop the sniffer, type CTRL+C\"), \"Routing concepts\" (139692), \"Using a session table\" (562859), \"How the FortiGate firmware license works\" (7.6.4, 299518) • CLI reference 7.6.6: diagnose vpn ike (309172113), diagnose sys (235530229), diagnose ip router bgp (869760727) / ospf (929006518) Left out on purpose: commands that reset, format or reboot the device (factoryreset, formatlogdisk, execute reboot…), ones the docs warn can cause an outage (execute fsso refresh, diagnose sys ha reset-uptime), ones that put a password on the command line (diagnose test authserver), and ones whose 7.6 argument syntax the docs don't spell out. Safety review: every real-time debug and the packet sniffer carry a caution that is confirmed before sending, quoting the FortiGate CLI troubleshooting cheat sheet (“Real-time debugging is a CPU intensive task”; IPS debugs “with proper filters can result in high CPU usage”) and the sniffer reference (“Packet capture can be very resource intensive”; no count runs until Ctrl+C). Each real-time debug recipe sets diagnose debug duration (minutes, 1–30, default 5; FortiOS defaults to 30 and 0 means unlimited, per the diagnose debug reference), and packet counts are limited to 1–1000. Releases: the lists were written for 7.6 and then checked against the 7.4 and 7.2 documentation — administration guide 7.4.9 and 7.2.13, CLI reference 7.4.9 and 7.2.13 (diagnose and execute pages), and the 7.4.0 CLI troubleshooting cheat sheet (there is none for 7.2). Items marked \"since\" are not shown on older devices: on 7.2, diagnose sys sdwan service replaces service4/service6, diagnose sys ha status replaces diagnose system ha status, and the IKE debug filters with dst-addr4 instead of rem-addr4, as the 7.2.13 CLI reference has them. Commands the 7.2 documentation does not show in full (test levels of lnkmtd, ipsmonitor and wad, wlac -c, a few get commands) are left out on 7.2 rather than assumed; get system interface physical is only in the 7.6 guide. The diagnose CLI reference is published from 7.2.13, 7.4.7 and 7.6.1 on, so the exact patch where a command changed is not known: the marks are per train.",
+  "notes": "FortiGate command lists for FortiOS 7.2, 7.4 and 7.6. Every command below was checked against Fortinet's FortiOS 7.6 documentation — nothing was added from memory: • CLI troubleshooting cheat sheet (7.6.0) docs.fortinet.com/document/fortigate/7.6.0/cli-troubleshooting-cheat-sheet/420966 • Administration guide 7.6.6: \"Debugging the packet flow\" (54688), \"IPsec related diagnose commands\" (44240), \"Performing a sniffer trace or packet capture\" (680228: \"To stop the sniffer, type CTRL+C\"), \"Routing concepts\" (139692), \"Using a session table\" (562859), \"How the FortiGate firmware license works\" (7.6.4, 299518) • CLI reference 7.6.6: diagnose vpn ike (309172113), diagnose sys (235530229), diagnose ip router bgp (869760727) / ospf (929006518) Left out on purpose: commands that reset, format or reboot the device (factoryreset, formatlogdisk, execute reboot…), ones the docs warn can cause an outage (execute fsso refresh, diagnose sys ha reset-uptime), ones that put a password on the command line (diagnose test authserver), and ones whose 7.6 argument syntax the docs don't spell out. Safety review: every real-time debug and the packet sniffer carry a caution that is confirmed before sending, quoting the FortiGate CLI troubleshooting cheat sheet (“Real-time debugging is a CPU intensive task”; IPS debugs “with proper filters can result in high CPU usage”) and the sniffer reference (“Packet capture can be very resource intensive”; no count runs until Ctrl+C). Each real-time debug recipe sets diagnose debug duration (minutes, 1–30, default 5; FortiOS defaults to 30 and 0 means unlimited, per the diagnose debug reference), and packet counts are limited to 1–1000. Releases: the lists were written for 7.6 and then checked against the 7.4 and 7.2 documentation — administration guide 7.4.9 and 7.2.13, CLI reference 7.4.9 and 7.2.13 (diagnose and execute pages), and the 7.4.0 CLI troubleshooting cheat sheet (there is none for 7.2). Items marked \"since\" are not shown on older devices: on 7.2, diagnose sys sdwan service replaces service4/service6, diagnose sys ha status replaces diagnose system ha status, and the IKE debug filters with dst-addr4 instead of rem-addr4, as the 7.2.13 CLI reference has them. Commands the 7.2 documentation does not show in full (test levels of lnkmtd, ipsmonitor and wad, wlac -c, a few get commands) are left out on 7.2 rather than assumed; get system interface physical is only in the 7.6 guide. The diagnose CLI reference is published from 7.2.13, 7.4.7 and 7.6.1 on, so where only the reference shows a difference the marks are per train. Release notes: the New features and Changes in CLI sections of every patch (7.2.1–7.2.14, 7.4.1–7.4.13, 7.6.1–7.6.8) were read for operational commands. They date the SD-WAN split exactly (7.4.4: diagnose sys sdwan service becomes service4 / service6) and add, each marked with the patch that introduced it and found in the 7.2.13 / 7.4.9 / 7.6.6 CLI reference: diagnose sys ha checksum show-nonsync (7.2.1), diagnose sys sdwan health-check remote (7.2.4), diagnose switch-controller telemetry show mac-stats (7.2.4), diagnose nodejs logs (7.2.4), diagnose sys tcp-auth-options (7.4.2). New commands that change the device, take a password on the command line or apply to one hardware family were left out.",
   "label": "FortiGate · FortiOS 7.2 – 7.6",
   "osVersion": "7.6",
   "stopDebug": ["diagnose debug disable", "diagnose debug reset"],
@@ -132,6 +132,12 @@
               "kind": "command",
               "cmd": "execute log filter",
               "desc": "Show the log filters that are set"
+            },
+            {
+              "kind": "command",
+              "cmd": "diagnose nodejs logs list",
+              "desc": "Log files of the GUI's Node.js service",
+              "since": "7.2.4"
             }
           ]
         }
@@ -321,24 +327,30 @@
               "kind": "command",
               "cmd": "diagnose sys sdwan service",
               "desc": "SD-WAN rules in the control plane",
-              "until": "7.2"
+              "until": "7.4.3"
             },
             {
               "kind": "command",
               "cmd": "diagnose sys sdwan service4",
               "desc": "SD-WAN rules in the control plane (IPv4)",
-              "since": "7.4"
+              "since": "7.4.4"
             },
             {
               "kind": "command",
               "cmd": "diagnose sys sdwan service6",
               "desc": "SD-WAN rules in the control plane (IPv6)",
-              "since": "7.4"
+              "since": "7.4.4"
             },
             {
               "kind": "command",
               "cmd": "diagnose firewall proute list",
               "desc": "SD-WAN rules and policy routes in the data plane"
+            },
+            {
+              "kind": "command",
+              "cmd": "diagnose sys sdwan health-check remote <name> <seq_num>",
+              "desc": "Statistics of the SD-WAN peer's remote health checks",
+              "since": "7.2.4"
             }
           ]
         },
@@ -401,6 +413,12 @@
               "kind": "command",
               "cmd": "get router info bgp neighbors",
               "desc": "Every BGP peer in detail"
+            },
+            {
+              "kind": "command",
+              "cmd": "diagnose sys tcp-auth-options",
+              "desc": "TCP authentication option (TCP-AO) state, as used by BGP neighbours",
+              "since": "7.4.2"
             }
           ]
         },
@@ -637,6 +655,12 @@
               "kind": "command",
               "cmd": "diagnose sys ha checksum cluster",
               "desc": "Configuration checksums of every member"
+            },
+            {
+              "kind": "command",
+              "cmd": "diagnose sys ha checksum show-nonsync",
+              "desc": "Checksums of the configuration that is not synchronised",
+              "since": "7.2.1"
             },
             {
               "kind": "command",
@@ -914,6 +938,12 @@
               "kind": "command",
               "cmd": "diagnose switch-controller switch-info 802.1X",
               "desc": "802.1X status per port"
+            },
+            {
+              "kind": "command",
+              "cmd": "diagnose switch-controller telemetry show mac-stats switch <serial_number>",
+              "desc": "Bytes and packets per device behind a FortiSwitch (NAC policy)",
+              "since": "7.2.4"
             }
           ]
         },

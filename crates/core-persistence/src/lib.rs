@@ -167,7 +167,7 @@ pub struct SavedSession {
 
 // rusqlite::Connection is Send; Mutex<Connection> is therefore Send + Sync.
 /// Highest schema version this build knows (the last migration file).
-pub const LATEST_SCHEMA: i64 = 28;
+pub const LATEST_SCHEMA: i64 = 29;
 
 pub struct Database {
     conn: Mutex<Connection>,
@@ -419,6 +419,12 @@ impl Database {
             version,
             28,
             include_str!("migrations/028_session_os_version.sql"),
+        )?;
+        apply(
+            &conn,
+            version,
+            29,
+            include_str!("migrations/029_enable_disable_highlight.sql"),
         )?;
         Ok(())
     }
@@ -1299,8 +1305,9 @@ impl Database {
         Ok(conn.last_insert_rowid())
     }
 
-    /// Overwrite a rule's editable fields (its identity — pattern + regex
-    /// flag — stays). Used when a sync pull brings another device's edit.
+    /// Overwrite a rule's name, style and enabled flag. The pattern has its
+    /// own call, [`Self::set_highlight_rule_pattern`]: a sync pull finds the
+    /// rule by its pattern and only ever changes the rest.
     #[allow(clippy::too_many_arguments)]
     pub fn update_highlight_rule(
         &self,
@@ -1326,6 +1333,25 @@ impl Database {
                 enabled as i64,
                 id
             ],
+        )?;
+        if n == 0 {
+            return Err(Error::NotFound);
+        }
+        Ok(())
+    }
+
+    /// Change what a rule matches. Other devices know the rule by its pattern,
+    /// so to them this is a new rule.
+    pub fn set_highlight_rule_pattern(
+        &self,
+        id: i64,
+        pattern: &str,
+        is_regex: bool,
+    ) -> Result<(), Error> {
+        let conn = self.conn.lock().unwrap();
+        let n = conn.execute(
+            "UPDATE highlight_rules SET pattern=?1, is_regex=?2 WHERE id=?3",
+            rusqlite::params![pattern, is_regex as i64, id],
         )?;
         if n == 0 {
             return Err(Error::NotFound);
@@ -2480,6 +2506,42 @@ mod migration_tests {
         drop(Database::open(&path).unwrap());
         drop(Database::open(&path).unwrap());
         let _ = std::fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    /// 029 teaches the built-in status rules "enable" / "disable", and leaves
+    /// a rule the user changed as it is.
+    #[test]
+    fn migration_029_extends_only_untouched_status_rules() {
+        let path = temp_db("m029");
+        let db = Database::open(&path).unwrap();
+        let pattern_of = |db: &Database, name: &str| {
+            db.list_highlight_rules()
+                .unwrap()
+                .into_iter()
+                .find(|r| r.name == name)
+                .map(|r| r.pattern)
+        };
+        // A new database ends up with the extended patterns.
+        assert!(pattern_of(&db, "Status: good")
+            .unwrap()
+            .contains("enabled?"));
+        assert!(pattern_of(&db, "Status: warning")
+            .unwrap()
+            .contains("disabled?"));
+
+        // A rule the user edited is not touched when the migration runs again.
+        let c = rusqlite::Connection::open(&path).unwrap();
+        c.execute(
+            "UPDATE highlight_rules SET pattern = 'mine' WHERE name = 'Status: good'",
+            [],
+        )
+        .unwrap();
+        c.execute_batch(include_str!("migrations/029_enable_disable_highlight.sql"))
+            .unwrap();
+        drop(c);
+        assert_eq!(pattern_of(&db, "Status: good").as_deref(), Some("mine"));
+        drop(db);
+        let _ = std::fs::remove_file(path);
     }
 
     /// 026 adds the richer highlight rules after the user's own, never twice,

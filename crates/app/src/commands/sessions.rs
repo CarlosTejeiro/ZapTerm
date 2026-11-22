@@ -1503,6 +1503,32 @@ pub async fn clone_saved_session(state: State<'_, AppState>, id: i64) -> Result<
 /// The password typed for `session_id` in a pane's reconnect form: from the
 /// in-memory cache, else from the encrypted copy in the database (which then
 /// warms the cache).
+/// The user a saved session logs in as. A session that uses a vault entry
+/// logs in as that entry's user when the entry has one: the vault is where
+/// the pair lives, so changing it there changes every session that uses it.
+/// An entry without a user (a password shared by several users), and every
+/// other session, uses the session's own Username.
+fn login_username(
+    session_username: Option<&str>,
+    credential: Option<&core_persistence::Credential>,
+) -> Option<String> {
+    credential
+        .filter(|c| c.reusable)
+        .and_then(|c| c.username.as_deref())
+        .map(str::trim)
+        .filter(|u| !u.is_empty())
+        .or(session_username)
+        .map(str::to_owned)
+}
+
+/// [`login_username`] for a saved session, looking its credential up.
+fn session_login_username(session: &SavedSession, state: &AppState) -> Option<String> {
+    let credential = session
+        .credential_id
+        .and_then(|id| state.db.get_credential(id).ok());
+    login_username(session.username.as_deref(), credential.as_ref())
+}
+
 fn typed_password(
     store: &dyn crate::commands::backup::SecretStore,
     db: &core_persistence::Database,
@@ -1839,7 +1865,7 @@ async fn build_bastion_chain(
             .clone()
             .ok_or_else(|| AppError::Internal(format!("jump host «{label}» has no host set")))?;
         let port = saved.port.unwrap_or(22);
-        let user = saved.username.clone().ok_or_else(|| {
+        let user = session_login_username(&saved, state).ok_or_else(|| {
             AppError::Internal(format!("jump host «{label}» has no username set"))
         })?;
         // A jump host without a stored password must not read as the target's
@@ -1912,9 +1938,7 @@ pub async fn open_saved_session(
                 .clone()
                 .ok_or_else(|| AppError::Internal("missing host".into()))?;
             let port = session.port.unwrap_or(22);
-            let username = session
-                .username
-                .clone()
+            let username = session_login_username(&session, &state)
                 .ok_or_else(|| AppError::Internal("missing username".into()))?;
 
             let auth = resolve_ssh_auth_for_session(&session, &app, &state)?;
@@ -2410,6 +2434,64 @@ fn parse_wsl_list(bytes: &[u8]) -> Vec<String> {
         })
         .filter(|l| !l.is_empty())
         .collect()
+}
+
+#[cfg(test)]
+mod login_username_tests {
+    use super::login_username;
+    use core_persistence::Credential;
+
+    fn cred(username: Option<&str>, reusable: bool) -> Credential {
+        Credential {
+            id: 1,
+            name: "c".into(),
+            kind: "ssh_password".into(),
+            username: username.map(str::to_owned),
+            keyring_key: "vault:x".into(),
+            reusable,
+        }
+    }
+
+    #[test]
+    fn a_vault_entry_with_a_user_decides_the_login() {
+        let c = cred(Some("netops"), true);
+        assert_eq!(
+            login_username(Some("admin"), Some(&c)).as_deref(),
+            Some("netops")
+        );
+        // …even when the session has none of its own.
+        assert_eq!(login_username(None, Some(&c)).as_deref(), Some("netops"));
+    }
+
+    #[test]
+    fn a_vault_entry_without_a_user_leaves_the_sessions_own() {
+        for c in [
+            cred(None, true),
+            cred(Some(""), true),
+            cred(Some("  "), true),
+        ] {
+            assert_eq!(
+                login_username(Some("admin"), Some(&c)).as_deref(),
+                Some("admin")
+            );
+        }
+        assert_eq!(login_username(None, Some(&cred(None, true))), None);
+    }
+
+    #[test]
+    fn a_sessions_private_credential_never_overrides_its_username() {
+        // The private credential row keeps the user it was created with; the
+        // session's Username field is what the user edits afterwards.
+        let c = cred(Some("old-user"), false);
+        assert_eq!(
+            login_username(Some("admin"), Some(&c)).as_deref(),
+            Some("admin")
+        );
+        assert_eq!(
+            login_username(Some("admin"), None).as_deref(),
+            Some("admin")
+        );
+    }
 }
 
 #[cfg(test)]
