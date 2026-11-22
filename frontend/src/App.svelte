@@ -4,6 +4,7 @@
   import { getTheme, applyTheme } from '$lib/themes/store.svelte'
   import { themes, themeLabels, colorSchemeFor } from '$lib/themes/index'
   import MarkTile from '$lib/icons/MarkTile.svelte'
+  import UpdateDialog from '$lib/ui/UpdateDialog.svelte'
   import Icon from '$lib/icons/Icon.svelte'
   import TitleBar from '$lib/pylon/TitleBar.svelte'
   import Sidebar from '$lib/pylon/Sidebar.svelte'
@@ -97,7 +98,7 @@
     setBarContext,
     matchSnippetShortcut,
   } from '$lib/stores/snippets.svelte'
-  import { getSessionPlatform, getSessionTcpMss, openExternal } from '$lib/bridge/commands'
+  import { getSessionPlatform, getSessionTcpMss } from '$lib/bridge/commands'
   import {
     createSnippet,
     updateSnippet,
@@ -318,6 +319,7 @@
     ),
   )
   let showAbout = $state(false)
+  let showUpdates = $state(false)
   // Bundle version from tauri.conf.json — single source of truth.
   let appVersion = $state('')
   getVersion()
@@ -1139,20 +1141,9 @@
     }
   }
 
-  /// ZapTerm doesn't update itself (no update server is contacted): open the
-  /// releases page, where the latest build can be downloaded.
-  async function handleCheckUpdates() {
-    const releasesUrl = 'https://github.com/CarlosTejeiro/ZapTerm/releases'
-    try {
-      await openExternal(releasesUrl)
-      showToast({
-        kind: 'info',
-        title: 'Releases',
-        detail: `Current version ${appVersion}. Opening the releases page…`,
-      })
-    } catch (e) {
-      showToast({ kind: 'error', title: 'Releases', detail: errorText(e) })
-    }
+  /// Help → Check for updates: the dialog asks GitHub only when opened.
+  function handleCheckUpdates() {
+    showUpdates = true
   }
 
   // ── export / import ──────────────────────────────────────────────────────
@@ -2194,6 +2185,10 @@
 <VaultGate />
 
 <Toasts />
+
+{#if showUpdates}
+  <UpdateDialog onClose={() => (showUpdates = false)} />
+{/if}
 
 {#if showAbout}
   <div
