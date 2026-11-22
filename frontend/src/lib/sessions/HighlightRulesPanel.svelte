@@ -11,6 +11,7 @@
     deleteHighlightRule,
     exportHighlightRules,
     importHighlightRules,
+    testHighlightPattern,
   } from '$lib/bridge/commands'
   import type { HighlightRule } from '$lib/bridge/types'
 
@@ -21,8 +22,7 @@
   /** Result of the last export/import, shown under the toolbar. */
   let status = $state<{ kind: 'ok' | 'err'; text: string; details?: string[] } | null>(null)
 
-  // Rule form — adds a rule, or edits `editing` (pattern and regex flag stay:
-  // they are the rule's identity, also for sync).
+  // Rule form — adds a rule, or edits `editing`.
   const DEFAULT_FG = '#e07474'
   const DEFAULT_BG = '#3a2a2a'
   let editing = $state<HighlightRule | null>(null)
@@ -46,31 +46,46 @@
     hit: boolean
   }
 
-  function escapeRegex(s: string) {
-    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  }
+  // The pattern is checked and matched by the backend, with the engine the
+  // terminal uses: JavaScript's RegExp has another syntax (it rejects `(?i)`,
+  // which the built-in rules use) and would show other matches.
+  let patternError = $state<string | null>(null)
+  let matches = $state<[number, number][]>([])
 
-  const patternError = $derived.by(() => {
-    if (!fIsRegex || !fPattern) return null
-    try {
-      new RegExp(fPattern)
-      return null
-    } catch (e) {
-      return errorText(e)
+  $effect(() => {
+    const pattern = fPattern
+    const isRegex = fIsRegex
+    const sample = testInput
+    if (!pattern) {
+      patternError = null
+      matches = []
+      return
+    }
+    let stale = false
+    testHighlightPattern(pattern, isRegex, sample)
+      .then((found) => {
+        if (stale) return
+        patternError = null
+        matches = found
+      })
+      .catch((e) => {
+        if (stale) return
+        patternError = errorText(e)
+        matches = []
+      })
+    return () => {
+      stale = true
     }
   })
 
   const testSpans = $derived.by<Span[]>(() => {
-    if (!testInput || !fPattern || patternError) return [{ text: testInput, hit: false }]
-    const regex = new RegExp(fIsRegex ? fPattern : escapeRegex(fPattern), 'g')
     const spans: Span[] = []
     let last = 0
-    for (const m of testInput.matchAll(regex)) {
-      if (!m[0]) break // an empty match would loop forever
-      const start = m.index ?? 0
+    for (const [start, end] of matches) {
+      if (start < last || end > testInput.length) break // answer for another sample
       if (start > last) spans.push({ text: testInput.slice(last, start), hit: false })
-      spans.push({ text: m[0], hit: true })
-      last = start + m[0].length
+      spans.push({ text: testInput.slice(start, end), hit: true })
+      last = end
     }
     if (last < testInput.length) spans.push({ text: testInput.slice(last), hit: false })
     return spans
@@ -131,10 +146,12 @@
       formError = 'Pattern is required'
       return
     }
-    if (patternError) {
-      formError = `Invalid regex: ${patternError}`
-      return
-    }
+    // An invalid pattern is already reported under the field. A rule being
+    // edited may keep an old pattern as it is, so its name or colors can still
+    // change; the backend checks whatever is saved.
+    const patternKept =
+      editing && editing.pattern === fPattern.trim() && editing.is_regex === fIsRegex
+    if (patternError && !patternKept) return
     const fg = fUseFg ? fFg : null
     const bg = fUseBg ? fBg : null
     saving = true
@@ -143,6 +160,8 @@
         await updateHighlightRule(
           editing.id,
           fName.trim(),
+          fPattern.trim(),
+          fIsRegex,
           fg,
           bg,
           fBold,
@@ -332,18 +351,17 @@
             bind:value={fPattern}
             class="mono"
             placeholder={fIsRegex ? 'changed state to (down|administratively down)' : '%ERROR'}
-            disabled={!!editing}
-            title={editing ? 'The pattern of a rule cannot change — add a new rule instead' : ''}
+            oninput={() => (formError = null)}
           />
         </label>
       </div>
 
       <label class="check">
-        <input type="checkbox" bind:checked={fIsRegex} disabled={!!editing} />
+        <input type="checkbox" bind:checked={fIsRegex} />
         <span>Regular expression</span>
       </label>
       {#if patternError}
-        <p class="msg-err">Invalid regex: {patternError}</p>
+        <p class="msg-err">{fIsRegex ? 'Invalid regex' : 'Invalid pattern'}: {patternError}</p>
       {/if}
 
       <div class="style-row">
