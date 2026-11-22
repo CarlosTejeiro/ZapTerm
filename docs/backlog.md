@@ -15,7 +15,9 @@ Add entries with format: `- **Feature name**: brief description.`
   isn't viable (no anonymous manifest, can't ship a token). Options when
   wanted: a **private update server** (`latest.json` + signed bundles you host;
   Windows/Linux self-update now, macOS after signing), or keep distribution
-  manual. "Check for updates" currently just opens the releases page.
+  manual. "Check for updates" (1.7.16) asks GitHub for the newest release when
+  the user opens it and downloads the matching installer, verified by SHA-256;
+  it does not replace the running app by itself.
 
 ## Features
 

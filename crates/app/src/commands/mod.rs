@@ -18,4 +18,5 @@ pub mod snippets;
 pub mod sync;
 pub mod transfer;
 pub mod triggers;
+pub mod update;
 pub mod vault;

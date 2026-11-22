@@ -1029,6 +1029,58 @@ export async function restartApp(): Promise<void> {
   return invoke<void>('restart_app')
 }
 
+// ── Check for updates (Help menu; only ever started by the user) ──────────
+
+export type InstallKind =
+  | 'nsis'
+  | 'msi'
+  | 'store'
+  | 'portable'
+  | 'dmg'
+  | 'deb'
+  | 'rpm'
+  | 'appimage'
+  | 'other'
+
+export interface UpdateInfo {
+  current: string
+  /** null when GitHub lists no release this build can use. */
+  latest: string | null
+  newer: boolean
+  beta_channel: boolean
+  prerelease: boolean
+  tag: string | null
+  release_url: string
+  published_at: string | null
+  notes: string | null
+  install_kind: InstallKind
+  /** The file "Download" fetches; null when this install updates another way. */
+  asset: { name: string; size: number } | null
+}
+
+/** Ask GitHub for the newest release this build should offer. */
+export async function checkForUpdate(): Promise<UpdateInfo> {
+  return invoke<UpdateInfo>('check_for_update')
+}
+
+/**
+ * Download the installer offered by the last check into Downloads, verified
+ * against GitHub's SHA-256. Progress arrives as `update-download-progress`.
+ */
+export async function downloadUpdate(): Promise<string> {
+  return invoke<string>('download_update')
+}
+
+/** Start the downloaded installer. `true`: ZapTerm is closing for it. */
+export async function installUpdate(): Promise<boolean> {
+  return invoke<boolean>('install_update')
+}
+
+/** Show the downloaded file in the file manager. */
+export async function revealUpdate(): Promise<void> {
+  return invoke<void>('reveal_update')
+}
+
 // Open an http(s) URL in the user's default browser.
 export async function openExternal(url: string): Promise<void> {
   return invoke<void>('open_external', { url })
