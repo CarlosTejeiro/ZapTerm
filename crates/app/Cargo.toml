@@ -44,6 +44,7 @@ zeroize            = { workspace = true }
 sha2               = "0.10"
 # Device name stamped into encrypted backups (already in the tree via tauri).
 gethostname        = "1"
+ureq = { version = "3", default-features = false, features = ["rustls", "platform-verifier"] }
 
 [target.'cfg(windows)'.dependencies]
 # Read PuTTY sessions straight from HKCU when importing on Windows. The

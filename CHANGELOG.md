@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.7.16] - 2026-11-22
+
+### Added
+- **Help → Check for updates tells you what's new and installs it.** It used
+  to open the releases page, where a beta could be listed first. Now it asks
+  GitHub for the newest release *for your copy* — stable versions for a
+  stable copy; a beta copy is also offered newer betas — and shows it with
+  its release notes. "Download and install" fetches the installer that
+  matches how ZapTerm was installed (setup EXE, MSI, portable EXE, DMG, DEB,
+  RPM or AppImage, for your CPU) into your Downloads folder and checks it
+  against the SHA-256 GitHub publishes for it; a file that doesn't match is
+  deleted. The setup EXE and the MSI then install with one click (ZapTerm
+  closes so the installer can replace it); a DMG, DEB or RPM opens in its
+  installer; a portable EXE or AppImage is shown in its folder to replace
+  the old one. A copy from the Microsoft Store is pointed to the Store.
+- Nothing is checked in the background: GitHub is only contacted when you
+  open the dialog (the privacy policy and the Q&A say so).
+
 ## [1.7.15] - 2026-11-22
 
 ### Security
