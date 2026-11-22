@@ -321,6 +321,7 @@ pub fn run() {
             commands::highlight::toggle_highlight_rule,
             commands::highlight::delete_highlight_rule,
             commands::highlight::update_highlight_rule,
+            commands::highlight::test_highlight_pattern,
             commands::highlight::export_highlight_rules,
             commands::highlight::import_highlight_rules,
             commands::logging::start_session_logging,

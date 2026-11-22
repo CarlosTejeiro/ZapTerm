@@ -8,3 +8,4 @@
 # for a version listed here, or the file served would change.
 1.5.9
 1.7.1
+1.7.9

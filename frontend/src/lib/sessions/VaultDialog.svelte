@@ -57,6 +57,15 @@
 
   const canSave = $derived(!!fName.trim() && (editing !== null || !!fPass))
 
+  // Something typed in the form that Save hasn't stored yet. While there is,
+  // only the Cancel, Save and Close buttons take the form away: a click that
+  // lands outside the dialog or an Escape (which also dismisses the system's
+  // accent and autocorrect pop-ups) must not throw the edit away.
+  const dirty = $derived(
+    showForm &&
+      (fPass !== '' || fName !== (editing?.name ?? '') || fUser !== (editing?.username ?? '')),
+  )
+
   async function save() {
     if (!canSave) return
     const name = fName.trim()
@@ -86,6 +95,8 @@
   function onKeydown(ev: KeyboardEvent) {
     if (ev.key === 'Escape') {
       ev.stopPropagation()
+      // Escape while the keyboard is composing a character belongs to that.
+      if (ev.isComposing || dirty) return
       if (showForm) showForm = false
       else onClose()
     }
@@ -100,7 +111,9 @@
   tabindex="-1"
   onkeydown={onKeydown}
   onclick={(e) => {
-    if (e.target === e.currentTarget) onClose()
+    // With the form open the dialog changes size, so a click meant for it
+    // can land on the backdrop: only close from the list.
+    if (e.target === e.currentTarget && !showForm) onClose()
   }}
   transition:fade={{ duration: 120 }}
 >
@@ -114,7 +127,8 @@
   >
     <h3 style:color={theme.textPrimary}>Credential vault</h3>
     <p class="hint" style:color={theme.textDim}>
-      Reusable credentials, referenced by sessions and macros. Secrets stay in the OS keyring.
+      Reusable credentials, referenced by sessions and macros. Passwords are kept in the encrypted
+      vault.
     </p>
 
     {#if showForm}

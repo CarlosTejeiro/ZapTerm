@@ -122,6 +122,28 @@ jobs:
           Copy-Item $exe.FullName $portable
           gh release upload "${{ github.ref_name }}" $portable --clobber
 
+      # Microsoft Store package. The Store refuses unsigned MSI/EXE installers
+      # (policy 10.2.9) but signs an MSIX itself, so this is what is uploaded
+      # to Partner Center. Skipped until packaging/msix/identity.json holds
+      # the identity Partner Center assigned: a package with another identity
+      # is rejected there.
+      - name: Upload MSIX for the Microsoft Store (Windows)
+        if: matrix.platform == 'windows-latest' && startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $identity = Get-Content packaging/msix/identity.json -Raw | ConvertFrom-Json
+          if ($identity.publisher -match '00000000-0000-0000-0000-000000000000') {
+            Write-Host '::notice::MSIX skipped: packaging/msix/identity.json still has the placeholder identity.'
+            exit 0
+          }
+          $version = (Get-Content crates/app/tauri.conf.json -Raw | ConvertFrom-Json).version
+          $msix = "ZapTerm_${version}_x64.msix"
+          pwsh packaging/msix/make-msix.ps1 -Exe "target/${{ matrix.target }}/release/zapterm.exe" -Version $version -Out $msix
+          if ($LASTEXITCODE -ne 0) { throw 'make-msix failed' }
+          gh release upload "${{ github.ref_name }}" $msix --clobber
+
   # Set the draft's body once all builds finish: the curated notes from
   # docs/releases/<tag>.md (if present) followed by this version's CHANGELOG
   # section, extracted verbatim from CHANGELOG.md. Either part may be absent.

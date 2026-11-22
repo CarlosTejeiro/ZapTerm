@@ -211,6 +211,22 @@
     const entry = vaultEntries.find((v) => v.id === vaultCredentialId)
     username = entry?.username ?? ''
   }
+
+  /// The user of the chosen vault entry, when it has one. The session then
+  /// logs in as that user (the backend takes it from the vault at connect
+  /// time), so the Username field only shows it and can't be edited. An entry
+  /// without a user — a password shared by several users — leaves the field
+  /// to the session.
+  const vaultUser = $derived.by(() => {
+    if (protocol !== 'ssh' || authType !== 'password' || vaultCredentialId === null) return null
+    const user = vaultEntries.find((v) => v.id === vaultCredentialId)?.username?.trim()
+    return user ? user : null
+  })
+  // Keep the session's own copy in step, so lists and exports show the user
+  // it really logs in as.
+  $effect(() => {
+    if (vaultUser !== null && username !== vaultUser) username = vaultUser
+  })
   let device = $state('')
   let baudRate = $state(9600)
   let folderId = $state<number | null>(null)
@@ -612,11 +628,16 @@
           bind:value={username}
           placeholder="admin"
           required
+          disabled={vaultUser !== null}
+          title={vaultUser !== null ? 'Taken from the vault entry' : ''}
           autocomplete="off"
           autocapitalize="off"
           autocorrect="off"
           spellcheck="false"
         />
+        {#if vaultUser !== null}
+          <span class="from-vault">From the vault entry. Change it in the vault.</span>
+        {/if}
       </label>
       <label>
         Authentication
@@ -639,16 +660,18 @@
             </select>
           </label>
         {/if}
-        {#if vaultCredentialId === null}
-          <label>
-            Password
+        <label>
+          Password
+          {#if vaultCredentialId === null}
             <input
               type="password"
               bind:value={password}
               placeholder={isEdit ? 'leave blank to keep current' : ''}
             />
-          </label>
-        {/if}
+          {:else}
+            <input type="password" disabled placeholder="taken from the vault entry" />
+          {/if}
+        </label>
       {:else if authType === 'key'}
         <label>
           Key file
@@ -669,9 +692,9 @@
       {#if isEdit}
         <p class="hint">
           Changing the authentication method or entering a new password / passphrase updates this
-          session's credential on save. Leaving the secret blank keeps the current one. Typing a
-          password on a session that uses a vault entry gives it its own private secret — the shared
-          vault entry is left unchanged.
+          session's credential on save. Leaving the secret blank keeps the current one. To give a
+          session that uses a vault entry its own password, choose "— type a password —" first; the
+          shared vault entry is left unchanged.
         </p>
       {/if}
 
@@ -1304,6 +1327,16 @@
     user-select: none;
   }
 
+  /* A field whose value comes from the vault entry: shown, not editable. */
+  input:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .from-vault {
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: var(--zx-text-muted);
+  }
   .hint {
     font-size: 0.74rem;
     color: var(--zx-text-muted);

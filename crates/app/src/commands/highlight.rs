@@ -37,6 +37,36 @@ pub async fn list_highlight_rules(
         .map_err(|e| AppError::Internal(e.to_string()))
 }
 
+/// A pattern the highlighter can compile and no other rule already uses.
+/// `own_id` is the rule being edited, which may keep its own pattern.
+fn check_pattern(
+    rules: &[HighlightRule],
+    own_id: Option<i64>,
+    pattern: &str,
+    is_regex: bool,
+) -> Result<(), String> {
+    if pattern.trim().is_empty() {
+        return Err("Pattern is required".into());
+    }
+    core_highlight::compile(pattern, is_regex).map_err(|e| {
+        if is_regex {
+            format!("Invalid regex: {e}")
+        } else {
+            format!("Invalid pattern: {e}")
+        }
+    })?;
+    if let Some(other) = rules
+        .iter()
+        .find(|r| Some(r.id) != own_id && r.pattern == pattern && r.is_regex == is_regex)
+    {
+        return Err(format!(
+            "The rule \u{201c}{}\u{201d} already has this pattern",
+            other.name
+        ));
+    }
+    Ok(())
+}
+
 #[tauri::command]
 #[allow(clippy::too_many_arguments)]
 pub async fn create_highlight_rule(
@@ -49,6 +79,11 @@ pub async fn create_highlight_rule(
     bold: bool,
     underline: bool,
 ) -> Result<i64, AppError> {
+    let rules = state
+        .db
+        .list_highlight_rules()
+        .map_err(|e| AppError::Internal(e.to_string()))?;
+    check_pattern(&rules, None, &pattern, is_regex).map_err(AppError::Internal)?;
     let id = state
         .db
         .create_highlight_rule(
@@ -63,6 +98,17 @@ pub async fn create_highlight_rule(
         .map_err(|e| AppError::Internal(e.to_string()))?;
     rebuild_highlighter(&state);
     Ok(id)
+}
+
+/// Where a pattern matches in a sample line, in UTF-16 units, using the same
+/// engine as the terminal. An invalid pattern is the error.
+#[tauri::command]
+pub async fn test_highlight_pattern(
+    pattern: String,
+    is_regex: bool,
+    sample: String,
+) -> Result<Vec<(usize, usize)>, AppError> {
+    core_highlight::match_ranges(&pattern, is_regex, &sample).map_err(AppError::Internal)
 }
 
 #[tauri::command]
@@ -95,6 +141,8 @@ pub async fn update_highlight_rule(
     state: State<'_, AppState>,
     id: i64,
     name: String,
+    pattern: String,
+    is_regex: bool,
     fg_color: Option<String>,
     bg_color: Option<String>,
     bold: bool,
@@ -104,6 +152,24 @@ pub async fn update_highlight_rule(
     let name = name.trim();
     if name.is_empty() {
         return Err(AppError::Internal("Name is required".into()));
+    }
+    let rules = state
+        .db
+        .list_highlight_rules()
+        .map_err(|e| AppError::Internal(e.to_string()))?;
+    let current = rules
+        .iter()
+        .find(|r| r.id == id)
+        .ok_or_else(|| AppError::Internal("This rule no longer exists".into()))?;
+    // A rule whose pattern stays is not re-checked: an old rule that no
+    // longer compiles can still be renamed or recoloured.
+    let pattern_changed = current.pattern != pattern || current.is_regex != is_regex;
+    if pattern_changed {
+        check_pattern(&rules, Some(id), &pattern, is_regex).map_err(AppError::Internal)?;
+        state
+            .db
+            .set_highlight_rule_pattern(id, &pattern, is_regex)
+            .map_err(|e| AppError::Internal(e.to_string()))?;
     }
     state
         .db
@@ -332,6 +398,27 @@ mod tests {
     }
 
     #[test]
+    fn check_pattern_validates_and_rejects_duplicates() {
+        let rules = vec![
+            rule(1, "Err", "ERROR", false),
+            rule(2, "Down", r"\bdown\b", true),
+        ];
+        // New, valid.
+        assert!(check_pattern(&rules, None, "(?i)disable", true).is_ok());
+        // Invalid regex — but fine as plain text.
+        let e = check_pattern(&rules, None, "(unclosed", true).unwrap_err();
+        assert!(e.starts_with("Invalid regex"), "{e}");
+        assert!(check_pattern(&rules, None, "(unclosed", false).is_ok());
+        assert!(check_pattern(&rules, None, "  ", false).is_err());
+        // Another rule has it; the rule itself may keep it.
+        let e = check_pattern(&rules, Some(2), "ERROR", false).unwrap_err();
+        assert!(e.contains("Err"), "{e}");
+        assert!(check_pattern(&rules, Some(1), "ERROR", false).is_ok());
+        // Same text, other kind, is a different rule.
+        assert!(check_pattern(&rules, None, "ERROR", true).is_ok());
+    }
+
+    #[test]
     fn export_round_trips_into_import() {
         let rules = vec![
             rule(1, "Err", "%ERROR", false),
@@ -499,6 +586,29 @@ mod tests {
         );
         let f = colored(&rules, "/dev/sda1   50G   46G  2.5G  95% /\n");
         assert_eq!(texts(&f, "Usage 90–97%"), ["95%"]);
+    }
+
+    /// FortiOS `get system status` reports settings as enable / disable.
+    #[test]
+    fn default_rules_colour_enable_and_disable() {
+        let rules = default_rules();
+        let f = colored(&rules, "Private Encryption: Disable\r\n");
+        assert_eq!(texts(&f, "Status: warning"), ["Disable"]);
+        let f = colored(&rules, "Virtual domain configuration: disable\r\n");
+        assert_eq!(texts(&f, "Status: warning"), ["disable"]);
+        let f = colored(&rules, "FIPS-CC mode: disable\r\n");
+        assert_eq!(texts(&f, "Status: warning"), ["disable"]);
+        let f = colored(&rules, "set status enable\r\n    set allowaccess ping\r\n");
+        assert_eq!(texts(&f, "Status: good"), ["enable"]);
+        let f = colored(&rules, "Log hard disk: Enable\r\n");
+        assert_eq!(texts(&f, "Status: good"), ["Enable"]);
+        // The longer forms still count, and longer words are left alone.
+        let f = colored(&rules, "port1 is enabled, port2 is disabled\n");
+        assert_eq!(texts(&f, "Status: good"), ["enabled"]);
+        assert_eq!(texts(&f, "Status: warning"), ["disabled"]);
+        let f = colored(&rules, "enablement disables\n");
+        assert!(texts(&f, "Status: good").is_empty());
+        assert!(texts(&f, "Status: warning").is_empty());
     }
 
     #[test]

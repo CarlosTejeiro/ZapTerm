@@ -5,7 +5,7 @@
 **Website:** <https://carlostejeiro.github.io/ZapTerm/>
 
 **Free software (GNU GPL v3 or later).**
-**Status: alpha — functional but not yet hardened for production.**
+**Status: in continuous development — see [Made for the community, provided as is](#made-for-the-community-provided-as-is).**
 
 ZapTerm is a fast, modern, multi-protocol terminal client for network engineers —
 a lightweight open-source alternative to SecureCRT, MobaXterm or PuTTY. It runs
@@ -75,11 +75,13 @@ Never hunt for a host again:
 The little things that add up across a long day:
 
 - **Command hints** — autocomplete from your own history plus vendor catalogs
-  for **12 platforms**, with automatic platform detection from the prompt.
+  for **9 platforms**, with automatic platform detection from the prompt.
 - **Command lists per vendor** — grouped commands and recipes under the
   terminal for the detected platform (local tabs get the Windows, macOS or
   Linux lists for their shell). They are JSON files: make your own copy
   in **Settings → Command Lists** and edit it; updates never change your copy.
+  The FortiGate lists follow the device's FortiOS release (7.2, 7.4, 7.6),
+  read from `get system status`.
 - **★ Custom commands** — your own command list, the same on every platform,
   next to Recent in the command bar (add, edit, remove, or ☆ a Recent entry).
 - **Keyword highlighting** — per-rule regex in true-color ANSI, on every
@@ -109,7 +111,9 @@ The little things that add up across a long day:
   `{{vault:Name.Password}}`.
 - Secrets are resolved **in the backend** at run time — they never enter the UI,
   the JSON, exports or logs.
-- Passwords **typed at a prompt** are never recorded to history or recents.
+- Passwords **typed at a prompt** are never recorded to history or recents, and
+  neither are configuration commands that carry a secret (`set psksecret …`,
+  `enable secret …`).
 
 ### Transfer files
 
@@ -268,6 +272,26 @@ zapterm/
 - [x] Linux packaging: from-source Arch `PKGBUILD` (`packaging/arch/`) — AUR/Flathub/Snap pending public distribution
 - [x] Regex matching in login-script expects (0.8)
 - [x] Edit remote files with a local editor over SFTP (0.8) — OS drag & drop upload deferred
+
+## Made for the community, provided as is
+
+ZapTerm is a personal, non-profit project. It is shared for free, with the
+simple hope of giving network engineers one more good tool to work with.
+
+It is in continuous development: new versions come out often, things change,
+and bugs can and do appear. Please keep that in mind before relying on it for
+critical work.
+
+ZapTerm comes with no warranty of any kind, and its author cannot accept
+responsibility for outages, data loss or any other damage arising from its use
+(the exact terms are sections 15 and 16 of the [licence](LICENSE)). A terminal
+sends what you tell it to send: you are responsible for the commands you run
+and for the devices you run them on. Try things in a lab first, keep backups,
+and read before you press Enter.
+
+If you find a bug or miss a feature, please
+[open an issue](https://github.com/CarlosTejeiro/ZapTerm/issues) — reports and
+ideas are how ZapTerm gets better for everyone.
 
 ## Contributing
 

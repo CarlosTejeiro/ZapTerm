@@ -71,9 +71,12 @@ notebooks).
 
 - **SSH auth**: password, public key, SSH agent, or keyboard-interactive (2FA).
 - **Use a saved credential (vault)**: in the session dialog, pick a vault entry
-  instead of typing a password. Choosing one fills the **Username** field (left
-  empty if the entry has none); the **password stays in the vault** and is never
-  shown. See [Credential Vault](#4-credential-vault).
+  instead of typing a password. The session then logs in with the **entry's
+  user and password**: both fields are shown locked, and changing either in the
+  vault changes it for every session that uses the entry. An entry without a
+  user leaves **Username** to the session (one password shared by several
+  users). To give the session its own password again, choose *— type a
+  password —*. See [Credential Vault](#4-credential-vault).
 - **Host-key verification**: on first connect ZapTerm shows the server's SHA-256
   fingerprint for you to approve; it's pinned in `known_hosts` and a later change
   is flagged.
@@ -96,7 +99,8 @@ a log.
 
 - **An entry has a Name (label), a Username, and a Password.** The **Name** is
   what you reference elsewhere — it is *not* the username.
-- **Create/edit** entries from the Vault dialog. Names are unique.
+- **Create/edit** entries from the Vault dialog. Names are unique. While you
+  are editing an entry, the form only goes away with Cancel, Save or Close.
 - **Use it two ways**:
   - Attach it to a saved session (the session's auth "Use a saved credential").
   - Reference it from a macro: `{{vault:<Name>.Password}}` or
@@ -203,6 +207,12 @@ connects (set in the New/Edit Session dialog).
   Commands with a `<value>` and multi-line recipes ask for their values first.
 - Commands that can load a device (real-time debugs, captures) show a ⚠ badge
   and ask before they are sent.
+- **By OS release.** The FortiGate lists cover FortiOS 7.2, 7.4 and 7.6. Run
+  `get system status` once: ZapTerm reads the version, remembers it for the
+  session and shows the commands of that release (for example
+  `diagnose sys sdwan service` up to 7.4.3 and `service4` / `service6` from
+  7.4.4). Before it knows the version it shows the newest forms. The same
+  status line also turns a session first taken for Linux into FortiGate.
 - **★ Custom** holds your own commands, on every platform; **Recent** lists
   the commands you used last.
 - **Edit the lists**: Settings → Command Lists → *Make my copy* writes that
@@ -211,13 +221,17 @@ connects (set in the New/Edit Session dialog).
   ★ Custom. **Macros** (multi-step, in the sidebar MACROS zone) are unchanged.
 - **Security**: a value you type at a **password prompt is never recorded** to
   history, Recent or hints (and can't resurface as a "previous command").
+  Neither is a configuration command that carries a secret as an argument
+  (`set psksecret …`, `enable secret …`, `username … password …`,
+  `snmp-server community …`); commands that only read, such as
+  `show run | include password`, are remembered.
 
 ---
 
 ## 7. Command hints & platform detection
 
 - As you type, ZapTerm suggests commands from your history and per-vendor catalogs
-  (12 platforms). Accept a ghost suggestion with `→` / `End`; open the
+  (9 platforms). Accept a ghost suggestion with `→` / `End`; open the
   suggestion popup with `Ctrl+Space`.
 - The session's **platform is auto-detected** from the banner and prompt, so
   suggestions and command lists match the device.

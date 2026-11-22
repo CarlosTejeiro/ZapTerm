@@ -637,10 +637,25 @@ export async function deleteHighlightRule(id: number): Promise<void> {
   return invoke<void>('delete_highlight_rule', { id })
 }
 
-/** Change a rule's name and style. Its pattern and regex flag stay. */
+/**
+ * Where `pattern` matches in `sample`, as [start, end) offsets into the
+ * string, found by the engine the terminal uses. Rejects with the reason when
+ * the pattern is not valid.
+ */
+export async function testHighlightPattern(
+  pattern: string,
+  isRegex: boolean,
+  sample: string,
+): Promise<[number, number][]> {
+  return invoke<[number, number][]>('test_highlight_pattern', { pattern, isRegex, sample })
+}
+
+/** Change a rule. Other synced devices see a changed pattern as a new rule. */
 export async function updateHighlightRule(
   id: number,
   name: string,
+  pattern: string,
+  isRegex: boolean,
   fgColor: string | null,
   bgColor: string | null,
   bold: boolean,
@@ -650,6 +665,8 @@ export async function updateHighlightRule(
   return invoke<void>('update_highlight_rule', {
     id,
     name,
+    pattern,
+    isRegex,
     fgColor,
     bgColor,
     bold,
