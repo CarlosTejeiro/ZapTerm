@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.7.15] - 2026-11-22
+
+### Security
+- **`url` updated to 2.5.9** (and `form_urlencoded` to 1.2.3), for
+  [RUSTSEC-2026-0592](https://rustsec.org/advisories/RUSTSEC-2026-0592): a
+  stack overflow in `Url::origin()` on nested `blob:` URLs. ZapTerm gets
+  `url` through Tauri; nothing in ZapTerm's own code changes.
+
 ## [1.7.14] - 2026-11-21
 
 ### Changed
