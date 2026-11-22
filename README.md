@@ -5,7 +5,7 @@
 **Website:** <https://carlostejeiro.github.io/ZapTerm/>
 
 **Free software (GNU GPL v3 or later).**
-**Status: alpha — functional but not yet hardened for production.**
+**Status: in continuous development — see [Made for the community, provided as is](#made-for-the-community-provided-as-is).**
 
 ZapTerm is a fast, modern, multi-protocol terminal client for network engineers —
 a lightweight open-source alternative to SecureCRT, MobaXterm or PuTTY. It runs
@@ -272,6 +272,26 @@ zapterm/
 - [x] Linux packaging: from-source Arch `PKGBUILD` (`packaging/arch/`) — AUR/Flathub/Snap pending public distribution
 - [x] Regex matching in login-script expects (0.8)
 - [x] Edit remote files with a local editor over SFTP (0.8) — OS drag & drop upload deferred
+
+## Made for the community, provided as is
+
+ZapTerm is a personal, non-profit project. It is shared for free, with the
+simple hope of giving network engineers one more good tool to work with.
+
+It is in continuous development: new versions come out often, things change,
+and bugs can and do appear. Please keep that in mind before relying on it for
+critical work.
+
+ZapTerm comes with no warranty of any kind, and its author cannot accept
+responsibility for outages, data loss or any other damage arising from its use
+(the exact terms are sections 15 and 16 of the [licence](LICENSE)). A terminal
+sends what you tell it to send: you are responsible for the commands you run
+and for the devices you run them on. Try things in a lab first, keep backups,
+and read before you press Enter.
+
+If you find a bug or miss a feature, please
+[open an issue](https://github.com/CarlosTejeiro/ZapTerm/issues) — reports and
+ideas are how ZapTerm gets better for everyone.
 
 ## Contributing
 
