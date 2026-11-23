@@ -13,15 +13,21 @@
      *  command is already on the devices' line ("live" mode) — only Enter is
      *  left to send. */
     onRunCompare?: (command: string, typed: boolean) => void
+    /** What the sessions belong to, for the label's tooltip. */
+    scopeLabel?: 'tab' | 'group'
   }
 
-  const { theme, sessionIds, onRunCompare }: Props = $props()
+  const { theme, sessionIds, onRunCompare, scopeLabel = 'tab' }: Props = $props()
 
   let line = $state('')
   // "live" = every keystroke is fanned out as you type (SecureCRT-style chat
   // mode). Off = nothing is sent until you press Enter (safer default — you
   // compose the whole command, review it, then dispatch).
   let live = $state(false)
+  const LIVE_HELP =
+    'Off: nothing is sent until you press Enter, so you can check the command first. ' +
+    'On: every key goes to all the sessions as you type it — for what a device answers ' +
+    'before Enter, such as ? for context help on Cisco IOS. Backspace is sent too.'
   let flash = $state<string | null>(null)
   let flashTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -109,15 +115,21 @@
   style:--mb-border={theme.border}
   style:--mb-accent={theme.accent}
 >
-  <span class="mb-label" style:color={theme.accent}>
+  <span
+    class="mb-label"
+    style:color={theme.accent}
+    title={`What you type in this box goes to all ${sessionIds.length} session${sessionIds.length === 1 ? '' : 's'} of this ${scopeLabel}`}
+  >
     <Icon name="cast" size={13} />
-    MASTER
+    SEND TO ALL
   </span>
   <input
     class="mb-input"
-    placeholder={sessionIds.length
-      ? `Broadcast to ${sessionIds.length} host${sessionIds.length === 1 ? '' : 's'}… (Enter to send)`
-      : 'Waiting for sessions to connect…'}
+    placeholder={!sessionIds.length
+      ? 'Waiting for sessions to connect…'
+      : live
+        ? `Each key goes to ${sessionIds.length} host${sessionIds.length === 1 ? '' : 's'} as you type`
+        : `Broadcast to ${sessionIds.length} host${sessionIds.length === 1 ? '' : 's'}… (Enter to send)`}
     bind:value={line}
     oninput={onInput}
     onkeydown={onKeydown}
@@ -139,9 +151,9 @@
       title="Run on all and compare the output">▶ Run &amp; compare</button
     >
   {/if}
-  <label class="mb-live" style:color={theme.textMuted} title="Stream every keystroke as you type">
+  <label class="mb-live" style:color={theme.textMuted} title={LIVE_HELP}>
     <input type="checkbox" bind:checked={live} />
-    live
+    Send keys as I type
   </label>
 </div>
 

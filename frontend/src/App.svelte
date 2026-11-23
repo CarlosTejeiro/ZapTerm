@@ -154,6 +154,10 @@
     /** Stable label/colour for the tab (mirrors the first leaf at creation). */
     label: string
     color: string
+    /** Multi on for this tab: what is typed in one of its panes, and the
+     *  command-list items clicked, go to all its sessions. Per tab, so
+     *  switching tabs never carries it over. */
+    multi: boolean
   }
 
   /** All panes in a tab, regardless of layout. */
@@ -275,6 +279,7 @@
       statuses: new SvelteMap<number, PaneStatus>([[pane.id, 'connecting']]),
       label: pane.label,
       color: pane.color,
+      multi: false,
     }
   }
 
@@ -288,6 +293,7 @@
       statuses,
       label,
       color: panes[0]?.color ?? pickColor(),
+      multi: false,
     }
   }
 
@@ -344,7 +350,6 @@
   let bytesPerSecBySession = $state<Record<string, number>>({})
   /// When set, opens NewSessionDialog in edit mode with the given session pre-filled.
   let editingSession = $state<SavedSession | null>(null)
-  let multiOn = $state(false)
 
   // Macro library (sidebar Macros section): macros are snippets carrying steps.
   let editingMacro = $state<Snippet | 'new' | null>(null)
@@ -533,9 +538,6 @@
   $effect(() => {
     sessionRuntime.focusedPaneId = focusedPaneId
   })
-  $effect(() => {
-    broadcast.enabled = multiOn
-  })
 
   // Tell the bottom bar which session is focused, so it shows that vendor's
   // command lists and that session's recent commands. Effects
@@ -568,6 +570,37 @@
 
   const activeTab = $derived(tabs.find((t) => t.id === activeTabId))
 
+  // ── Multi (broadcast) — per tab, and only with two or more sessions ──────
+  /** Panes of a tab that hold a session (connected or connecting). */
+  function tabSessionCount(t: AppTab): number {
+    return tabPanes(t).filter((p) => !p.empty).length
+  }
+  const activeSessionCount = $derived(activeTab ? tabSessionCount(activeTab) : 0)
+  const multiOn = $derived(!!activeTab?.multi && activeSessionCount > 1)
+
+  function toggleMulti() {
+    if (!activeTab) return
+    if (!activeTab.multi && activeSessionCount < 2) {
+      showToast({
+        kind: 'info',
+        title: 'Multi needs two or more sessions',
+        detail: 'Split the tab or open a group, then turn Multi on to type in all of them at once.',
+      })
+      return
+    }
+    activeTab.multi = !activeTab.multi
+  }
+
+  // A tab left with a single session drops Multi, so it isn't silently on
+  // again the next time the tab is split.
+  $effect(() => {
+    for (const t of tabs) if (t.multi && tabSessionCount(t) < 2) t.multi = false
+  })
+
+  $effect(() => {
+    broadcast.enabled = multiOn
+  })
+
   /// Returns the first leaf's status as a coarse summary for the tab strip.
   function summaryStatus(tab: AppTab): PaneStatus {
     const id = firstPaneId(tab)
@@ -592,6 +625,7 @@
       label: tabDisplayLabel(t),
       color: t.color,
       status: summaryStatus(t),
+      multi: t.multi && tabSessionCount(t) > 1,
     })),
   )
 
@@ -1149,7 +1183,7 @@
         handleSplit(focusedPaneId, 'v')
         break
       case 'multi-exec':
-        multiOn = !multiOn
+        toggleMulti()
         break
       case 'quick-connect':
         showQuickConnect = true
@@ -1477,7 +1511,7 @@
       label: 'Toggle multi-exec',
       icon: 'cast' as const,
       section: 'Actions' as const,
-      run: () => (multiOn = !multiOn),
+      run: toggleMulti,
     },
     {
       id: 'act-close-tab',
@@ -1998,6 +2032,7 @@
         {activeTabId}
         {splitOn}
         {multiOn}
+        multiCount={activeSessionCount}
         onActivate={activateTab}
         onAdd={addLocalTab}
         onClose={closeTab}
@@ -2005,7 +2040,7 @@
         onDuplicate={duplicateTab}
         onSetColor={setTabColor}
         onToggleSplit={handleSplitFocused}
-        onToggleMulti={() => (multiOn = !multiOn)}
+        onToggleMulti={toggleMulti}
       />
 
       <div class="pylon-panes">
@@ -2023,6 +2058,7 @@
                 {theme}
                 {focusedPaneId}
                 active={tab.id === activeTabId}
+                broadcasting={tab.multi && tabSessionCount(tab) > 1}
                 onFocus={(id) => (focusedPaneId = id)}
                 onClosePane={(id) => handleClosePane(id)}
                 onStatusChange={(id, s) => handleStatusChange(tab.id, id, s)}
@@ -2034,6 +2070,7 @@
                 {theme}
                 {focusedPaneId}
                 {canClosePanes}
+                broadcasting={tab.multi && tabSessionCount(tab) > 1}
                 onFocus={(id) => (focusedPaneId = id)}
                 onSplit={(id, dir) => handleSplit(id, dir)}
                 onClosePane={(id) => handleClosePane(id)}

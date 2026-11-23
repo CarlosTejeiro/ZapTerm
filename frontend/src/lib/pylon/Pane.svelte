@@ -66,6 +66,8 @@
     onClosePane?: () => void
     onStatusChange?: (status: PaneStatus) => void
     onGlobalShortcut?: (key: string, e: KeyboardEvent) => void
+    /** Multi is on in this pane's tab: what is typed here goes to the others. */
+    broadcasting?: boolean
   }
 
   const {
@@ -80,6 +82,7 @@
     onClosePane,
     onStatusChange,
     onGlobalShortcut,
+    broadcasting = false,
   }: Props = $props()
 
   let status = $state<PaneStatus>('connecting')
@@ -374,9 +377,11 @@
   class="pane"
   style:background={theme.terminal.bg}
   style:border-radius="calc({theme.radius} + 4px)"
-  style:box-shadow={focused && hasSiblings
-    ? `inset 0 0 0 1px color-mix(in srgb, ${theme.accent} 60%, transparent), 0 1px 2px rgba(0,0,0,0.14), 0 8px 26px rgba(0,0,0,0.18)`
-    : `inset 0 0 0 1px ${theme.border}, 0 1px 2px rgba(0,0,0,0.12), 0 6px 20px rgba(0,0,0,0.14)`}
+  style:box-shadow={broadcasting
+    ? `inset 0 0 0 ${focused ? 2 : 1}px ${theme.accent2}, 0 1px 2px rgba(0,0,0,0.14), 0 8px 26px rgba(0,0,0,0.18)`
+    : focused && hasSiblings
+      ? `inset 0 0 0 1px color-mix(in srgb, ${theme.accent} 60%, transparent), 0 1px 2px rgba(0,0,0,0.14), 0 8px 26px rgba(0,0,0,0.18)`
+      : `inset 0 0 0 1px ${theme.border}, 0 1px 2px rgba(0,0,0,0.12), 0 6px 20px rgba(0,0,0,0.14)`}
   onclick={onFocus}
   onkeydown={(e) => {
     if (e.key === 'Enter' || e.key === ' ') onFocus()

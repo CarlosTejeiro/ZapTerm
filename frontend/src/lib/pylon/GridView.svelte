@@ -27,6 +27,8 @@
     onClosePane: (paneId: number) => void
     onStatusChange: (paneId: number, status: PaneStatus) => void
     onGlobalShortcut?: (key: string, e: KeyboardEvent) => void
+    /** Multi is on in this tab (border on every pane). */
+    broadcasting?: boolean
   }
 
   const {
@@ -39,6 +41,7 @@
     onClosePane,
     onStatusChange,
     onGlobalShortcut,
+    broadcasting = false,
   }: Props = $props()
 
   // Live session UUIDs of the panes currently in this grid. Recomputed as
@@ -103,6 +106,7 @@
           onClosePane={() => onClosePane(pane.id)}
           onStatusChange={(s) => onStatusChange(pane.id, s)}
           {onGlobalShortcut}
+          {broadcasting}
         />
       </div>
     {/each}
@@ -122,7 +126,12 @@
     />
   {/if}
 
-  <MasterInputBar {theme} sessionIds={liveSessionIds} onRunCompare={runCompare} />
+  <MasterInputBar
+    {theme}
+    sessionIds={liveSessionIds}
+    scopeLabel="group"
+    onRunCompare={runCompare}
+  />
 </div>
 
 <style>

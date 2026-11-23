@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
-## [1.8.5-beta] - beta of the automation work (branch `claude/automation`, not on main yet)
+## [1.8.6-beta] - beta of the automation work (branch `claude/automation`, not on main yet)
 
 Betas are the 1.8.x versions: 1.8.0, 1.8.1… tagged `v1.8.0-beta`, `v1.8.1-beta`…
 (1.6.0 was the first beta, before the encrypted vault reached main as 1.7.)
@@ -43,6 +43,22 @@ Includes everything up to 1.7.16 (the sections below), plus:
     back within 10 s.
   - A device that pauses mid-output is no longer cut short: if more output
     arrives after a quiet second, the capture carries on.
+
+- **Multi is per tab and needs two or more sessions.** It was one global
+  switch: it stayed on when you moved to another tab, so typing there could
+  reach several devices unnoticed, and in a tab with a single session it did
+  nothing at all. Now each tab has its own Multi; with fewer than two
+  sessions the button is greyed out and explains how to get there (split the
+  tab or open a group), and a tab left with one session turns it off. While
+  it is on, the button reads "Multi · N", the tab shows a broadcast icon and
+  every pane in it has a coloured border.
+- **The "MASTER" bar is now "SEND TO ALL"**, and its tooltip says how many
+  sessions of the tab (or group) receive what is typed there.
+- **"live" in the bar is now "Send keys as I type"**, with a tooltip
+  saying what it does: off (the default), nothing is sent until Enter; on,
+  every key goes to all the sessions as you type it, for what a device
+  answers before Enter (such as `?` for context help on Cisco IOS). The box's
+  placeholder says which mode is on.
 
 ### Fixed
 - **Run & compare with "live" on sent the command twice.** Live mode had
