@@ -23,9 +23,10 @@ import { invoke } from '@tauri-apps/api/core'
 import { onTerminalData } from '$lib/bridge/events'
 import { promptReturned } from '$lib/bridge/commands'
 import type { UnlistenFn } from '@tauri-apps/api/event'
-import { endsAtPager, type CompareHost, type HostState } from './compare'
+import { endsAtPager, MAX_PAGES, type CompareHost, type HostState } from './compare'
 
 export type { HostState }
+export { MAX_PAGES }
 
 export interface HostCapture extends CompareHost {
   platform: string | null
@@ -70,8 +71,6 @@ const DEFAULT_TIMEOUT_MS = 10_000
 // listening this much longer before closing the run: a device that pauses
 // mid-output then still gets its full output compared.
 const GRACE_MS = 1_500
-/** Most pages one host is paged through in one run. */
-export const MAX_PAGES = 200
 
 function stripAnsi(s: string): string {
   return (

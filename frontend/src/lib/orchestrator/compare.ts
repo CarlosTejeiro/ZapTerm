@@ -4,6 +4,10 @@
 
 export type HostState = 'running' | 'done' | 'timeout'
 
+/** Most pages one session is paged through for one command when "Page
+ *  through --More--" is on. */
+export const MAX_PAGES = 200
+
 /** What the comparison needs to know about one pane. */
 export interface CompareHost {
   sessionId: string
