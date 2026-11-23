@@ -284,6 +284,8 @@ progress. -->
   the most common, or on a tie the left-most pane's); **…** still waiting;
   **–** no reply; **!** the capture may be incomplete. With two versions the
   differences show straight away; with more, each one can be compared with A.
+  The differences show side by side, each output with its line numbers
+  (**Split**, the default), or in one column (**Unified**).
   The panel warns when panes are connected to the same device (same output
   expected), when the output still stopped at a `--More--` prompt, and when no
   prompt came back within 10 s. **Page through --More--** (on by default)

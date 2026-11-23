@@ -8,6 +8,7 @@ import {
   normalizeOutput,
   paneTarget,
   sameDeviceSets,
+  splitRows,
   type CompareHost,
 } from './compare'
 import { liveDelta } from '$lib/pylon/liveInput'
@@ -192,5 +193,37 @@ describe('paneTarget', () => {
       null,
     )
     expect(paneTarget({})).toBe(null)
+  })
+})
+
+describe('splitRows', () => {
+  const same = (t: string) => ({ kind: 'same' as const, text: t })
+  const a = (t: string) => ({ kind: 'a' as const, text: t })
+  const b = (t: string) => ({ kind: 'b' as const, text: t })
+
+  it('puts identical lines face to face and pairs changes in order', () => {
+    expect(splitRows([same('x'), a('old 1'), a('old 2'), b('new 1'), same('y')])).toEqual([
+      { left: { n: 1, text: 'x', kind: 'same' }, right: { n: 1, text: 'x', kind: 'same' } },
+      { left: { n: 2, text: 'old 1', kind: 'a' }, right: { n: 2, text: 'new 1', kind: 'b' } },
+      { left: { n: 3, text: 'old 2', kind: 'a' }, right: null },
+      { left: { n: 4, text: 'y', kind: 'same' }, right: { n: 3, text: 'y', kind: 'same' } },
+    ])
+  })
+
+  it('numbers lines past a fold, and keeps the fold', () => {
+    const rows = splitRows([{ kind: 'gap', count: 5 }, b('added'), same('z')])
+    expect(rows).toEqual([
+      { kind: 'gap', count: 5 },
+      { left: null, right: { n: 6, text: 'added', kind: 'b' } },
+      { left: { n: 6, text: 'z', kind: 'same' }, right: { n: 7, text: 'z', kind: 'same' } },
+    ])
+  })
+
+  it('pairs interleaved removals and additions as one block', () => {
+    const rows = splitRows([a('a1'), b('b1'), a('a2'), b('b2')])
+    expect(rows.map((r) => ('count' in r ? r : [r.left?.text, r.right?.text]))).toEqual([
+      ['a1', 'b1'],
+      ['a2', 'b2'],
+    ])
   })
 })

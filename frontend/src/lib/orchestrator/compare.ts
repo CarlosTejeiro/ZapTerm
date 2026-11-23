@@ -194,6 +194,64 @@ export function collapseSame(
   return out
 }
 
+/** One side of a split-view row: a line and its number in that output. */
+export interface SplitCell {
+  n: number
+  text: string
+  /** `same` on both sides, `a` (only in the left output), `b` (only in the
+   *  right one). */
+  kind: 'same' | 'a' | 'b'
+}
+
+/** A row of the side-by-side diff: a fold of identical lines, or a line on
+ *  the left and/or the right (null where that side has no line). */
+export type SplitRow =
+  | { kind: 'gap'; count: number }
+  | { left: SplitCell | null; right: SplitCell | null }
+
+/**
+ * Lay the rows of `collapseSame` out side by side, the way a split diff shows
+ * them: identical lines face each other, and in each block of changes the
+ * removed lines are paired in order with the added ones (left and right).
+ * Lines are numbered as in each output, counting the folded ones.
+ */
+export function splitRows(rows: DiffRow[]): SplitRow[] {
+  const out: SplitRow[] = []
+  let na = 0
+  let nb = 0
+  let removed: string[] = []
+  let added: string[] = []
+  const flush = () => {
+    for (let i = 0; i < Math.max(removed.length, added.length); i++) {
+      out.push({
+        left: i < removed.length ? { n: ++na, text: removed[i]!, kind: 'a' } : null,
+        right: i < added.length ? { n: ++nb, text: added[i]!, kind: 'b' } : null,
+      })
+    }
+    removed = []
+    added = []
+  }
+  for (const r of rows) {
+    if (r.kind === 'a') removed.push(r.text)
+    else if (r.kind === 'b') added.push(r.text)
+    else {
+      flush()
+      if (r.kind === 'gap') {
+        na += r.count
+        nb += r.count
+        out.push(r)
+      } else {
+        out.push({
+          left: { n: ++na, text: r.text, kind: 'same' },
+          right: { n: ++nb, text: r.text, kind: 'same' },
+        })
+      }
+    }
+  }
+  flush()
+  return out
+}
+
 /** What `paneTarget` needs to know about a pane. */
 export interface PaneEndpoint {
   savedSession?: { protocol: string; host: string | null; port: number | null }

@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
-## [1.8.9-beta] - beta of the automation work (branch `claude/automation`, not on main yet)
+## [1.8.10-beta] - beta of the automation work (branch `claude/automation`, not on main yet)
 
 Betas are the 1.8.x versions: 1.8.0, 1.8.1… tagged `v1.8.0-beta`, `v1.8.1-beta`…
 (1.6.0 was the first beta, before the encrypted vault reached main as 1.7.)
@@ -18,6 +18,10 @@ disagree on which suffixes they accept.
 Includes everything up to 1.7.18 (the sections below), plus:
 
 ### Changed
+- **Run & compare shows the differences side by side.** The two outputs face
+  each other, each with its own line numbers; removed and added lines are
+  paired across, and identical runs stay folded. **Split / Unified** next to
+  the legend switches back to the single-column view; Split is the default.
 - **"Page through --More--" also works with Enter in the SEND TO ALL bar**
   (1.8.8 only paged during Run & compare, so a line sent with Enter still
   stopped at `--More--`). After the line goes out, each session that stops at

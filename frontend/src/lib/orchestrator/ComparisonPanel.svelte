@@ -12,8 +12,10 @@
     endsAtPager,
     joinNames,
     sameDeviceSets,
+    splitRows,
     type CompareHost,
     type DiffRow,
+    type SplitCell,
     type Variant,
   } from './compare'
   import { setCompareBadges, clearCompareBadges, type CompareBadge } from './compareBadges.svelte'
@@ -191,12 +193,47 @@
   <div class="legend">
     <span class="lg a">− {a.letter}: {namesOf(a.hosts)}</span>
     <span class="lg b">+ {b.letter}: {namesOf(b.hosts)}</span>
+    <span class="spacer"></span>
+    <span class="layout" role="group" aria-label="Diff layout">
+      <button
+        class:on={compareSettings.diffLayout === 'split'}
+        aria-pressed={compareSettings.diffLayout === 'split'}
+        onclick={() => (compareSettings.diffLayout = 'split')}
+        title="Side by side: the left output on the left, the right one on the right">Split</button
+      ><button
+        class:on={compareSettings.diffLayout === 'unified'}
+        aria-pressed={compareSettings.diffLayout === 'unified'}
+        onclick={() => (compareSettings.diffLayout = 'unified')}
+        title="One column: removed lines (−) then added lines (+)">Unified</button
+      >
+    </span>
   </div>
-  <pre class="diff">{#each diffRows(a, b) as r, i (i)}{#if r.kind === 'gap'}<span
-          class="dl gap">  ··· {r.count} identical line{r.count === 1 ? '' : 's'} ···
+  {#if compareSettings.diffLayout === 'split'}
+    <div class="sdiff" role="table" aria-label="Differences side by side">
+      {#each splitRows(diffRows(a, b)) as r, i (i)}
+        {#if 'count' in r}
+          <div class="sgap" role="row">
+            ··· {r.count} identical line{r.count === 1 ? '' : 's'} ···
+          </div>
+        {:else}
+          {@render half(r.left, false)}{@render half(r.right, true)}
+        {/if}
+      {/each}
+    </div>
+  {:else}
+    <pre class="diff">{#each diffRows(a, b) as r, i (i)}{#if r.kind === 'gap'}<span
+            class="dl gap">  ··· {r.count} identical line{r.count === 1 ? '' : 's'} ···
 </span>{:else}<span class="dl {r.kind}"
-          >{r.kind === 'a' ? '− ' : r.kind === 'b' ? '+ ' : '  '}{r.text}
+            >{r.kind === 'a' ? '− ' : r.kind === 'b' ? '+ ' : '  '}{r.text}
 </span>{/if}{/each}</pre>
+  {/if}
+{/snippet}
+
+{#snippet half(c: SplitCell | null, right: boolean)}
+  <span class="sn {c?.kind ?? 'none'}" class:r={right}>{c?.n ?? ''}</span><span
+    class="st {c?.kind ?? 'none'}"
+    >{c ? (c.kind === 'a' ? '− ' : c.kind === 'b' ? '+ ' : '  ') + c.text : ''}</span
+  >
 {/snippet}
 
 <section class="compare" style:font-family={theme.fontUi} aria-label="Run and compare">
@@ -414,9 +451,90 @@
   .legend {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 0.3rem 1rem;
     font-size: 0.74rem;
     font-family: var(--zx-font-mono);
+  }
+  .layout {
+    display: inline-flex;
+    border: 1px solid var(--zx-border);
+    border-radius: var(--zx-radius);
+    overflow: hidden;
+    font-family: var(--zx-font-ui);
+  }
+  .layout button {
+    all: unset;
+    cursor: pointer;
+    padding: 0.1rem 0.55rem;
+    font-size: 0.7rem;
+    color: var(--zx-text-muted);
+  }
+  .layout button + button {
+    border-left: 1px solid var(--zx-border);
+  }
+  .layout button.on {
+    background: color-mix(in srgb, var(--zx-accent) 18%, transparent);
+    color: var(--zx-accent);
+  }
+  .layout button:focus-visible {
+    outline: 1px solid var(--zx-accent);
+    outline-offset: -1px;
+  }
+
+  /* Side by side: line number | left output | line number | right output. */
+  .sdiff {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr);
+    background: var(--zx-term-bg);
+    color: var(--zx-term-fg);
+    border: 1px solid color-mix(in srgb, var(--zx-term-fg) 12%, transparent);
+    border-radius: var(--zx-radius);
+    font-family: var(--zx-font-mono);
+    font-size: 0.74rem;
+    max-height: 16rem;
+    overflow-y: auto;
+    flex-shrink: 0;
+    padding: 0.3rem 0;
+  }
+  .sn {
+    padding: 0 0.45rem;
+    text-align: right;
+    color: var(--zx-term-dim);
+    user-select: none;
+    font-variant-numeric: tabular-nums;
+  }
+  /* The divider between the two outputs. */
+  .sn.r {
+    border-left: 1px solid color-mix(in srgb, var(--zx-term-fg) 14%, transparent);
+  }
+  .st {
+    padding-right: 0.6rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .st.same {
+    color: var(--zx-term-dim);
+  }
+  .sn.a,
+  .st.a {
+    color: var(--zx-term-err);
+    background: color-mix(in srgb, var(--zx-term-err) 10%, transparent);
+  }
+  .sn.b,
+  .st.b {
+    color: var(--zx-term-ok);
+    background: color-mix(in srgb, var(--zx-term-ok) 10%, transparent);
+  }
+  .sn.none,
+  .st.none {
+    background: color-mix(in srgb, var(--zx-term-fg) 4%, transparent);
+  }
+  .sgap {
+    grid-column: 1 / -1;
+    padding: 0.1rem 0.65rem;
+    color: var(--zx-term-dim);
+    font-style: italic;
   }
   .lg.a {
     color: var(--zx-err);
