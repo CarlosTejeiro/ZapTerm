@@ -32,30 +32,63 @@ export interface Comparison {
   noReply: CompareHost[]
 }
 
+// "--More--" (Cisco IOS, Arista, FortiOS), "---(more)---" / "---(more 45%)---"
+// (Junos), "<--- More --->" (Cisco ASA).
+/** A pager prompt at the end of a line. */
+const PAGER_RE = /(?:^|\s)(?:<?-{2,}\s*\(?\s*more\b[^\n]*?\)?\s*-{2,}>?)\s*$/i
+/** A pager prompt the device left at the start of a line when it paged on
+ *  without erasing it, with the spaces after it. */
+const PAGER_PREFIX_RE = /^\s*<?-{2,}\s*\(?\s*more\b[^\n]*?\)?\s*-{2,}>?[ \t]*/i
+
+/**
+ * One line as a terminal shows it: a carriage return goes back to the start
+ * of the line, a backspace one column left, and what comes next overwrites
+ * what was there. Pagers erase their prompt this way (`--More--` followed by
+ * backspaces, or by `\r` and spaces) before printing the next page.
+ */
+function renderLine(line: string): string {
+  if (!/[\r\b]/.test(line)) return line
+  const cells: string[] = []
+  let col = 0
+  for (const ch of line) {
+    if (ch === '\r') col = 0
+    else if (ch === '\b') col = Math.max(0, col - 1)
+    else cells[col++] = ch
+  }
+  return Array.from(cells, (c) => c ?? ' ').join('')
+}
+
+/** The capture split into lines, each rendered as the terminal shows it. */
+function renderLines(buffer: string): string[] {
+  return buffer.replace(/\r\n/g, '\n').split('\n').map(renderLine)
+}
+
 /**
  * The part of a capture that is compared: without the echoed command (first
- * line), the prompt that came back (last non-empty line) and spaces at line
- * ends, with line endings unified.
+ * line), the prompt that came back (last non-empty line), pager prompts and
+ * spaces at line ends, with line endings unified.
  */
 export function normalizeOutput(buffer: string, command: string): string {
-  let lines = buffer.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n')
+  let lines = renderLines(buffer)
   if (lines.length && command && lines[0]!.includes(command)) lines = lines.slice(1)
   while (lines.length && lines[lines.length - 1]!.trim() === '') lines.pop()
-  if (lines.length) lines = lines.slice(0, -1) // the prompt that came back
+  // The prompt that came back — or, when the capture stopped at a pager, that
+  // pager prompt.
+  if (lines.length) lines = lines.slice(0, -1)
   return lines
+    .flatMap((l) => {
+      // A pager prompt left behind mid-output: drop it, keep what follows.
+      const rest = l.replace(PAGER_PREFIX_RE, '')
+      return rest !== l && rest.trim() === '' ? [] : [rest]
+    })
     .map((l) => l.replace(/\s+$/, ''))
     .join('\n')
     .trim()
 }
 
-// "--More--" (Cisco IOS, Arista, FortiOS), "---(more)---" / "---(more 45%)---"
-// (Junos), "<--- More --->" (Cisco ASA). Only the last line of a capture is
-// looked at.
-const PAGER_RE = /(?:^|\s)(?:<?-{2,}\s*\(?\s*more\b[^\n]*?\)?\s*-{2,}>?)\s*$/i
-
 /** True when the capture stopped at a pager prompt such as `--More--`. */
 export function endsAtPager(buffer: string): boolean {
-  const lines = buffer.replace(/\r/g, '\n').split('\n')
+  const lines = renderLines(buffer)
   for (let i = lines.length - 1; i >= 0; i--) {
     const l = lines[i]!.trim()
     if (l) return PAGER_RE.test(l)

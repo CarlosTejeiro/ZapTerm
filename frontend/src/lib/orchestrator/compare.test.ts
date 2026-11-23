@@ -31,6 +31,32 @@ describe('normalizeOutput', () => {
     const raw = 'FW # get system status\r\nVersion: v7.4.5  \r\nSerial: X1\r\nFW # '
     expect(normalizeOutput(raw, CMD)).toBe('Version: v7.4.5\nSerial: X1')
   })
+
+  it('drops pager prompts the device erased when paging on', () => {
+    const want = 'line 1\nline 2\nline 3'
+    // Cisco IOS: " --More-- ", then backspaces, spaces, backspaces.
+    const bs = '\b'.repeat(10)
+    const ios = `sw# show run\r\nline 1\r\n --More-- ${bs}          ${bs}line 2\r\nline 3\r\nsw# `
+    expect(normalizeOutput(ios, 'show run')).toBe(want)
+    // Carriage return and spaces over the prompt (Junos style).
+    const junos = `show run\r\nline 1\r\n---(more 50%)---\r                \rline 2\r\nline 3\r\nr1> `
+    expect(normalizeOutput(junos, 'show run')).toBe(want)
+  })
+
+  it('drops pager prompts left at the start of a line', () => {
+    const raw = 'show run\nline 1\n--More-- line 2\n<--- More --->\nline 3\nfw# '
+    expect(normalizeOutput(raw, 'show run')).toBe('line 1\nline 2\nline 3')
+  })
+
+  it('keeps a line ended by a carriage return', () => {
+    expect(normalizeOutput('show ver\r\r\nVersion 1\r\r\nfw# ', 'show ver')).toBe('Version 1')
+  })
+
+  it('drops the pager prompt a capture stopped at, keeping the last output line', () => {
+    expect(normalizeOutput('show run\nline 1\nline 2\n --More-- ', 'show run')).toBe(
+      'line 1\nline 2',
+    )
+  })
 })
 
 describe('endsAtPager', () => {
@@ -43,6 +69,10 @@ describe('endsAtPager', () => {
     expect(endsAtPager('--More--\nFW # ')).toBe(false)
     expect(endsAtPager('Learn more about it\nFW # ')).toBe(false)
     expect(endsAtPager('')).toBe(false)
+  })
+  it('does not see a pager prompt the device has already erased', () => {
+    expect(endsAtPager('a\n --More-- ' + '\b'.repeat(10) + ' '.repeat(10))).toBe(false)
+    expect(endsAtPager('a\n---(more)---\r              \r')).toBe(false)
   })
 })
 

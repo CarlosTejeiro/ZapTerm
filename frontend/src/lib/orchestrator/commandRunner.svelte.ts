@@ -14,12 +14,16 @@
 //   2. Time window — a global timeout flips any still-running host to
 //      `timeout`. This is also the ONLY mechanism for hosts whose platform is
 //      unknown (prompt_returned always returns false there).
+//
+// With `autoPage`, a host whose output stops at a pager prompt (`--More--`,
+// `---(more)---`, `<--- More --->`) is sent a space so the device prints the
+// next page, and the deadline starts again, up to MAX_PAGES pages per host.
 
 import { invoke } from '@tauri-apps/api/core'
 import { onTerminalData } from '$lib/bridge/events'
 import { promptReturned } from '$lib/bridge/commands'
 import type { UnlistenFn } from '@tauri-apps/api/event'
-import type { CompareHost, HostState } from './compare'
+import { endsAtPager, type CompareHost, type HostState } from './compare'
 
 export type { HostState }
 
@@ -30,6 +34,8 @@ export interface HostCapture extends CompareHost {
    *  run is still open goes back to `running`, so a pause mid-output doesn't
    *  cut the capture short. */
   doneBy: 'prompt' | 'settle' | null
+  /** Spaces sent to page on through a `--More--` pager. */
+  pages: number
 }
 
 export interface RunnerHost {
@@ -47,6 +53,9 @@ export interface RunOptions {
    *  "live" mode streamed it while it was typed): only press Enter, and don't
    *  wait for an echo that arrived before the run started. */
   typed?: boolean
+  /** Answer pager prompts (`--More--`) with a space so the whole output is
+   *  captured. */
+  autoPage?: boolean
 }
 
 const QUIET_MS = 150
@@ -61,6 +70,8 @@ const DEFAULT_TIMEOUT_MS = 10_000
 // listening this much longer before closing the run: a device that pauses
 // mid-output then still gets its full output compared.
 const GRACE_MS = 1_500
+/** Most pages one host is paged through in one run. */
+export const MAX_PAGES = 200
 
 function stripAnsi(s: string): string {
   return (
@@ -91,6 +102,7 @@ export class CommandRunner {
   #timeoutMs: number
   /** Wait for the command's echo before trusting completion. */
   #needEcho = true
+  #autoPage = false
 
   constructor(timeoutMs: number = DEFAULT_TIMEOUT_MS) {
     this.#timeoutMs = timeoutMs
@@ -108,6 +120,7 @@ export class CommandRunner {
     this.command = command
     this.running = true
     this.#needEcho = !opts.typed
+    this.#autoPage = opts.autoPage ?? false
     this.hosts = hosts.map((h) => ({
       sessionId: h.sessionId,
       label: h.label,
@@ -116,6 +129,7 @@ export class CommandRunner {
       target: h.target,
       state: 'running' as HostState,
       doneBy: null,
+      pages: 0,
       buffer: '',
     }))
     for (const h of hosts) this.#decoders.set(h.sessionId, new TextDecoder())
@@ -128,6 +142,12 @@ export class CommandRunner {
       invoke('send_input', { sessionId: h.sessionId, data: bytes }).catch(console.error)
     }
 
+    this.#armDeadline()
+  }
+
+  /** (Re)start the time limit for the run. */
+  #armDeadline() {
+    if (this.#globalTimer) clearTimeout(this.#globalTimer)
     this.#globalTimer = setTimeout(() => this.#expire(), this.#timeoutMs)
   }
 
@@ -189,6 +209,20 @@ export class CommandRunner {
     // Wait until the command echo has shown up before trusting a prompt match;
     // otherwise the echoed prompt right after sending can look "done".
     if (!this.#echoSeen(host)) return
+
+    // Stopped at a pager: press Space for the next page. Only looked at once
+    // the host has gone quiet, so it is really waiting for a key; the next
+    // check comes with the device's next output, so one space per prompt.
+    // Past MAX_PAGES it is left at the prompt (and flagged as incomplete).
+    if (this.#autoPage && endsAtPager(host.buffer.slice(-2048))) {
+      if (host.pages < MAX_PAGES) {
+        host.pages++
+        invoke('send_input', { sessionId, data: [0x20] }).catch(console.error)
+        this.#armDeadline()
+      }
+      return
+    }
+
     if (!host.platform) return // unknown platform → time-window only
 
     // Check only the tail to keep the regex cheap and end-anchored.
