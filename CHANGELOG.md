@@ -8,14 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
-## [1.8.6-beta] - beta of the automation work (branch `claude/automation`, not on main yet)
+## [1.8.7-beta] - beta of the automation work (branch `claude/automation`, not on main yet)
 
 Betas are the 1.8.x versions: 1.8.0, 1.8.1… tagged `v1.8.0-beta`, `v1.8.1-beta`…
 (1.6.0 was the first beta, before the encrypted vault reached main as 1.7.)
 The app version itself carries no suffix, because the MSI and RPM bundlers
 disagree on which suffixes they accept.
 
-Includes everything up to 1.7.16 (the sections below), plus:
+Includes everything up to 1.7.18 (the sections below), plus:
 
 ### Security
 - **`cookie` updated to 0.18.3** for
@@ -89,6 +89,22 @@ Includes everything up to 1.7.16 (the sections below), plus:
   Refused, declined and approved commands are logged in the panel.
 - `Session.run(..., strict=True)` raises instead of returning an empty string
   when read-only keeps a command from being sent.
+## [1.7.18] - 2026-11-23
+
+### Added
+- **Drag a session from the sidebar onto an empty split pane** to open it
+  there. Until now an empty pane was filled only by clicking a session while
+  it was focused. The pane shows a dashed outline while a session is over it;
+  the session stays where it is in the sidebar.
+
+## [1.7.17] - 2026-11-23
+
+### Security
+- **`cookie` updated to 0.18.3**, for
+  [RUSTSEC-2026-0594](https://rustsec.org/advisories/RUSTSEC-2026-0594)
+  ("private cookie nonces can repeat in processes that fork"). ZapTerm gets
+  `cookie` through Tauri; nothing in ZapTerm's own code changes.
+
 ## [1.7.16] - 2026-11-22
 
 ### Added

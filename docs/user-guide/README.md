@@ -265,7 +265,8 @@ progress. -->
 ## 10. Splits & multi-exec
 
 - **Split panes** (`Ctrl+\` / `Ctrl+Shift+\`): recursive horizontal/vertical
-  splits; open a saved session into an empty split from the sidebar.
+  splits; open a saved session into an empty split by clicking it in the
+  sidebar or dragging it onto the empty pane.
 - **Multi** (`Ctrl+Shift+M`): type once in several sessions. It is set per
   tab and needs two or more sessions in it — split the tab or open a group;
   with one session the button is greyed out and says so. While it is on, the
