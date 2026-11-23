@@ -288,9 +288,10 @@ progress. -->
   expected), when the output still stopped at a `--More--` prompt, and when no
   prompt came back within 10 s. **Page through --More--** (on by default)
   presses Space for you when a device stops at a pager prompt (`--More--`,
-  `---(more)---`, `<--- More --->`), only in that session and only during Run
-  & compare, up to 200 pages, so the whole output is compared; the pager
-  prompts are left out of the comparison. Panes with the same
+  `---(more)---`, `<--- More --->`) after a line sent from the SEND TO ALL bar,
+  with Enter or with Run & compare: only in that session, up to 200 pages, so
+  you get the whole output; Run & compare leaves the pager prompts out of the
+  comparison. What you type straight into a pane is not paged. Panes with the same
   name are told apart as "name (pane 2)". **Send keys as I type** in the SEND
   TO ALL bar sends every key to all the sessions as you type it (for what a
   device answers before Enter, such as `?` for context help on Cisco IOS),

@@ -1,10 +1,12 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte'
   import { invoke } from '@tauri-apps/api/core'
   import type { PylonTheme } from '$lib/themes/index'
   import Icon from '$lib/icons/Icon.svelte'
   import { liveDelta } from './liveInput'
   import { compareSettings } from '$lib/orchestrator/compareSettings.svelte'
-  import { MAX_PAGES } from '$lib/orchestrator/commandRunner.svelte'
+  import { MAX_PAGES } from '$lib/orchestrator/compare'
+  import { PagerWatch } from '$lib/orchestrator/pagerWatch'
 
   interface Props {
     theme: PylonTheme
@@ -31,9 +33,17 @@
     'On: every key goes to all the sessions as you type it — for what a device answers ' +
     'before Enter, such as ? for context help on Cisco IOS. Backspace is sent too.'
   const PAGE_HELP =
-    'Run & compare presses Space for you when a device stops at a pager prompt ' +
-    '(--More--, ---(more)---), so the whole output is compared. Only during ' +
-    `Run & compare, only in the session that is waiting, up to ${MAX_PAGES} pages.`
+    'Presses Space for you when a device stops at a pager prompt (--More--, ' +
+    '---(more)---), so you get the whole output. After a line sent from this bar ' +
+    `(Enter or Run & compare), only in the session that is waiting, up to ${MAX_PAGES} pages.`
+
+  // Pages through the output of a line sent with Enter (Run & compare pages
+  // through its own).
+  const pager = new PagerWatch()
+  onDestroy(() => pager.stop())
+  $effect(() => {
+    if (!compareSettings.autoPage) pager.stop()
+  })
   let flash = $state<string | null>(null)
   let flashTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -43,11 +53,20 @@
     flashTimer = setTimeout(() => (flash = null), 1800)
   }
 
-  function fanout(data: string) {
+  function fanout(data: string, ids: string[] = sessionIds) {
     const bytes = Array.from(new TextEncoder().encode(data))
-    for (const sid of sessionIds) {
+    for (const sid of ids) {
       invoke('send_input', { sessionId: sid, data: bytes }).catch(console.error)
     }
+  }
+
+  /** Send a finished line; with "Page through --More--" on, start watching
+   *  for pager prompts first so the first page isn't missed. */
+  async function sendLine(data: string) {
+    const ids = [...sessionIds]
+    if (compareSettings.autoPage) await pager.start(ids)
+    else pager.stop()
+    fanout(data, ids)
   }
 
   function onKeydown(e: KeyboardEvent) {
@@ -59,7 +78,7 @@
       }
       // In live mode the characters were already streamed; only the newline
       // is left to send. Otherwise send the whole composed line + newline.
-      fanout(live ? liveDelta(sentLive, line) + '\r' : line + '\r')
+      void sendLine(live ? liveDelta(sentLive, line) + '\r' : line + '\r')
       notify(`Sent to ${sessionIds.length} host${sessionIds.length === 1 ? '' : 's'}`)
       line = ''
       sentLive = ''
@@ -105,6 +124,7 @@
       const delta = liveDelta(sentLive, line)
       if (delta) fanout(delta)
     }
+    pager.stop()
     onRunCompare(cmd, live)
     line = ''
     sentLive = ''
