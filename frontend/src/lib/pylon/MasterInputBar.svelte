@@ -2,14 +2,17 @@
   import { invoke } from '@tauri-apps/api/core'
   import type { PylonTheme } from '$lib/themes/index'
   import Icon from '$lib/icons/Icon.svelte'
+  import { liveDelta } from './liveInput'
 
   interface Props {
     theme: PylonTheme
     /** Live session UUIDs this bar broadcasts to. */
     sessionIds: string[]
     /** When provided, shows a "Run & compare" action that captures + diffs
-     *  per-host output instead of just fanning the command out. */
-    onRunCompare?: (command: string) => void
+     *  per-host output instead of just fanning the command out. `typed`: the
+     *  command is already on the devices' line ("live" mode) — only Enter is
+     *  left to send. */
+    onRunCompare?: (command: string, typed: boolean) => void
   }
 
   const { theme, sessionIds, onRunCompare }: Props = $props()
@@ -44,21 +47,34 @@
       }
       // In live mode the characters were already streamed; only the newline
       // is left to send. Otherwise send the whole composed line + newline.
-      fanout(live ? '\r' : line + '\r')
+      fanout(live ? liveDelta(sentLive, line) + '\r' : line + '\r')
       notify(`Sent to ${sessionIds.length} host${sessionIds.length === 1 ? '' : 's'}`)
       line = ''
+      sentLive = ''
     }
   }
 
+  /** In live mode: what the devices' command line holds now. */
+  let sentLive = ''
+
   function onInput(e: Event) {
-    if (!live) return
-    // Stream only the newly-typed tail so we don't re-send the whole buffer.
     const value = (e.target as HTMLInputElement).value
-    if (value.length > line.length) {
-      fanout(value.slice(line.length))
+    if (live) {
+      // Keep the devices' line equal to the box: new characters are sent,
+      // deleted ones are erased with Backspace.
+      const delta = liveDelta(sentLive, value)
+      if (delta) fanout(delta)
+      sentLive = value
     }
     line = value
   }
+
+  // Switching live on or off starts from an empty line on the devices'
+  // side: what was composed before isn't on their line.
+  $effect(() => {
+    void live
+    sentLive = ''
+  })
 
   function runCompare() {
     if (!onRunCompare) return
@@ -71,8 +87,15 @@
       notify('No live sessions in this grid yet')
       return
     }
-    onRunCompare(cmd)
+    // Live mode already typed the line on every device: sending it again
+    // would double it (`show versionshow version`).
+    if (live) {
+      const delta = liveDelta(sentLive, line)
+      if (delta) fanout(delta)
+    }
+    onRunCompare(cmd, live)
     line = ''
+    sentLive = ''
   }
 </script>
 

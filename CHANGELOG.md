@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
-## [1.8.4-beta] - beta of the automation work (branch `claude/automation`, not on main yet)
+## [1.8.5-beta] - beta of the automation work (branch `claude/automation`, not on main yet)
 
 Betas are the 1.8.x versions: 1.8.0, 1.8.1… tagged `v1.8.0-beta`, `v1.8.1-beta`…
 (1.6.0 was the first beta, before the encrypted vault reached main as 1.7.)
@@ -16,6 +16,40 @@ The app version itself carries no suffix, because the MSI and RPM bundlers
 disagree on which suffixes they accept.
 
 Includes everything up to 1.7.16 (the sections below), plus:
+
+### Security
+- **`cookie` updated to 0.18.3** for
+  [RUSTSEC-2026-0594](https://rustsec.org/advisories/RUSTSEC-2026-0594), as
+  in 1.7.17 on main.
+
+### Changed
+- **Run & compare says what it found.** The result was a modal with "2 hosts
+  identical" and a "diff" button even when there was nothing to compare. Now:
+  - It is a panel under the terminals, and each pane's header shows its result:
+    **=** same output everywhere, **A** / **B**… which version the pane printed
+    (A is the most common, or on a tie the left-most pane's), **…** waiting,
+    **–** no reply, **!** possibly incomplete.
+  - The status reads "Same output on both panes", "Output differs: 2
+    versions"… and the panel says what is compared (the text between the
+    command and the prompt, spaces at line ends ignored).
+  - With two versions the differences show straight away, only the changed
+    lines and a few around them; with more, each version can be compared
+    with A in one click. No more picking two groups.
+  - Panes with the same name are told apart ("FWF-40F (pane 2)"), and panes
+    connected to the same device (same host and port) are pointed out: the
+    same output is then expected.
+  - It warns when an output stopped at a `--More--` prompt (turn paging off
+    and run again; the pane is still waiting there) and when no prompt came
+    back within 10 s.
+  - A device that pauses mid-output is no longer cut short: if more output
+    arrives after a quiet second, the capture carries on.
+
+### Fixed
+- **Run & compare with "live" on sent the command twice.** Live mode had
+  already typed it on every device, and Run & compare typed it again
+  (`show versionshow version`). It now only presses Enter.
+- **"live" ignored Backspace.** Characters deleted in the MASTER bar stayed
+  on the devices' command line; they are now erased there too.
 
 ### Added
 - **Add devices in bulk** (File menu and command palette). Paste one device

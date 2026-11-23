@@ -4,6 +4,7 @@
   import MasterInputBar from './MasterInputBar.svelte'
   import ComparisonPanel from '$lib/orchestrator/ComparisonPanel.svelte'
   import { CommandRunner, type RunnerHost } from '$lib/orchestrator/commandRunner.svelte'
+  import { paneTarget } from '$lib/orchestrator/compare'
   import { getSessionPlatform } from '$lib/bridge/commands'
   import type { PylonTheme } from '$lib/themes/index'
   import {
@@ -61,11 +62,11 @@
   const runner = new CommandRunner()
   let showPanel = $state(false)
 
-  async function runCompare(command: string) {
+  async function runCompare(command: string, typed: boolean) {
     // Resolve each live pane's platform (for prompt-return detection). Panes
     // without a saved session / known platform fall back to time-window only.
     const hosts: RunnerHost[] = []
-    for (const pane of panes) {
+    for (const [i, pane] of panes.entries()) {
       const sid = paneToSession.get(pane.id)
       if (!sid) continue
       let platform: string | null = null
@@ -73,10 +74,16 @@
       if (savedId != null) {
         platform = await getSessionPlatform(savedId).catch(() => null)
       }
-      hosts.push({ sessionId: sid, label: pane.label, platform })
+      hosts.push({
+        sessionId: sid,
+        label: pane.label,
+        platform,
+        position: i + 1,
+        target: paneTarget(pane),
+      })
     }
     showPanel = true
-    await runner.run(hosts, command)
+    await runner.run(hosts, command, { typed })
   }
 
   $effect(() => () => runner.reset())
@@ -101,21 +108,22 @@
     {/each}
   </div>
 
+  {#if showPanel}
+    <ComparisonPanel
+      {theme}
+      command={runner.command}
+      hosts={runner.hosts}
+      running={runner.running}
+      timeoutMs={runner.timeoutMs}
+      onClose={() => {
+        showPanel = false
+        runner.reset()
+      }}
+    />
+  {/if}
+
   <MasterInputBar {theme} sessionIds={liveSessionIds} onRunCompare={runCompare} />
 </div>
-
-{#if showPanel}
-  <ComparisonPanel
-    {theme}
-    command={runner.command}
-    hosts={runner.hosts}
-    running={runner.running}
-    onClose={() => {
-      showPanel = false
-      runner.reset()
-    }}
-  />
-{/if}
 
 <style>
   .grid-wrap {

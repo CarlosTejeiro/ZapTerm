@@ -268,6 +268,20 @@ progress. -->
   splits; open a saved session into an empty split from the sidebar.
 - **Multi-exec broadcast** (`Ctrl+Shift+M`): type once, send to many sessions;
   open N hosts as a grid with a master input bar and **Compare** their output.
+- **Run & compare** (MASTER bar, in a split or a grid): sends the command to
+  every pane and compares what each one printed between the command and the
+  prompt that came back (spaces at line ends ignored). The result opens in a
+  panel under the terminals and as a mark in each pane's header: **=** every
+  pane printed the same; **A**, **B**… which version this pane printed (A is
+  the most common, or on a tie the left-most pane's); **…** still waiting;
+  **–** no reply; **!** the capture may be incomplete. With two versions the
+  differences show straight away; with more, each one can be compared with A.
+  The panel warns when panes are connected to the same device (same output
+  expected), when the output stopped at a `--More--` prompt (turn paging off
+  and run again), and when no prompt came back within 10 s. Panes with the same
+  name are told apart as "name (pane 2)". **live** in the MASTER bar streams
+  the line as you type, Backspace included; Run & compare then only presses
+  Enter.
 
 ---
 
