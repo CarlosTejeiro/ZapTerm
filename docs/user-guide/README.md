@@ -265,7 +265,8 @@ progress. -->
 ## 10. Splits & multi-exec
 
 - **Split panes** (`Ctrl+\` / `Ctrl+Shift+\`): recursive horizontal/vertical
-  splits; open a saved session into an empty split from the sidebar.
+  splits; open a saved session into an empty split by clicking it in the
+  sidebar or dragging it onto the empty pane.
 - **Multi-exec broadcast** (`Ctrl+Shift+M`): type once, send to many sessions;
   open N hosts as a grid with a master input bar and **Compare** their output.
 

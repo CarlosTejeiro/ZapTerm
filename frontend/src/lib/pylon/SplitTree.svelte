@@ -17,6 +17,8 @@
     onStatusChange: (paneId: number, status: PaneStatus) => void
     onGlobalShortcut?: (key: string, e: KeyboardEvent) => void
     onResize: (path: number[], ratio: number) => void
+    /** A saved session dragged from the sidebar was dropped on an empty pane. */
+    onDropSession?: (paneId: number, sessionId: number) => void
   }
 
   const {
@@ -30,6 +32,7 @@
     onStatusChange,
     onGlobalShortcut,
     onResize,
+    onDropSession,
   }: Props = $props()
 
   // Panes are drawn from a FLAT list keyed by pane id and placed absolutely,
@@ -110,6 +113,7 @@
         onClosePane={() => onClosePane(pane.id)}
         onStatusChange={(s) => onStatusChange(pane.id, s)}
         {onGlobalShortcut}
+        onDropSession={(sid) => onDropSession?.(pane.id, sid)}
       />
     </div>
   {/each}
