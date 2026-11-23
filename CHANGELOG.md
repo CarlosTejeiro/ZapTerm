@@ -44,7 +44,17 @@ Includes everything up to 1.7.16 (the sections below), plus:
   - A device that pauses mid-output is no longer cut short: if more output
     arrives after a quiet second, the capture carries on.
 
-- **"live" in the MASTER bar is now "Send keys as I type"**, with a tooltip
+- **Multi is per tab and needs two or more sessions.** It was one global
+  switch: it stayed on when you moved to another tab, so typing there could
+  reach several devices unnoticed, and in a tab with a single session it did
+  nothing at all. Now each tab has its own Multi; with fewer than two
+  sessions the button is greyed out and explains how to get there (split the
+  tab or open a group), and a tab left with one session turns it off. While
+  it is on, the button reads "Multi · N", the tab shows a broadcast icon and
+  every pane in it has a coloured border.
+- **The "MASTER" bar is now "SEND TO ALL"**, and its tooltip says how many
+  sessions of the tab (or group) receive what is typed there.
+- **"live" in the bar is now "Send keys as I type"**, with a tooltip
   saying what it does: off (the default), nothing is sent until Enter; on,
   every key goes to all the sessions as you type it, for what a device
   answers before Enter (such as `?` for context help on Cisco IOS). The box's

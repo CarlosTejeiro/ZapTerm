@@ -13,9 +13,11 @@
      *  command is already on the devices' line ("live" mode) — only Enter is
      *  left to send. */
     onRunCompare?: (command: string, typed: boolean) => void
+    /** What the sessions belong to, for the label's tooltip. */
+    scopeLabel?: 'tab' | 'group'
   }
 
-  const { theme, sessionIds, onRunCompare }: Props = $props()
+  const { theme, sessionIds, onRunCompare, scopeLabel = 'tab' }: Props = $props()
 
   let line = $state('')
   // "live" = every keystroke is fanned out as you type (SecureCRT-style chat
@@ -113,9 +115,13 @@
   style:--mb-border={theme.border}
   style:--mb-accent={theme.accent}
 >
-  <span class="mb-label" style:color={theme.accent}>
+  <span
+    class="mb-label"
+    style:color={theme.accent}
+    title={`What you type in this box goes to all ${sessionIds.length} session${sessionIds.length === 1 ? '' : 's'} of this ${scopeLabel}`}
+  >
     <Icon name="cast" size={13} />
-    MASTER
+    SEND TO ALL
   </span>
   <input
     class="mb-input"

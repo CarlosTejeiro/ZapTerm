@@ -266,10 +266,17 @@ progress. -->
 
 - **Split panes** (`Ctrl+\` / `Ctrl+Shift+\`): recursive horizontal/vertical
   splits; open a saved session into an empty split from the sidebar.
-- **Multi-exec broadcast** (`Ctrl+Shift+M`): type once, send to many sessions;
-  open N hosts as a grid with a master input bar and **Compare** their output.
-- **Run & compare** (MASTER bar, in a split or a grid): sends the command to
-  every pane and compares what each one printed between the command and the
+- **Multi** (`Ctrl+Shift+M`): type once in several sessions. It is set per
+  tab and needs two or more sessions in it — split the tab or open a group;
+  with one session the button is greyed out and says so. While it is on, the
+  button reads "Multi · 3", the tab shows a broadcast icon, every pane has a
+  coloured border, and what you type in any pane (or a list command you click)
+  goes to all the sessions of that tab — never to other tabs. It turns itself
+  off when the tab is left with one session. The **SEND TO ALL** bar under the
+  panes sends a whole line to all of them; in a grid opened from a group it is
+  always there.
+- **Run & compare** (SEND TO ALL bar, in a split or a grid): sends the command
+  to every pane and compares what each one printed between the command and the
   prompt that came back (spaces at line ends ignored). The result opens in a
   panel under the terminals and as a mark in each pane's header: **=** every
   pane printed the same; **A**, **B**… which version this pane printed (A is
@@ -279,11 +286,11 @@ progress. -->
   The panel warns when panes are connected to the same device (same output
   expected), when the output stopped at a `--More--` prompt (turn paging off
   and run again), and when no prompt came back within 10 s. Panes with the same
-  name are told apart as "name (pane 2)". **Send keys as I type** in the MASTER
-  bar sends every key to all the sessions as you type it (for what a device
-  answers before Enter, such as `?` for context help on Cisco IOS), Backspace
-  included; Run & compare then only presses Enter. Off (the default), nothing
-  is sent until Enter.
+  name are told apart as "name (pane 2)". **Send keys as I type** in the SEND
+  TO ALL bar sends every key to all the sessions as you type it (for what a
+  device answers before Enter, such as `?` for context help on Cisco IOS),
+  Backspace included; Run & compare then only presses Enter. Off (the default),
+  nothing is sent until Enter.
 
 ---
 
