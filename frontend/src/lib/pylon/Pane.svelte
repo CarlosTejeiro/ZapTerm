@@ -12,6 +12,7 @@
     stopSessionLogging,
   } from '$lib/bridge/commands'
   import { paneToSession } from '$lib/stores/sessionRuntime.svelte'
+  import { compareBadges } from '$lib/orchestrator/compareBadges.svelte'
   import { showToast } from '$lib/ui/toast-store.svelte'
   import { invoke } from '@tauri-apps/api/core'
   import { decodeEscapes, runMacro } from '$lib/orchestrator/macroRunner'
@@ -251,6 +252,8 @@
   // header re-exposes these here).
   const isSsh = $derived(protocol === 'ssh')
   const runtimeSid = $derived(paneToSession.get(pane.id) ?? null)
+  /** Run & compare result for this pane, when a comparison is open. */
+  const compareBadge = $derived(runtimeSid ? compareBadges.bySession[runtimeSid] : undefined)
   let showSftp = $state(false)
   let showTunnels = $state(false)
 
@@ -395,6 +398,21 @@
     {/if}
     {#if !pane.empty}
       <span class="ph-proto" style:color={theme.terminal.dim}>{protocol.toUpperCase()}</span>
+    {/if}
+    {#if compareBadge}
+      <span
+        class="ph-compare {compareBadge.kind}"
+        class:main={compareBadge.letter === 'A'}
+        title={compareBadge.title}
+        aria-label={compareBadge.title}
+        >{compareBadge.kind === 'running'
+          ? '…'
+          : compareBadge.kind === 'same'
+            ? '='
+            : compareBadge.kind === 'noreply'
+              ? '–'
+              : compareBadge.letter}{compareBadge.incomplete ? '!' : ''}</span
+      >
     {/if}
     <span class="ph-actions">
       {#if !pane.empty}
@@ -622,6 +640,34 @@
     font-weight: 600;
     letter-spacing: 0.4px;
     flex-shrink: 0;
+  }
+
+  /* Run & compare result: "=" same output everywhere, "A"/"B"… which
+     version this pane printed (A is the most common), "…" waiting, "–" no
+     reply; "!" = the capture may be incomplete. */
+  .ph-compare {
+    flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-family: var(--zx-font-mono);
+    cursor: default;
+    color: var(--zx-term-fg);
+    background: color-mix(in srgb, var(--zx-term-fg) 14%, transparent);
+  }
+  .ph-compare.same {
+    color: var(--zx-term-ok);
+    background: color-mix(in srgb, var(--zx-term-ok) 18%, transparent);
+  }
+  .ph-compare.variant:not(.main) {
+    color: var(--zx-term-warn);
+    background: color-mix(in srgb, var(--zx-term-warn) 20%, transparent);
+  }
+  .ph-compare.running,
+  .ph-compare.noreply {
+    color: var(--zx-term-dim);
   }
 
   .ph-actions {

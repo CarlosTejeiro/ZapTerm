@@ -16,6 +16,7 @@
   import MasterInputBar from '$lib/pylon/MasterInputBar.svelte'
   import ComparisonPanel from '$lib/orchestrator/ComparisonPanel.svelte'
   import { CommandRunner, type RunnerHost } from '$lib/orchestrator/commandRunner.svelte'
+  import { paneTarget } from '$lib/orchestrator/compare'
   import CommandListDialog from '$lib/orchestrator/CommandListDialog.svelte'
   import TunnelsManagerDialog from '$lib/terminal/TunnelsManagerDialog.svelte'
   import {
@@ -658,19 +659,34 @@
   // send one command to every live pane of the active tab and diff the outputs.
   const compareRunner = new CommandRunner()
   let showComparePanel = $state(false)
+  /** The tab whose panes the comparison is about; the panel shows only there. */
+  let compareTabId = $state<number | null>(null)
 
-  async function runCompareActiveTab(command: string) {
+  async function runCompareActiveTab(command: string, typed: boolean) {
     if (!activeTab) return
     const hosts: RunnerHost[] = []
-    for (const pane of tabPanes(activeTab)) {
+    for (const [i, pane] of tabPanes(activeTab).entries()) {
       const sid = paneToSession.get(pane.id)
       if (!sid) continue
       const savedId = pane.savedSession?.id
       const platform = savedId != null ? await getSessionPlatform(savedId).catch(() => null) : null
-      hosts.push({ sessionId: sid, label: pane.label, platform })
+      hosts.push({
+        sessionId: sid,
+        label: pane.label,
+        platform,
+        position: i + 1,
+        target: paneTarget(pane),
+      })
     }
+    compareTabId = activeTab.id
     showComparePanel = true
-    await compareRunner.run(hosts, command)
+    await compareRunner.run(hosts, command, { typed })
+  }
+
+  function closeComparePanel() {
+    showComparePanel = false
+    compareTabId = null
+    compareRunner.reset()
   }
 
   /// Every live session across all tabs, labelled — target list for the
@@ -2030,6 +2046,17 @@
         {/each}
       </div>
 
+      {#if showComparePanel && activeTab?.id === compareTabId}
+        <ComparisonPanel
+          {theme}
+          command={compareRunner.command}
+          hosts={compareRunner.hosts}
+          running={compareRunner.running}
+          timeoutMs={compareRunner.timeoutMs}
+          onClose={closeComparePanel}
+        />
+      {/if}
+
       {#if multiOn && activeTab?.layout.kind === 'split'}
         <!-- Multi-exec on a regular tab: same master bar as grid mode,
              broadcasting to every live pane of the active tab, with the same
@@ -2144,19 +2171,6 @@
 
 {#if showCommandList}
   <CommandListDialog targets={liveTargets} onClose={() => (showCommandList = false)} />
-{/if}
-
-{#if showComparePanel}
-  <ComparisonPanel
-    {theme}
-    command={compareRunner.command}
-    hosts={compareRunner.hosts}
-    running={compareRunner.running}
-    onClose={() => {
-      showComparePanel = false
-      compareRunner.reset()
-    }}
-  />
 {/if}
 
 {#if showTunnelsManager}
