@@ -279,9 +279,11 @@ progress. -->
   The panel warns when panes are connected to the same device (same output
   expected), when the output stopped at a `--More--` prompt (turn paging off
   and run again), and when no prompt came back within 10 s. Panes with the same
-  name are told apart as "name (pane 2)". **live** in the MASTER bar streams
-  the line as you type, Backspace included; Run & compare then only presses
-  Enter.
+  name are told apart as "name (pane 2)". **Send keys as I type** in the MASTER
+  bar sends every key to all the sessions as you type it (for what a device
+  answers before Enter, such as `?` for context help on Cisco IOS), Backspace
+  included; Run & compare then only presses Enter. Off (the default), nothing
+  is sent until Enter.
 
 ---
 
