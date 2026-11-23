@@ -817,6 +817,15 @@
     return pane.id
   }
 
+  /// A saved session dragged from the sidebar and dropped on an empty pane:
+  /// open it there, as clicking it with that pane focused does.
+  function dropSessionIntoPane(paneId: number, sessionId: number) {
+    const s = sessions.find((x) => x.id === sessionId)
+    if (!s) return
+    focusedPaneId = paneId
+    openSavedSessionTab(s)
+  }
+
   // ── Python scripts ──────────────────────────────────────────────────────────
   /// Script chosen in the file dialog, awaiting the Run / Dry run confirmation.
   let scriptPending = $state<string | null>(null)
@@ -2077,6 +2086,7 @@
                 onStatusChange={(id, s) => handleStatusChange(tab.id, id, s)}
                 onGlobalShortcut={handleGlobalShortcut}
                 onResize={(path, ratio) => handleResize(path, ratio)}
+                onDropSession={dropSessionIntoPane}
               />
             {/if}
           </div>

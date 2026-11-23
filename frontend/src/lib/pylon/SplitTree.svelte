@@ -19,6 +19,8 @@
     onResize: (path: number[], ratio: number) => void
     /** Multi is on in this tab (border on every pane). */
     broadcasting?: boolean
+    /** A saved session dragged from the sidebar was dropped on an empty pane. */
+    onDropSession?: (paneId: number, sessionId: number) => void
   }
 
   const {
@@ -33,6 +35,7 @@
     onGlobalShortcut,
     onResize,
     broadcasting = false,
+    onDropSession,
   }: Props = $props()
 
   // Panes are drawn from a FLAT list keyed by pane id and placed absolutely,
@@ -114,6 +117,7 @@
         onStatusChange={(s) => onStatusChange(pane.id, s)}
         {onGlobalShortcut}
         {broadcasting}
+        onDropSession={(sid) => onDropSession?.(pane.id, sid)}
       />
     </div>
   {/each}
