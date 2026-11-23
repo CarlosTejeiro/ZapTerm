@@ -3,6 +3,8 @@
   import type { PylonTheme } from '$lib/themes/index'
   import Icon from '$lib/icons/Icon.svelte'
   import { liveDelta } from './liveInput'
+  import { compareSettings } from '$lib/orchestrator/compareSettings.svelte'
+  import { MAX_PAGES } from '$lib/orchestrator/commandRunner.svelte'
 
   interface Props {
     theme: PylonTheme
@@ -28,6 +30,10 @@
     'Off: nothing is sent until you press Enter, so you can check the command first. ' +
     'On: every key goes to all the sessions as you type it — for what a device answers ' +
     'before Enter, such as ? for context help on Cisco IOS. Backspace is sent too.'
+  const PAGE_HELP =
+    'Run & compare presses Space for you when a device stops at a pager prompt ' +
+    '(--More--, ---(more)---), so the whole output is compared. Only during ' +
+    `Run & compare, only in the session that is waiting, up to ${MAX_PAGES} pages.`
   let flash = $state<string | null>(null)
   let flashTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -150,6 +156,12 @@
       onclick={runCompare}
       title="Run on all and compare the output">▶ Run &amp; compare</button
     >
+  {/if}
+  {#if onRunCompare}
+    <label class="mb-live" style:color={theme.textMuted} title={PAGE_HELP}>
+      <input type="checkbox" bind:checked={compareSettings.autoPage} />
+      Page through --More--
+    </label>
   {/if}
   <label class="mb-live" style:color={theme.textMuted} title={LIVE_HELP}>
     <input type="checkbox" bind:checked={live} />

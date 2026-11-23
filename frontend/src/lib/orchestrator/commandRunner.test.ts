@@ -33,7 +33,7 @@ vi.mock('$lib/bridge/commands', () => ({
   promptReturned: async () => false,
 }))
 
-const { CommandRunner } = await import('./commandRunner.svelte')
+const { CommandRunner, MAX_PAGES } = await import('./commandRunner.svelte')
 
 const out = (sessionId: string, text: string) =>
   feed?.({ session_id: sessionId, data: Array.from(new TextEncoder().encode(text)) })
@@ -88,6 +88,58 @@ describe('CommandRunner', () => {
     await vi.advanceTimersByTimeAsync(1000 + 1600)
     expect(r.running).toBe(false)
     expect(r.hosts[0]!.buffer).toContain('part 2')
+    r.reset()
+  })
+
+  it('presses Space at a pager prompt only in the waiting host, with autoPage', async () => {
+    const r = new CommandRunner(3000)
+    await r.run([host(1), host(2)], 'show run', { autoPage: true })
+    sent.length = 0
+    out('s1', 'show run\r\npage 1\r\n --More-- ')
+    out('s2', 'show run\r\nall\r\nfw2# ')
+    await vi.advanceTimersByTimeAsync(200)
+    expect(sent).toEqual([{ sessionId: 's1', text: ' ' }])
+    // The device erases the prompt and prints the rest.
+    out('s1', '\b'.repeat(10) + ' '.repeat(10) + '\b'.repeat(10) + 'page 2\r\nfw1# ')
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(sent).toHaveLength(1)
+    expect(r.hosts[0]!.pages).toBe(1)
+    expect(r.running).toBe(false)
+    r.reset()
+  })
+
+  it('leaves a pager prompt alone without autoPage', async () => {
+    const r = new CommandRunner(3000)
+    await r.run([host(1)], 'show run')
+    sent.length = 0
+    out('s1', 'show run\r\npage 1\r\n --More-- ')
+    await vi.advanceTimersByTimeAsync(3000)
+    expect(sent).toEqual([])
+    r.reset()
+  })
+
+  it('restarts the time limit on every page', async () => {
+    const r = new CommandRunner(3000)
+    await r.run([host(1)], 'show run', { autoPage: true })
+    out('s1', 'show run\r\n')
+    for (let i = 0; i < 4; i++) {
+      out('s1', `\rpage ${i}\r\n --More-- `)
+      await vi.advanceTimersByTimeAsync(2000) // 8 s in all, past the 3 s limit
+    }
+    expect(r.hosts[0]!.state).not.toBe('timeout')
+    expect(r.hosts[0]!.pages).toBe(4)
+    r.reset()
+  })
+
+  it('stops paging after MAX_PAGES', async () => {
+    const r = new CommandRunner(60_000)
+    await r.run([host(1)], 'show run', { autoPage: true })
+    out('s1', 'show run\r\n')
+    for (let i = 0; i < MAX_PAGES + 5; i++) {
+      out('s1', `\rp${i}\r\n --More-- `)
+      await vi.advanceTimersByTimeAsync(200)
+    }
+    expect(r.hosts[0]!.pages).toBe(MAX_PAGES)
     r.reset()
   })
 

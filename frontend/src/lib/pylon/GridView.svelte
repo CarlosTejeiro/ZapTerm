@@ -6,6 +6,7 @@
   import { CommandRunner, type RunnerHost } from '$lib/orchestrator/commandRunner.svelte'
   import { paneTarget } from '$lib/orchestrator/compare'
   import { getSessionPlatform } from '$lib/bridge/commands'
+  import { compareSettings } from '$lib/orchestrator/compareSettings.svelte'
   import type { PylonTheme } from '$lib/themes/index'
   import {
     paneToSession,
@@ -86,7 +87,7 @@
       })
     }
     showPanel = true
-    await runner.run(hosts, command, { typed })
+    await runner.run(hosts, command, { typed, autoPage: compareSettings.autoPage })
   }
 
   $effect(() => () => runner.reset())

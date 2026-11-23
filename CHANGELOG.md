@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
-## [1.8.7-beta] - beta of the automation work (branch `claude/automation`, not on main yet)
+## [1.8.8-beta] - beta of the automation work (branch `claude/automation`, not on main yet)
 
 Betas are the 1.8.x versions: 1.8.0, 1.8.1… tagged `v1.8.0-beta`, `v1.8.1-beta`…
 (1.6.0 was the first beta, before the encrypted vault reached main as 1.7.)
@@ -16,6 +16,15 @@ The app version itself carries no suffix, because the MSI and RPM bundlers
 disagree on which suffixes they accept.
 
 Includes everything up to 1.7.18 (the sections below), plus:
+
+### Added
+- **Run & compare pages through `--More--` for you.** A device that stopped at
+  a pager prompt (`--More--`, `---(more)---`, `<--- More --->`) left that pane
+  waiting and its output was compared cut short. Now Run & compare presses
+  Space in that session only, while it is capturing, until the prompt comes
+  back (up to 200 pages; the time limit starts again with each page). The pager
+  prompts and the way devices erase them are left out of the comparison. On by
+  default; **Page through --More--** in the SEND TO ALL bar turns it off.
 
 ### Security
 - **`cookie` updated to 0.18.3** for

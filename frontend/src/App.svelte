@@ -130,6 +130,7 @@
   } from '$lib/stores/settings.svelte'
   import type { SavedSession, Folder, BroadcastGroup, Snippet, LoginStep } from '$lib/bridge/types'
   import { groups, loadGroups } from '$lib/stores/groups.svelte'
+  import { compareSettings } from '$lib/orchestrator/compareSettings.svelte'
   import GroupsDialog from '$lib/sessions/GroupsDialog.svelte'
 
   // ── types ───────────────────────────────────────────────────────────────────
@@ -714,7 +715,7 @@
     }
     compareTabId = activeTab.id
     showComparePanel = true
-    await compareRunner.run(hosts, command, { typed })
+    await compareRunner.run(hosts, command, { typed, autoPage: compareSettings.autoPage })
   }
 
   function closeComparePanel() {

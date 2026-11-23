@@ -2,7 +2,8 @@
   import { onDestroy, untrack } from 'svelte'
   import { writeText as clipboardWriteText } from '@tauri-apps/plugin-clipboard-manager'
   import type { PylonTheme } from '$lib/themes/index'
-  import type { HostCapture } from './commandRunner.svelte'
+  import { MAX_PAGES, type HostCapture } from './commandRunner.svelte'
+  import { compareSettings } from './compareSettings.svelte'
   import { lineDiff } from './lineDiff'
   import {
     collapseSame,
@@ -47,6 +48,14 @@
   const aLabel = $derived(aLeads ? 'the most common output' : 'the left-most pane')
   const sameDevice = $derived(sameDeviceSets(hosts))
   const pagered = $derived(hosts.filter((h) => h.state !== 'running' && endsAtPager(h.buffer)))
+  /** What to do about a capture stuck at a pager prompt. */
+  const pagerAdvice = $derived(
+    !compareSettings.autoPage
+      ? 'turn on “Page through --More--” below, or turn paging off on the device, and run the command again'
+      : pagered.every((h) => h.pages >= MAX_PAGES)
+        ? `it was paged on ${MAX_PAGES} times and still had more: turn paging off on the device to compare all of it`
+        : 'turn paging off on the device and run the command again',
+  )
   const timedOutWithOutput = $derived(
     hosts.filter((h) => h.state === 'timeout' && !noReply.includes(h) && !pagered.includes(h)),
   )
@@ -230,8 +239,8 @@
       {/each}
       {#if pagered.length}
         <p class="warn">
-          ⚠ The output stopped at a “--More--” prompt on {namesOf(pagered)}: turn paging off on the
-          device and run the command again. {pagered.length === 1
+          ⚠ The output stopped at a “--More--” prompt on {namesOf(pagered)}: {pagerAdvice}. {pagered.length ===
+          1
             ? 'That pane is'
             : 'Those panes are'} still waiting at the prompt.
         </p>
