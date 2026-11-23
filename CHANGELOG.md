@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.7.18] - 2026-11-23
+
+### Added
+- **Drag a session from the sidebar onto an empty split pane** to open it
+  there. Until now an empty pane was filled only by clicking a session while
+  it was focused. The pane shows a dashed outline while a session is over it;
+  the session stays where it is in the sidebar.
+
 ## [1.7.17] - 2026-11-23
 
 ### Security

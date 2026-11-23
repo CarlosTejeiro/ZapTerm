@@ -65,6 +65,8 @@
     onClosePane?: () => void
     onStatusChange?: (status: PaneStatus) => void
     onGlobalShortcut?: (key: string, e: KeyboardEvent) => void
+    /** An empty pane received a saved session dragged from the sidebar. */
+    onDropSession?: (sessionId: number) => void
   }
 
   const {
@@ -79,7 +81,34 @@
     onClosePane,
     onStatusChange,
     onGlobalShortcut,
+    onDropSession,
   }: Props = $props()
+
+  // ── drop a sidebar session on an empty pane ──────────────────────────────
+  // The sidebar puts the saved session id under this type when a row is
+  // dragged (it is also how folders and reordering receive it).
+  const SESSION_MIME = 'application/x-zapterm-session'
+  let dropHover = $state(false)
+
+  function carriesSession(e: DragEvent): boolean {
+    return !!e.dataTransfer && Array.from(e.dataTransfer.types).includes(SESSION_MIME)
+  }
+
+  function onEmptyDragOver(e: DragEvent) {
+    if (!onDropSession || !carriesSession(e)) return
+    e.preventDefault()
+    // The sidebar allows only "move"; any other effect would refuse the drop.
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
+    dropHover = true
+  }
+
+  function onEmptyDrop(e: DragEvent) {
+    dropHover = false
+    if (!onDropSession || !carriesSession(e)) return
+    e.preventDefault()
+    const id = Number(e.dataTransfer?.getData(SESSION_MIME))
+    if (Number.isInteger(id) && id > 0) onDropSession(id)
+  }
 
   let status = $state<PaneStatus>('connecting')
 
@@ -483,8 +512,18 @@
   <!-- Terminal body -->
   <div class="pane-body" style:--term-bg={theme.terminal.bg}>
     {#if pane.empty}
-      <!-- Freshly-split placeholder: filled by clicking a sidebar session. -->
-      <div class="empty-overlay" style:background={theme.terminal.bg}>
+      <!-- Freshly-split placeholder: filled by clicking a sidebar session or
+           dropping one dragged from the sidebar. -->
+      <div
+        class="empty-overlay"
+        class:drop-hover={dropHover}
+        style:background={theme.terminal.bg}
+        role="region"
+        aria-label="Empty pane"
+        ondragover={onEmptyDragOver}
+        ondragleave={() => (dropHover = false)}
+        ondrop={onEmptyDrop}
+      >
         <svg
           class="empty-icon"
           width="30"
@@ -499,7 +538,7 @@
         </svg>
         <p class="empty-title" style:color={theme.terminal.fg}>Empty pane</p>
         <p class="empty-sub" style:color={theme.terminal.dim}>
-          Click a session in the sidebar to open it here.
+          Click a session in the sidebar, or drag it here, to open it.
         </p>
       </div>
     {:else if needsPassword}
@@ -709,6 +748,14 @@
     justify-content: center;
     gap: 6px;
     user-select: none;
+    outline: 2px dashed transparent;
+    outline-offset: -8px;
+    border-radius: 6px;
+    transition: outline-color 0.1s;
+  }
+  /* A session dragged from the sidebar is over this pane. */
+  .empty-overlay.drop-hover {
+    outline-color: var(--zx-accent);
   }
   .empty-icon {
     opacity: 0.7;
