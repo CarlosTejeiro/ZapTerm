@@ -40,6 +40,18 @@ describe('extractRunOutput', () => {
     expect(extractRunOutput('fw1 (interface) # end\r\nfw1 # ', 'end')).toBe('')
   })
 
+  it('handles \\r\\r\\n line endings (some serial consoles)', () => {
+    // The echo line used to be wiped by its trailing \r, so run() never saw
+    // the echo and waited until its time limit.
+    const raw =
+      'get system status\r\r\nVersion: FortiGate-90G v7.6.8\r\r\nHostname: FortiGate-90G\r\r\n\r\r\nFortiGate-90G (STS)# '
+    expect(extractRunOutput(raw, 'get system status')).toBe(
+      'Version: FortiGate-90G v7.6.8\nHostname: FortiGate-90G',
+    )
+    expect(lastLine(raw)).toBe('FortiGate-90G (STS)# ')
+    expect(looksLikePrompt(lastLine(raw))).toBe(true)
+  })
+
   it('drops pager prompts erased with backspaces', () => {
     const raw =
       'sw # show run\r\nline 1\r\n --More-- \x08\x08\x08\x08\x08\x08\x08\x08\x08\x08          \x08\x08\x08\x08\x08\x08\x08\x08\x08\x08line 2\r\nsw # '
@@ -54,6 +66,11 @@ describe('helpers', () => {
 
   it('keeps the last write of a carriage-return-rewritten line', () => {
     expect(cleanText('progress 10%\rprogress 100%\n')).toBe('progress 100%\n')
+  })
+
+  it('overwrites rather than erases on a carriage return', () => {
+    expect(cleanText('abc\r\n')).toBe('abc\n')
+    expect(cleanText('--More--\r        \rline\n')).toBe('line\n')
   })
 
   it('finds the echo end and the last line', () => {

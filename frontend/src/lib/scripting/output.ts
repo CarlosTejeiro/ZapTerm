@@ -1,6 +1,8 @@
 // Pure helpers for the script host's `run()` — kept free of Svelte runes and
 // Tauri so they are unit-testable under Vitest's node environment.
 
+import { renderLine } from '$lib/terminal/renderLine'
+
 /** Strip ANSI/OSC escape sequences (colors, cursor moves, titles). */
 export function stripAnsi(s: string): string {
   return s
@@ -13,21 +15,16 @@ export function stripAnsi(s: string): string {
 export const MORE_RE = /-+\s*More\s*-+\s*$/i
 
 /**
- * Normalise terminal text: CRLF/CR → LF, backspace erasure applied (pagers
- * wipe their "--More--" with `\b`), pager prompts left mid-stream removed.
+ * Normalise terminal text: CRLF → LF, each line as the terminal shows it
+ * (carriage returns and backspaces applied — pagers wipe their "--More--"
+ * that way), pager prompts left mid-stream removed.
  */
 export function cleanText(s: string): string {
-  let t = s.replace(/\r\n/g, '\n')
-  // Apply backspaces: "abc\b\bX" → "aX".
-  while (/[^\n]\x08/.test(t)) t = t.replace(/[^\n]\x08/g, '')
-  t = t.replace(/\x08/g, '')
-  // A carriage return mid-line rewinds it; keep what was written last.
-  t = t
+  const t = s
+    .replace(/\r\n/g, '\n')
     .split('\n')
-    .map((line) => {
-      const parts = line.split('\r')
-      return parts[parts.length - 1] ?? ''
-    })
+    // A redrawn line keeps the spaces that blanked what it replaced: drop them.
+    .map((line) => (/[\r\b]/.test(line) ? renderLine(line).replace(/\s+$/, '') : line))
     .join('\n')
   return t.replace(/[ \t]*-+\s*More\s*-+[ \t]*/gi, '')
 }

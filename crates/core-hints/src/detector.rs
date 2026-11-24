@@ -387,6 +387,18 @@ fn prompt_src_for(p: Platform) -> &'static str {
 mod tests {
     use super::*;
 
+    #[test]
+    fn fortios_sts_prompt_ends_a_command() {
+        // FortiOS 7.6 STS builds show `(STS)` with no space before `#`.
+        let out = "Hostname: FortiGate-90G\r\r\n\r\r\nFortiGate-90G (STS)# ";
+        assert!(ends_with_prompt(Platform::Fortigate, out));
+        assert!(ends_with_prompt(Platform::Fortigate, "FGT60F (root) # "));
+        assert!(!ends_with_prompt(
+            Platform::Fortigate,
+            "Hostname: FortiGate-90G"
+        ));
+    }
+
     fn detect(text: &str) -> Option<Platform> {
         let mut d = PlatformDetector::new();
         d.feed(text.as_bytes())
