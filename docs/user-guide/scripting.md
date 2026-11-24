@@ -53,6 +53,9 @@ fills with `zapterm.report()`, and the live log (`print`, errors, `[dry-run]` an
 `[read-only]` lines). **Stop** kills the script; after a dry run or a
 read-only run, **Run for real** runs it again with sending enabled. The panel doesn't block the window, so you can
 watch and use the tabs while a script runs.
+Drag the panel's left or top edge (or their corner) to resize it, or use
+**Enlarge** in its header to fill the window; double-click an edge for the
+default size. The notebook and AI assistant panels resize the same way.
 
 One script runs at a time.
 

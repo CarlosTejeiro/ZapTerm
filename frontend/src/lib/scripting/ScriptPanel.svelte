@@ -5,9 +5,12 @@
   import Icon from '$lib/icons/Icon.svelte'
   import { scriptRun, startScript, stopScript } from './scriptHost.svelte'
   import { showActivity } from '$lib/activity/activity.svelte'
+  import { createPanelSizer } from '$lib/ui/panelSizer.svelte'
 
   let logEl = $state<HTMLPreElement | null>(null)
   let collapsed = $state(false)
+  let panelEl = $state<HTMLDivElement | null>(null)
+  const sizer = createPanelSizer('ui.panel.script', { w: 380, h: 220 })
 
   const fileName = $derived(scriptRun.path.split(/[\\/]/).pop() ?? scriptRun.path)
   const statusLabel = $derived(
@@ -27,7 +30,45 @@
   }
 </script>
 
-<div class="panel" class:collapsed role="region" aria-label="Script run">
+<div
+  class="panel"
+  class:collapsed
+  class:sized={!!sizer.size && !collapsed}
+  class:dragging={sizer.dragging}
+  role="region"
+  aria-label="Script run"
+  bind:this={panelEl}
+  style:width={sizer.size ? `${sizer.size.w}px` : null}
+  style:height={sizer.size && !collapsed ? `${sizer.size.h}px` : null}
+>
+  {#if !collapsed}
+    <!-- Resize handles: left edge, top edge and their corner (the panel is
+         anchored bottom-right). Double-click: the default size. -->
+    <div
+      class="grip gx"
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Resize panel width"
+      onpointerdown={(e) => sizer.startDrag(e, panelEl, 'x')}
+      ondblclick={sizer.reset}
+    ></div>
+    <div
+      class="grip gy"
+      role="separator"
+      aria-orientation="horizontal"
+      aria-label="Resize panel height"
+      onpointerdown={(e) => sizer.startDrag(e, panelEl, 'y')}
+      ondblclick={sizer.reset}
+    ></div>
+    <div
+      class="grip gxy"
+      role="separator"
+      aria-label="Resize panel"
+      title="Drag to resize · double-click for the default size"
+      onpointerdown={(e) => sizer.startDrag(e, panelEl, 'both')}
+      ondblclick={sizer.reset}
+    ></div>
+  {/if}
   <div class="head">
     <span class="dot {scriptRun.status}"></span>
     <span class="title" title={scriptRun.path}>{fileName}</span>
@@ -58,6 +99,16 @@
       title="Automation activity: everything sent, when and where"
       aria-label="Automation activity"><Icon name="pulse" size={12} /></button
     >
+    {#if !collapsed}
+      <button
+        class="icon"
+        onclick={sizer.toggleLarge}
+        title={sizer.large ? 'Restore size' : 'Enlarge'}
+        aria-label={sizer.large ? 'Restore size' : 'Enlarge'}
+        aria-pressed={sizer.large}
+        ><Icon name={sizer.large ? 'shrink' : 'expand'} size={12} /></button
+      >
+    {/if}
     <button
       class="icon"
       onclick={() => (collapsed = !collapsed)}
@@ -258,5 +309,45 @@
   .badge.ro {
     background: color-mix(in srgb, var(--zx-warn) 18%, transparent);
     color: var(--zx-warn);
+  }
+  /* ── resizing ───────────────────────────────────────────────────────── */
+  .panel.sized {
+    max-height: none;
+  }
+  .panel.dragging {
+    user-select: none;
+  }
+  .grip {
+    position: absolute;
+    z-index: 2;
+    touch-action: none;
+  }
+  .gx {
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 5px;
+    cursor: ew-resize;
+  }
+  .gy {
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 5px;
+    cursor: ns-resize;
+  }
+  .gxy {
+    left: 0;
+    top: 0;
+    width: 13px;
+    height: 13px;
+    cursor: nwse-resize;
+    z-index: 3;
+  }
+  .gx:hover,
+  .gy:hover,
+  .panel.dragging .gx,
+  .panel.dragging .gy {
+    background: color-mix(in srgb, var(--zx-accent) 35%, transparent);
   }
 </style>

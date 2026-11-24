@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
-## [1.8.15-beta] - beta of the automation work (branch `claude/automation`, not on main yet)
+## [1.8.16-beta] - beta of the automation work (branch `claude/automation`, not on main yet)
 
 Betas are the 1.8.x versions: 1.8.0, 1.8.1… tagged `v1.8.0-beta`, `v1.8.1-beta`…
 (1.6.0 was the first beta, before the encrypted vault reached main as 1.7.)
@@ -18,6 +18,15 @@ disagree on which suffixes they accept.
 Includes everything up to 1.7.18 (the sections below), plus:
 
 ### Changed
+- **The automation panels can be made bigger.** The AI assistant, notebook
+  and script panels were a fixed size in the corner:
+  - Drag the panel's left edge, top edge or top-left corner to resize it;
+    the list of what was sent (or the script's log) takes the extra room.
+    The size is remembered, per kind of panel. Double-click an edge for the
+    default size.
+  - **Enlarge** in the panel's header fills the window, leaving the title
+    bar and its menus in reach; **Restore size** goes back.
+  - **Automation activity** has the same Enlarge button, and remembers it.
 - **macOS: "Download and install" now installs.** It used to open the disk
   image and leave ZapTerm running, so the old copy was in the way of the new
   one. Now **Install and reopen** closes ZapTerm, puts the new version in the

@@ -14,6 +14,10 @@ export const ICON_PATHS = {
   shield: '<path d="M8 1.8 13 3.6v4.1c0 3.1-2 5.4-5 6.5-3-1.1-5-3.4-5-6.5V3.6z" />',
   /** Declined / not allowed. */
   ban: '<circle cx="8" cy="8" r="5.8" /><path d="M3.9 3.9 12.1 12.1" />',
+  /** Make a panel as big as the window allows. */
+  expand: '<path d="M9.5 2.5h4v4M13.5 2.5 9 7M6.5 13.5h-4v-4M2.5 13.5 7 9" />',
+  /** Back to the size it had. */
+  shrink: '<path d="M13.5 6.5h-4v-4M9.5 6.5 14 2M2.5 9.5h4v4M6.5 9.5 2 14" />',
   plus: '<path d="M8 3v10M3 8h10" />',
   folder: '<path d="M2 4.5h4l1.5 2H14v6.5H2z" />',
   chevron: '<path d="M6 3.5 L10.5 8 L6 12.5" />',
