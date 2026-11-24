@@ -3,27 +3,13 @@
   /// rows the script reported, and its live log. Non-modal, so the terminal
   /// tabs the script is driving stay visible and usable.
   import Icon from '$lib/icons/Icon.svelte'
-  import {
-    scriptRun,
-    startNotebookFromSettings,
-    startScript,
-    stopNotebook,
-    stopScript,
-  } from './scriptHost.svelte'
-  import { setSetting } from '$lib/bridge/commands'
+  import { scriptRun, startScript, stopScript } from './scriptHost.svelte'
   import { showActivity } from '$lib/activity/activity.svelte'
 
   let logEl = $state<HTMLPreElement | null>(null)
   let collapsed = $state(false)
-  let copied = $state(false)
 
-  const notebook = $derived(scriptRun.mode === 'notebook')
-  const notebookOn = $derived(
-    notebook && (scriptRun.status === 'waiting' || scriptRun.status === 'connected'),
-  )
-  const fileName = $derived(
-    notebook ? 'Notebook connection' : (scriptRun.path.split(/[\\/]/).pop() ?? scriptRun.path),
-  )
+  const fileName = $derived(scriptRun.path.split(/[\\/]/).pop() ?? scriptRun.path)
   const statusLabel = $derived(
     scriptRun.status === 'running'
       ? scriptRun.dryRun
@@ -33,82 +19,11 @@
         ? 'Finished'
         : scriptRun.status === 'stopped'
           ? 'Stopped'
-          : scriptRun.status === 'waiting'
-            ? 'Waiting for a notebook…'
-            : scriptRun.status === 'connected'
-              ? scriptRun.client?.kind === 'mcp'
-                ? `AI assistant connected · ${scriptRun.client.name}`
-                : scriptRun.client?.kind === 'unknown'
-                  ? 'Unidentified client connected'
-                  : 'Notebook connected'
-              : scriptRun.status === 'off'
-                ? 'Off'
-                : 'Failed',
+          : 'Failed',
   )
-  /** What to paste in the notebook's first cell. */
-  const connectSnippet = $derived(
-    `import sys; sys.path.insert(0, r"${scriptRun.moduleDir}")\n` +
-      `import zapterm; zapterm.connect()`,
-  )
-
-  async function copySnippet() {
-    try {
-      await navigator.clipboard.writeText(connectSnippet)
-      copied = true
-      setTimeout(() => (copied = false), 1500)
-    } catch {
-      /* clipboard unavailable: the text is selectable */
-    }
-  }
-
-  // Follow the log as it grows (unless the user scrolled up to read).
-  $effect(() => {
-    void scriptRun.log.length
-    const el = logEl
-    if (!el) return
-    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40
-    if (nearBottom) queueMicrotask(() => (el.scrollTop = el.scrollHeight))
-  })
 
   function rerun(dryRun: boolean, readOnly: boolean) {
     void startScript(scriptRun.path, dryRun, readOnly, scriptRun.allow)
-  }
-
-  /// Notebook mode: read-only can be switched live; remembered for next time.
-  function setNotebookReadOnly(on: boolean) {
-    scriptRun.readOnly = on
-    void setSetting('notebook.read_only', on ? '1' : '0').catch(() => {})
-  }
-
-  /// Notebook mode, Read-only off: ask before each other command.
-  function setAskChanges(on: boolean) {
-    scriptRun.askChanges = on
-    void setSetting('notebook.ask_changes', on ? '1' : '0').catch(() => {})
-  }
-
-  /** What an MCP client (an AI assistant) needs in its configuration. */
-  const mcpSnippet = $derived.by(() => {
-    const sep = scriptRun.moduleDir.includes('\\') ? '\\' : '/'
-    const python = /Windows/i.test(navigator.userAgent) ? 'python' : 'python3'
-    return JSON.stringify(
-      {
-        mcpServers: {
-          zapterm: { command: python, args: [`${scriptRun.moduleDir}${sep}zapterm_mcp.py`] },
-        },
-      },
-      null,
-      2,
-    )
-  })
-  let mcpCopied = $state(false)
-  async function copyMcp() {
-    try {
-      await navigator.clipboard.writeText(mcpSnippet)
-      mcpCopied = true
-      setTimeout(() => (mcpCopied = false), 1500)
-    } catch {
-      /* clipboard unavailable: the text is on screen to copy by hand */
-    }
   }
 </script>
 
@@ -123,15 +38,7 @@
         title={`Only ${scriptRun.allow.join(', ')} commands are sent`}>read-only</span
       >{/if}
     <span class="spacer"></span>
-    {#if notebook}
-      {#if notebookOn}
-        <button class="btn stop" onclick={() => stopNotebook()}>Turn off</button>
-      {:else}
-        <button class="btn" onclick={() => void startNotebookFromSettings().catch(console.error)}
-          >Turn on</button
-        >
-      {/if}
-    {:else if scriptRun.status === 'running'}
+    {#if scriptRun.status === 'running'}
       <button class="btn stop" onclick={() => stopScript()}>Stop</button>
     {:else}
       {#if scriptRun.dryRun || scriptRun.readOnly}
@@ -158,7 +65,7 @@
       aria-label={collapsed ? 'Expand' : 'Collapse'}
       ><Icon name="chevron" size={12} open={!collapsed} /></button
     >
-    {#if scriptRun.status !== 'running' && !notebookOn}
+    {#if scriptRun.status !== 'running'}
       <button
         class="icon"
         onclick={() => (scriptRun.visible = false)}
@@ -169,59 +76,6 @@
   </div>
 
   {#if !collapsed}
-    {#if notebookOn && scriptRun.moduleDir}
-      <div class="connect">
-        <label class="ro-toggle">
-          <input
-            type="checkbox"
-            checked={scriptRun.readOnly}
-            onchange={(e) => setNotebookReadOnly(e.currentTarget.checked)}
-          />
-          <span>
-            <strong>Read-only</strong> — only <code>{scriptRun.allow.join(', ')}</code> commands are sent;
-            anything else is listed as "would run".
-          </span>
-        </label>
-        {#if !scriptRun.readOnly}
-          <label class="ro-toggle">
-            <input
-              type="checkbox"
-              checked={scriptRun.askChanges}
-              onchange={(e) => setAskChanges(e.currentTarget.checked)}
-            />
-            <span>
-              <strong>Ask me first</strong> — before any other command is sent, ZapTerm shows it and waits
-              for your Yes.
-            </span>
-          </label>
-        {/if}
-        <p>
-          In your notebook (VS Code, JupyterLab) or a <code>python</code> prompt, run:
-        </p>
-        <div class="snippet">
-          <pre>{connectSnippet}</pre>
-          <button class="btn" onclick={copySnippet}>{copied ? 'Copied' : 'Copy'}</button>
-        </div>
-        <p class="hint">
-          Then <code>zapterm.tab("name")</code> for an open tab or
-          <code>zapterm.open("saved session")</code>.
-          {#if scriptRun.idleMinutes > 0}Turns itself off after {scriptRun.idleMinutes} min without notebook
-            calls.{/if}
-        </p>
-        <details class="mcp">
-          <summary>Connect an AI assistant (MCP)</summary>
-          <p>
-            Add this server to your MCP client (Claude Desktop, Claude Code…). The assistant can
-            list tabs and saved sessions, open one and run commands — under the same Read-only and
-            Ask rules above. What your devices print is sent to that assistant.
-          </p>
-          <div class="snippet">
-            <pre>{mcpSnippet}</pre>
-            <button class="btn" onclick={copyMcp}>{mcpCopied ? 'Copied' : 'Copy'}</button>
-          </div>
-        </details>
-      </div>
-    {/if}
     {#if scriptRun.report.length > 0}
       <table class="report">
         <tbody>
@@ -244,10 +98,6 @@
 </span>{/each}</pre>
     {#if scriptRun.python}
       <p class="foot">{scriptRun.python}</p>
-    {:else if notebookOn && scriptRun.connectionFile}
-      <p class="foot" title="zapterm.connect(path=…) if it isn't found">
-        {scriptRun.connectionFile}
-      </p>
     {/if}
   {/if}
 </div>
@@ -352,52 +202,6 @@
   .icon:hover {
     color: var(--zx-text);
   }
-  .connect {
-    margin: 8px 10px 0;
-    font-size: 12px;
-    color: var(--zx-text-muted);
-  }
-  .connect p {
-    margin: 0 0 6px;
-  }
-  .connect code {
-    font-family: var(--zx-font-mono);
-    font-size: 11.5px;
-    color: var(--zx-text);
-  }
-  .snippet {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    margin-bottom: 6px;
-  }
-  .snippet pre {
-    flex: 1;
-    margin: 0;
-    padding: 6px 8px;
-    border-radius: 6px;
-    background: var(--zx-term-bg);
-    color: var(--zx-term-fg);
-    font-family: var(--zx-font-mono);
-    font-size: 11.5px;
-    white-space: pre-wrap;
-    word-break: break-all;
-    user-select: text;
-  }
-  .hint {
-    font-size: 11.5px;
-  }
-  .mcp {
-    margin-top: 6px;
-    font-size: 12px;
-  }
-  .mcp summary {
-    cursor: pointer;
-    color: var(--zx-text-muted);
-  }
-  .mcp p {
-    margin: 6px 0;
-  }
   .report {
     border-collapse: collapse;
     margin: 6px 10px 0;
@@ -454,12 +258,5 @@
   .badge.ro {
     background: color-mix(in srgb, var(--zx-warn) 18%, transparent);
     color: var(--zx-warn);
-  }
-  .ro-toggle {
-    display: flex;
-    gap: 6px;
-    align-items: flex-start;
-    margin-bottom: 8px;
-    cursor: pointer;
   }
 </style>

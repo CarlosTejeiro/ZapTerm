@@ -168,6 +168,7 @@ export function groupActivity(entries: ActivityEntry[]): ActivityGroup[] {
     cur.end = e.time
     lastAt = at
     if (isRow(e)) cur.rows.push(e)
+    else if (e.action === 'connect' && e.result === 'refused') cur.note = e.detail
     else if (e.action === 'start') cur.note = e.detail
     else if (e.action === 'finish') {
       cur.note = [cur.note, e.detail].filter(Boolean).join(' · ')

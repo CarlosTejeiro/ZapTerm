@@ -24,7 +24,7 @@ skipped and logged as "would run", and ``run()`` returns an empty string for
 it. ZapTerm enforces this, not the script.
 
 From a notebook (VS Code, JupyterLab) or a Python prompt you started yourself,
-turn on **Tools → Allow notebook connection** in ZapTerm, then::
+turn on **Tools → Notebook connection** in ZapTerm, then::
 
     import zapterm
     zapterm.connect()
@@ -127,8 +127,7 @@ def _open(port: int, token: str) -> None:
             sock = socket.create_connection(("127.0.0.1", int(port)), timeout=10)
         except OSError:
             raise Error(
-                "ZapTerm isn't accepting notebooks (is it open, with Tools → Allow "
-                "notebook connection on?)"
+                f"ZapTerm isn't accepting {_who()} (is it open, with {_menu()} on?)"
             ) from None
         reader = sock.makefile("r", encoding="utf-8", newline="\n")
         sock.sendall((json.dumps({"token": token}) + "\n").encode("utf-8"))
@@ -138,8 +137,8 @@ def _open(port: int, token: str) -> None:
             break
         sock.close()
         message = hello.get("error") or (
-            "ZapTerm refused the connection (token out of date? turn the "
-            "notebook connection off and on, then connect() again)"
+            f"ZapTerm refused the connection (token out of date? turn {_menu()} "
+            "off and on, then connect again)"
         )
         if "already connected" in message and time.monotonic() < deadline:
             time.sleep(0.1)
@@ -147,6 +146,19 @@ def _open(port: int, token: str) -> None:
         raise Error(message)
     sock.settimeout(None)
     _sock, _reader = sock, reader
+
+
+def _is_assistant() -> bool:
+    return bool(_identity) and _identity.get("kind") == "mcp"
+
+
+def _who() -> str:
+    return "AI assistants" if _is_assistant() else "notebooks"
+
+
+def _menu() -> str:
+    """The ZapTerm menu entry that lets this kind of client in."""
+    return "Tools → AI assistant (MCP)" if _is_assistant() else "Tools → Notebook connection"
 
 
 def _close() -> None:
@@ -191,10 +203,8 @@ def _connect_notebook() -> None:
                 break
         else:
             raise Error(
-                "ZapTerm isn't accepting notebooks: turn on Tools → Allow notebook "
-                "connection in ZapTerm (looked for "
-                + ", ".join(str(t) for t in tried)
-                + ")"
+                f"ZapTerm isn't accepting {_who()}: turn on {_menu()} in ZapTerm "
+                "(looked for " + ", ".join(str(t) for t in tried) + ")"
             )
     _open(port, token)
     _announce()
@@ -235,7 +245,7 @@ def _connect() -> None:
 
 def connect(path: Optional[str] = None, port: Optional[int] = None, token: Optional[str] = None) -> None:
     """Connect a notebook (or any Python you started yourself) to a running
-    ZapTerm. Turn on **Tools → Allow notebook connection** in ZapTerm first.
+    ZapTerm. Turn on **Tools → Notebook connection** in ZapTerm first.
 
     With no arguments the connection details are read from the file ZapTerm
     writes (found automatically); ``path`` points at that file when ZapTerm keeps
@@ -270,7 +280,7 @@ def _call(method: str, **params):
                     raise Error(
                         "ZapTerm closed the connection"
                         + (
-                            " (notebook connection turned off, or ZapTerm closed) — "
+                            " (connection turned off, or ZapTerm closed) — "
                             "run the cell again to reconnect"
                             if _notebook is not None
                             else ""

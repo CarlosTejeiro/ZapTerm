@@ -448,7 +448,7 @@ pub async fn start_notebook(
                         let mut stream = stream;
                         let refusal = serde_json::json!({
                             "hello": false,
-                            "error": "another notebook is already connected to ZapTerm",
+                            "error": "another notebook or AI assistant is already connected to ZapTerm",
                         });
                         let _ = stream.write_all(format!("{refusal}\n").as_bytes()).await;
                         continue;
@@ -1120,7 +1120,7 @@ print(zapterm.session().name)
         assert_eq!(replies[0]["result"]["tools"].as_array().unwrap().len(), 5);
         assert_eq!(replies[1]["result"]["isError"], true);
         let text = replies[1]["result"]["content"][0]["text"].as_str().unwrap();
-        assert!(text.contains("Allow notebook connection"), "{text}");
+        assert!(text.contains("Tools → AI assistant (MCP)"), "{text}");
         let _ = std::fs::remove_dir_all(nb.dir);
     }
 
@@ -1165,7 +1165,7 @@ print(zapterm.session().name)
         );
         let out = run_outside(&python, &nb.module_dir, &body).await;
         assert!(
-            out.contains("refused: another notebook is already connected"),
+            out.contains("refused: another notebook or AI assistant is already connected"),
             "{out}"
         );
         assert!(

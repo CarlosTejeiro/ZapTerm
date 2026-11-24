@@ -18,7 +18,7 @@
 import { invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { onTerminalData } from '$lib/bridge/events'
-import { getSetting, promptReturned, sendVaultField } from '$lib/bridge/commands'
+import { getSetting, promptReturned, sendVaultField, setSetting } from '$lib/bridge/commands'
 import { paneToSession } from '$lib/stores/sessionRuntime.svelte'
 import {
   DEFAULT_READ_ONLY_ALLOW,
@@ -32,7 +32,7 @@ import {
   stripAnsi,
 } from './output'
 import { errorText } from '$lib/bridge/errors'
-import { recordActivity } from '$lib/activity/activity.svelte'
+import { activity, recordActivity } from '$lib/activity/activity.svelte'
 import { asksForSecret, MASK, maskSecrets } from './redact'
 import type { ActivitySource } from '$lib/activity/activityView'
 
@@ -109,6 +109,16 @@ export const scriptRun = $state({
    *  notebook (`Jupyter`, `Python`) or an AI assistant through the MCP
    *  server (its client's name). Null while nobody is. */
   client: null as { kind: 'notebook' | 'mcp' | 'unknown'; name: string } | null,
+  /** Who this connection is for: notebooks (Tools → Notebook connection) or
+   *  an AI assistant through the MCP server (Tools → AI assistant). A client
+   *  of the other kind is refused. */
+  audience: 'notebook' as Audience,
+  /** The connected client is of the other kind: its calls are refused. */
+  rejected: false,
+  /** The latest thing worth telling the user in the connection panel. */
+  notice: '',
+  /** Activity recorded after this number belongs to this connection. */
+  sinceSeq: 0,
   python: '',
   status: 'done' as RunStatus,
   exitCode: null as number | null,
@@ -121,6 +131,27 @@ export const scriptRun = $state({
   moduleDir: '',
   idleMinutes: 0,
 })
+
+export type Audience = 'notebook' | 'assistant'
+
+/** What the connected client may send: only display commands (`read`), any
+ *  command with a question before each change (`ask`), or anything (`free`). */
+export type Permission = 'read' | 'ask' | 'free'
+
+export function permission(): Permission {
+  return scriptRun.readOnly ? 'read' : scriptRun.askChanges ? 'ask' : 'free'
+}
+
+/** Change what the client may send, live, and remember it for next time
+ *  (each audience keeps its own choice). */
+export function setPermission(level: Permission): void {
+  scriptRun.readOnly = level === 'read'
+  // Leaving read-only never lands on "no questions" by itself.
+  scriptRun.askChanges = level !== 'free'
+  const key = scriptRun.audience
+  void setSetting(`${key}.read_only`, scriptRun.readOnly ? '1' : '0').catch(() => {})
+  void setSetting(`${key}.ask_changes`, scriptRun.askChanges ? '1' : '0').catch(() => {})
+}
 
 /** A script running or a notebook connection on: only one at a time. */
 export function hostBusy(): boolean {
@@ -222,14 +253,17 @@ function announceClient() {
   // kernel started before ZapTerm was updated): don't guess which.
   scriptRun.client ??= { kind: 'unknown', name: '' }
   const c = scriptRun.client
+  if (c.kind === 'unknown') {
+    scriptRun.notice =
+      'A client connected without saying what it is: it runs an older copy of zapterm.py. ' +
+      'Quit and reopen the AI assistant app (or restart the notebook kernel) so ZapTerm can name it.'
+  }
   log(
     c.kind === 'mcp'
       ? `AI assistant connected: ${c.name} (MCP).`
       : c.kind === 'notebook'
         ? `Notebook connected${c.name ? ` (${c.name})` : ''}.`
-        : 'A client connected without saying what it is: it runs an older copy of ' +
-          'zapterm.py. Quit and reopen the AI assistant app (or restart the notebook ' +
-          'kernel) so ZapTerm can name it.',
+        : scriptRun.notice,
   )
   audit('connect', null, '', 'ok')
 }
@@ -240,6 +274,28 @@ function clientLeft() {
   if (announced) audit('disconnect', null, '', 'ok')
   announced = false
   scriptRun.client = null
+  scriptRun.rejected = false
+}
+
+/** What a client of the wrong kind is told, and what the panel shows. */
+function wrongClient(): { toClient: string; toUser: string } {
+  return scriptRun.audience === 'assistant'
+    ? {
+        toClient:
+          'ZapTerm is set to accept an AI assistant, not a notebook: turn on ' +
+          'Tools → Notebook connection in ZapTerm instead',
+        toUser:
+          'A notebook tried to connect and was refused: this connection is for an AI ' +
+          'assistant. For notebooks, use Tools → Notebook connection.',
+      }
+    : {
+        toClient:
+          'ZapTerm is not accepting AI assistants right now: the user has to turn on ' +
+          'Tools → AI assistant (MCP) in ZapTerm',
+        toUser:
+          'An AI assistant tried to connect and was refused: this connection is for ' +
+          'notebooks. For an assistant, use Tools → AI assistant (MCP).',
+      }
 }
 
 function checkAborted(reqId?: number) {
@@ -289,7 +345,7 @@ export async function initScriptHost(hostApi: ScriptHostApi): Promise<() => void
         for (const id of inFlight) cancelled.add(id)
         const what = scriptRun.client?.kind === 'mcp' ? 'AI assistant' : 'Notebook'
         clientLeft()
-        log(`${what} disconnected — waiting for a notebook or an AI assistant…`)
+        log(`${what} disconnected.`)
       }
     }),
     await listen<{ run_id: string; code: number | null }>('script-exit', (e) => {
@@ -298,7 +354,7 @@ export async function initScriptHost(hostApi: ScriptHostApi): Promise<() => void
         aborted = true
         clientLeft()
         scriptRun.status = 'off'
-        log('Notebook connection turned off.')
+        log('Connection turned off.')
         taps.clear()
         return
       }
@@ -455,19 +511,34 @@ export async function stopScript(): Promise<void> {
 /** Turn the notebook connection on with the saved choices: read-only unless
  *  the user switched it off before (`notebook.read_only`), with their
  *  allowlist (`scripts.read_only_allow`). Used by every "turn on" path. */
-export async function startNotebookFromSettings(): Promise<void> {
+export async function startNotebookFromSettings(audience: Audience = 'notebook'): Promise<void> {
   const [ro, allowText, ask] = await Promise.all([
-    getSetting('notebook.read_only').catch(() => null),
+    getSetting(`${audience}.read_only`).catch(() => null),
     getSetting('scripts.read_only_allow').catch(() => null),
-    getSetting('notebook.ask_changes').catch(() => null),
+    getSetting(`${audience}.ask_changes`).catch(() => null),
   ])
-  await startNotebook(ro !== '0', parseAllowList(allowText), ask !== '0')
+  await startNotebook(ro !== '0', parseAllowList(allowText), ask !== '0', audience)
+}
+
+/** Turn the connection on for `audience`, turning it off first if it is on
+ *  for the other one (one connection, one kind of client at a time). */
+export async function switchConnection(audience: Audience): Promise<void> {
+  if (scriptRun.mode === 'notebook' && hostBusy()) {
+    if (scriptRun.audience === audience) {
+      scriptRun.visible = true
+      return
+    }
+    await stopNotebook()
+    for (let i = 0; i < 60 && hostBusy(); i++) await sleep(50)
+  }
+  await startNotebookFromSettings(audience)
 }
 
 export async function startNotebook(
   readOnly = true,
   allow: string[] = DEFAULT_READ_ONLY_ALLOW,
   askChanges = true,
+  audience: Audience = 'notebook',
 ): Promise<void> {
   if (hostBusy()) throw new Error('a script or a notebook connection is already active')
   taps.clear()
@@ -482,6 +553,10 @@ export async function startNotebook(
     askChanges,
     allow: [...allow],
     client: null,
+    audience,
+    rejected: false,
+    notice: '',
+    sinceSeq: activity.seq,
     python: '',
     status: 'waiting',
     exitCode: null,
@@ -503,7 +578,11 @@ export async function startNotebook(
     scriptRun.connectionFile = started.connection_file
     scriptRun.moduleDir = started.module_dir
     scriptRun.idleMinutes = started.idle_minutes
-    log('Notebook connection on — waiting for a notebook…')
+    log(
+      audience === 'assistant'
+        ? 'AI assistant access on — waiting for an assistant…'
+        : 'Notebook connection on — waiting for a notebook…',
+    )
   } catch (e) {
     scriptRun.status = 'off'
     log(
@@ -561,6 +640,9 @@ async function dispatch(
   reqId: number,
 ): Promise<unknown> {
   if (!api) throw new ApiError('error', 'ZapTerm is not ready')
+  if (scriptRun.rejected && method !== 'identify' && method !== 'cancel') {
+    throw new ApiError('refused', wrongClient().toClient)
+  }
   switch (method) {
     case 'identify': {
       // Sent by the client right after it connects.
@@ -578,7 +660,26 @@ async function dispatch(
           p.kind === 'mcp'
             ? { kind: 'mcp', name: client || 'MCP client' }
             : { kind: 'notebook', name: client }
-        announceClient()
+        const wanted = scriptRun.audience === 'assistant' ? 'mcp' : 'notebook'
+        if (scriptRun.client.kind !== wanted) {
+          // The other kind of client: it stays connected only to be told why
+          // every call is refused.
+          if (announceTimer) clearTimeout(announceTimer)
+          announceTimer = null
+          announced = true
+          scriptRun.rejected = true
+          scriptRun.notice = wrongClient().toUser
+          log(scriptRun.notice)
+          audit(
+            'connect',
+            null,
+            'refused: this connection is for the other kind of client',
+            'refused',
+          )
+        } else {
+          scriptRun.notice = ''
+          announceClient()
+        }
       }
       return null
     }

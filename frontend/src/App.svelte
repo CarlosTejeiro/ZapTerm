@@ -49,9 +49,11 @@
     hostBusy,
     initScriptHost,
     scriptRun,
-    startNotebookFromSettings,
     startScript,
+    switchConnection,
+    type Audience,
   } from '$lib/scripting/scriptHost.svelte'
+  import ConnectionPanel from '$lib/scripting/ConnectionPanel.svelte'
   import CommandPalette from '$lib/palette/CommandPalette.svelte'
   import type { PaletteItem } from '$lib/palette/CommandPalette.svelte'
   import Toasts from '$lib/ui/Toasts.svelte'
@@ -859,30 +861,41 @@
     if (typeof picked === 'string') scriptPending = picked
   }
 
-  /// Tools → Allow notebook connection: turn it on, or show the panel if it
-  /// already is.
-  async function openNotebookConnection() {
-    if (scriptRun.mode === 'notebook' && hostBusy()) {
+  /// Tools → Notebook connection / AI assistant (MCP): turn the connection on
+  /// for that kind of client, or show its panel if it already is. One
+  /// connection at a time: the other kind is turned off first, after asking.
+  async function openConnection(audience: Audience) {
+    const label = audience === 'assistant' ? 'AI assistant (MCP)' : 'Notebook connection'
+    if (scriptRun.mode === 'notebook' && hostBusy() && scriptRun.audience === audience) {
       scriptRun.visible = true
+      return
+    }
+    if (hostBusy() && scriptRun.mode !== 'notebook') {
+      scriptRun.visible = true
+      await message('A script is running — wait for it or stop it first.', {
+        title: label,
+        kind: 'info',
+      })
       return
     }
     if (hostBusy()) {
-      scriptRun.visible = true
-      await message('A script is running — wait for it or stop it first.', {
-        title: 'Notebook connection',
-        kind: 'info',
-      })
-      return
+      const other =
+        scriptRun.audience === 'assistant' ? 'AI assistant access' : 'notebook connection'
+      const yes = await ask(
+        `The ${other} is on. Only one of the two can be on at a time.\n\nTurn it off and turn on ${label}?`,
+        { title: label, kind: 'info' },
+      )
+      if (!yes) {
+        scriptRun.visible = true
+        return
+      }
     }
     try {
-      await startNotebookFromSettings()
+      await switchConnection(audience)
     } catch (e) {
       // e.g. a script was started while the settings were being read.
       scriptRun.visible = true
-      await message(String(e instanceof Error ? e.message : e), {
-        title: 'Notebook connection',
-        kind: 'info',
-      })
+      await message(String(e instanceof Error ? e.message : e), { title: label, kind: 'info' })
     }
   }
 
@@ -1453,11 +1466,18 @@
       run: chooseScript,
     },
     {
-      id: 'act-notebook',
-      label: 'Allow notebook connection',
-      icon: 'term' as const,
+      id: 'act-assistant',
+      label: 'AI assistant (MCP)',
+      icon: 'spark' as const,
       section: 'Actions' as const,
-      run: () => void openNotebookConnection(),
+      run: () => void openConnection('assistant'),
+    },
+    {
+      id: 'act-notebook',
+      label: 'Notebook connection',
+      icon: 'book' as const,
+      section: 'Actions' as const,
+      run: () => void openConnection('notebook'),
     },
     {
       id: 'act-activity',
@@ -1863,7 +1883,8 @@
     onSettings={() => (showSettings = true)}
     onRunScript={chooseScript}
     onScriptExamples={() => scriptExamplesDir(true).catch(() => {})}
-    onNotebook={() => void openNotebookConnection()}
+    onNotebook={() => void openConnection('notebook')}
+    onAssistant={() => void openConnection('assistant')}
     onActivity={showActivity}
     onCheckUpdates={handleCheckUpdates}
     onSetTheme={(k) => applyTheme(k)}
@@ -2216,7 +2237,9 @@
   />
 {/if}
 
-{#if scriptRun.visible}
+{#if scriptRun.visible && scriptRun.mode === 'notebook'}
+  <ConnectionPanel />
+{:else if scriptRun.visible}
   <ScriptPanel />
 {/if}
 

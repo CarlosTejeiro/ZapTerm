@@ -6,7 +6,7 @@ talks to it over stdin/stdout. It needs nothing but Python 3.9+::
     python3 /path/to/zapterm_mcp.py
 
 Every tool call is carried out by ZapTerm on a real terminal tab, over the
-notebook connection (Tools -> Allow notebook connection...), so:
+local connection you turn on with Tools -> AI assistant (MCP)..., so:
 
 * you see each command the assistant runs, in the tab, as it happens;
 * ZapTerm - not this file and not the assistant - decides what may be sent.
@@ -169,6 +169,11 @@ HANDLERS: Dict[str, Callable[[dict], str]] = {
     "run_command": tool_run_command,
     "get_mode": tool_get_mode,
 }
+
+# This file is always an AI assistant's way in, whatever its client says (or
+# doesn't): ZapTerm is told so, and lets it in only through Tools -> AI
+# assistant (MCP). `initialize` adds the client's own name.
+zapterm._identity = {"kind": "mcp", "client": "MCP client"}
 
 _connected = False
 

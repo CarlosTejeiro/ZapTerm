@@ -100,6 +100,22 @@ describe('groupActivity', () => {
     ])
   })
 
+  it('shows a refused client as a closed visit that sent nothing, with why', () => {
+    reset()
+    const n = { source: 'notebook', client: 'Python', device: '', address: '' } as const
+    const [g] = groupActivity([
+      ev('connect', {
+        ...n,
+        result: 'refused',
+        detail: 'refused: this connection is for the other kind of client',
+      }),
+      ev('disconnect', n),
+    ])
+    expect(g!.rows).toEqual([])
+    expect(g!.note).toContain('refused')
+    expect(g!.open).toBe(false)
+  })
+
   it('keeps how a script began and ended as the note', () => {
     reset()
     const s = { source: 'script', client: 'sase_reset.py' } as const
