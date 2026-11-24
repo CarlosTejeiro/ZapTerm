@@ -12,10 +12,10 @@ next cells. ZapTerm lets a notebook drive its tabs with the same `zapterm` modul
 scripts.
 
 > 🔒 **A notebook starts read-only.** Only `get …` / `show …` commands reach
-> the device; anything else is listed in the ZapTerm panel as "would run" and
-> `run()` returns an empty text for it. Untick **Read-only** in the panel only
-> when you really mean to change something — and keep bigger changes for a
-> script you've dry-run.
+> the device; anything else shows in the ZapTerm panel as blocked and
+> `run()` returns an empty text for it. Move the panel's control off
+> **Read-only** only when you really mean to change something — and keep
+> bigger changes for a script you've dry-run.
 
 ## One-time setup
 
@@ -29,15 +29,21 @@ You need one of these:
 
 ## Step 1 — let notebooks connect
 
-In ZapTerm: **Tools → Allow notebook connection…**. The panel shows *Waiting for a
+In ZapTerm: **Tools → Notebook connection…**. The panel shows *Waiting for a
 notebook…* and the lines a notebook needs:
 
 ![Notebook connection waiting](../images/notebook-waiting.png)
 
 The connection is off by default, local to your computer only, and turns
 itself off after 60 minutes without notebook activity or when ZapTerm closes.
-**Turn off** in the panel ends it any time. The **Read-only** box is ticked;
-leave it that way while you explore.
+**Turn off** in the panel ends it any time. **What a notebook may send** is on
+**Read-only**; leave it that way while you explore. The other two levels are
+**Ask me first** (any command, but ZapTerm asks you before each one that is
+not a display command) and **No questions**.
+
+This connection is for notebooks only: an AI assistant is let in through its
+own entry, [Tools → AI assistant (MCP)…](5-ai-assistant.md), and only one of
+the two can be on at a time.
 
 ## Step 2 — open the example notebook
 

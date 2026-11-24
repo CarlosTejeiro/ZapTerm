@@ -25,6 +25,7 @@
     onRunScript?: () => void
     onScriptExamples?: () => void
     onNotebook?: () => void
+    onAssistant?: () => void
     onActivity?: () => void
     onCheckUpdates?: () => void
     onSetTheme?: (key: string) => void
@@ -50,6 +51,7 @@
     onRunScript,
     onScriptExamples,
     onNotebook,
+    onAssistant,
     onActivity,
     onCheckUpdates,
     onSetTheme,
@@ -167,7 +169,14 @@
         },
       },
       {
-        label: 'Allow notebook connection…',
+        label: 'AI assistant (MCP)…',
+        action: () => {
+          onAssistant?.()
+          openMenu = null
+        },
+      },
+      {
+        label: 'Notebook connection…',
         action: () => {
           onNotebook?.()
           openMenu = null

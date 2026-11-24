@@ -20,7 +20,14 @@ export const activity = $state({
   /** Months of files loaded. */
   months: 2,
   visible: false,
+  /** Events recorded since ZapTerm started (the newest RECENT_MAX), each
+   *  with its number: what the connection panel shows live. */
+  recent: [] as { seq: number; entry: ActivityEntry }[],
+  /** Number of the last event recorded. */
+  seq: 0,
 })
+
+const RECENT_MAX = 400
 
 interface ActivityLog {
   entries: ActivityEntry[]
@@ -40,6 +47,10 @@ export function recordActivity(entry: NewActivity): Promise<void> {
     try {
       const stored = await invoke<ActivityEntry>('activity_record', { entry })
       if (activity.loaded) activity.entries.push(stored)
+      activity.recent.push({ seq: ++activity.seq, entry: stored })
+      if (activity.recent.length > RECENT_MAX) {
+        activity.recent.splice(0, activity.recent.length - RECENT_MAX)
+      }
     } catch (e) {
       console.error('activity_record failed', e)
     }

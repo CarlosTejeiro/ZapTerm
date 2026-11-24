@@ -18,10 +18,10 @@ session and run commands — and ZapTerm decides what is actually sent.
 |---|---|
 | **You see everything** | Each command is typed in a real tab, as with scripts and notebooks, and kept in the [activity record](#what-it-did-automation-activity). |
 | **Read-only by default** | Only commands starting with `get` or `show` (your list) reach a device. Anything else — including a display command chained with `;`, `|` or `&` — is refused, and the assistant is told it was not sent. |
-| **Ask me first** | With Read-only off, ZapTerm shows every other command and waits for your **Yes** before sending it. |
+| **Ask me first** | One level up from Read-only: ZapTerm shows every other command and waits for your **Yes** before sending it. |
 | **No passwords** | ZapTerm logs in from its vault. No tool gives the assistant a password or lets it type one. |
 | **Enforced by ZapTerm** | These rules live in the app, not in the MCP server or the assistant, so neither can skip them. |
-| **Off by default** | Nothing can connect until you turn the connection on; it turns itself off after 60 minutes without calls. |
+| **Off by default** | Nothing can connect until you turn **AI assistant (MCP)** on; it turns itself off after 60 minutes without calls. |
 
 A device's output can contain text written by someone else (a banner, an
 interface description). The tools tell the assistant to treat output as data,
@@ -31,10 +31,16 @@ never as instructions — and Read-only and Ask me first hold even if it doesn't
 
 You need Python 3.9 or newer on the same computer.
 
-1. In ZapTerm: **Tools → Allow notebook connection…** (the assistant uses the
-   same local connection as notebooks; one client at a time).
-2. In the panel, open **Connect an AI assistant (MCP)** and **Copy** the
-   configuration. It looks like this, with the path of your own installation:
+1. In ZapTerm: **Tools → AI assistant (MCP)…**. Its panel opens, waiting for
+   an assistant:
+
+   ![The AI assistant panel](../images/assistant-panel.png)
+
+   This is the assistant's own entry: a notebook that tries to connect while
+   it is on is refused (notebooks use **Tools → Notebook connection…**), and
+   only one of the two can be on at a time.
+2. Under **Set up your assistant**, **Copy** the configuration. It looks like
+   this, with the path of your own installation:
 
    ```json
    {
@@ -47,7 +53,11 @@ You need Python 3.9 or newer on the same computer.
    }
    ```
 
-3. Add it to your MCP client's configuration and restart the client.
+3. Add it to your MCP client's configuration, then quit the client completely
+   and open it again.
+
+Once the assistant has connected, the panel shows its name, and under **Since
+it was turned on** every command it sends, as it happens.
 
 ## What the assistant can do
 
@@ -61,12 +71,17 @@ You need Python 3.9 or newer on the same computer.
 
 ## Making changes
 
-Untick **Read-only** in the panel. **Ask me first** appears, ticked: for each
-command that is not a display command, ZapTerm shows it and waits.
+**What the assistant may send** in the panel has three levels, and the
+assistant keeps its own choice, apart from the notebooks':
+
+- **Read-only** (the default): only display commands reach a device.
+- **Ask me first**: display commands go straight through; before any other
+  command ZapTerm shows it to you, saying who asks, and waits.
+- **No questions**: every command is sent as it comes.
 
 ![ZapTerm asking before a command](../images/mcp-approve.png)
 
-**No** tells the assistant the command was declined. Untick *Ask me first*
+**No** tells the assistant the command was declined. Choose *No questions*
 only for work you would also hand to a script without watching.
 
 ## What it did: Automation activity

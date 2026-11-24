@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
-## [1.8.13-beta] - beta of the automation work (branch `claude/automation`, not on main yet)
+## [1.8.14-beta] - beta of the automation work (branch `claude/automation`, not on main yet)
 
 Betas are the 1.8.x versions: 1.8.0, 1.8.1… tagged `v1.8.0-beta`, `v1.8.1-beta`…
 (1.6.0 was the first beta, before the encrypted vault reached main as 1.7.)
@@ -16,6 +16,24 @@ The app version itself carries no suffix, because the MSI and RPM bundlers
 disagree on which suffixes they accept.
 
 Includes everything up to 1.7.18 (the sections below), plus:
+
+### Changed
+- **An AI assistant and notebooks each have their own entry and panel.**
+  "Allow notebook connection" let both in, with the assistant's set-up tucked
+  inside the notebook panel. Now **Tools → AI assistant (MCP)…** and **Tools →
+  Notebook connection…** are separate:
+  - Each panel says who is connected, by name, and only what its kind of
+    client needs to connect.
+  - Each lets in only its kind: a notebook is refused while the assistant's
+    entry is on, and the other way round, and is told which entry to use.
+    Only one of the two can be on at a time; asking for the other offers to
+    switch.
+  - **What it may send** is one control with three levels — **Read-only**,
+    **Ask me first**, **No questions** — instead of two checkboxes, and the
+    assistant and the notebooks each remember their own level.
+  - In place of the text log, the panel lists what was sent since it was
+    turned on, as it happens: time, device, command and result, with **All
+    activity** one click away.
 
 ### Changed
 - **Passwords are masked in the activity record and in the panel's log.** A
