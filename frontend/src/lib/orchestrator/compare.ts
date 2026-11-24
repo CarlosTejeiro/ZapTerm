@@ -2,6 +2,8 @@
 // panes produced the same output, how to tell panes apart, and what may have
 // made a capture incomplete. Kept free of Svelte so it can be unit-tested.
 
+import { renderLine } from '$lib/terminal/renderLine'
+
 export type HostState = 'running' | 'done' | 'timeout'
 
 /** Most pages one session is paged through for one command when "Page
@@ -43,24 +45,6 @@ const PAGER_RE = /(?:^|\s)(?:<?-{2,}\s*\(?\s*more\b[^\n]*?\)?\s*-{2,}>?)\s*$/i
 /** A pager prompt the device left at the start of a line when it paged on
  *  without erasing it, with the spaces after it. */
 const PAGER_PREFIX_RE = /^\s*<?-{2,}\s*\(?\s*more\b[^\n]*?\)?\s*-{2,}>?[ \t]*/i
-
-/**
- * One line as a terminal shows it: a carriage return goes back to the start
- * of the line, a backspace one column left, and what comes next overwrites
- * what was there. Pagers erase their prompt this way (`--More--` followed by
- * backspaces, or by `\r` and spaces) before printing the next page.
- */
-function renderLine(line: string): string {
-  if (!/[\r\b]/.test(line)) return line
-  const cells: string[] = []
-  let col = 0
-  for (const ch of line) {
-    if (ch === '\r') col = 0
-    else if (ch === '\b') col = Math.max(0, col - 1)
-    else cells[col++] = ch
-  }
-  return Array.from(cells, (c) => c ?? ' ').join('')
-}
 
 /** The capture split into lines, each rendered as the terminal shows it. */
 function renderLines(buffer: string): string[] {

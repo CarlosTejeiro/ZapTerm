@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
-## [1.8.10-beta] - beta of the automation work (branch `claude/automation`, not on main yet)
+## [1.8.11-beta] - beta of the automation work (branch `claude/automation`, not on main yet)
 
 Betas are the 1.8.x versions: 1.8.0, 1.8.1… tagged `v1.8.0-beta`, `v1.8.1-beta`…
 (1.6.0 was the first beta, before the encrypted vault reached main as 1.7.)
@@ -16,6 +16,16 @@ The app version itself carries no suffix, because the MSI and RPM bundlers
 disagree on which suffixes they accept.
 
 Includes everything up to 1.7.18 (the sections below), plus:
+
+### Fixed
+- **`run()` timed out on devices that end lines with `\r\r\n`** (seen on a
+  FortiGate 90G over a serial console), from scripts, notebooks and the MCP
+  server. The output came back complete, but the trailing `\r` wiped the
+  echoed command line, so `run()` never saw the echo and waited until its time
+  limit. Lines are now read the way the terminal shows them: a carriage return
+  or backspace moves the cursor and what follows overwrites, nothing is
+  erased. The FortiOS 7.6 STS prompt (`FortiGate-90G (STS)# `) was already
+  recognised; a test now covers it.
 
 ### Changed
 - **Run & compare shows the differences side by side.** The two outputs face
