@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.7.19] - 2026-11-24
+
+### Fixed
+- **`run()` timed out on devices that end lines with `\r\r\n`** (seen on a
+  FortiGate 90G over a serial console), in scripts and notebooks. The output
+  came back complete, but the trailing `\r` wiped the echoed command line, so
+  `run()` never saw the echo and waited until its time limit. Lines are now
+  read the way the terminal shows them: a carriage return or backspace moves
+  the cursor and what follows overwrites, nothing is erased. The FortiOS 7.6
+  STS prompt (`FortiGate-90G (STS)# `) was already recognised; a test now
+  covers it.
+
 ## [1.7.18] - 2026-11-23
 
 ### Added
