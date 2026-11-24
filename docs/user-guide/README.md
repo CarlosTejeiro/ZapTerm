@@ -331,8 +331,12 @@ selector, Font family + size, cursor style. -->
   with its notes and, if you want, downloads the installer that matches your
   copy (setup EXE, MSI, portable EXE, DMG, DEB, RPM or AppImage) into your
   Downloads folder, checked against the SHA-256 GitHub publishes. The setup
-  EXE and the MSI install with one click (ZapTerm closes for it); the others
-  open the installer or show the file. A copy from the Microsoft Store is
+  EXE and the MSI install with one click (ZapTerm closes for it). On macOS,
+  **Install and reopen** closes ZapTerm, replaces the app with the new
+  version and opens it again; if ZapTerm can't replace itself, the disk image
+  opens for you to drag it to Applications. The others open the installer or
+  show the file. Your sessions, vault and settings are never touched by an
+  update. A copy from the Microsoft Store is
   updated by the Store. Stable versions are offered to stable copies; a beta
   copy is also offered newer betas.
 

@@ -20,5 +20,10 @@ pub mod snippets;
 pub mod sync;
 pub mod transfer;
 pub mod triggers;
+// Compiled on every Unix so its tests run in CI (which has no macOS runner);
+// only the macOS build calls it.
+#[cfg(unix)]
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+mod mac_update;
 pub mod update;
 pub mod vault;

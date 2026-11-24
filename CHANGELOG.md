@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
-## [1.8.14-beta] - beta of the automation work (branch `claude/automation`, not on main yet)
+## [1.8.15-beta] - beta of the automation work (branch `claude/automation`, not on main yet)
 
 Betas are the 1.8.x versions: 1.8.0, 1.8.1… tagged `v1.8.0-beta`, `v1.8.1-beta`…
 (1.6.0 was the first beta, before the encrypted vault reached main as 1.7.)
@@ -18,6 +18,18 @@ disagree on which suffixes they accept.
 Includes everything up to 1.7.18 (the sections below), plus:
 
 ### Changed
+- **macOS: "Download and install" now installs.** It used to open the disk
+  image and leave ZapTerm running, so the old copy was in the way of the new
+  one. Now **Install and reopen** closes ZapTerm, puts the new version in the
+  place of the old one and opens it again; sessions, vault and settings are
+  not touched (they live outside the app). The old version is kept until the
+  new one is in place and is put back if anything fails, and then the disk
+  image opens so you can drag ZapTerm to Applications yourself. That is also
+  what happens where ZapTerm can't replace itself (no permission on its
+  folder). What it did is written to `update.log` in the data folder.
+  ZapTerm is not signed with an Apple Developer ID yet, so the updater runs
+  the `xattr -cr` step on the new version itself. A copy downloaded with a
+  browser still needs that command the first time.
 - **An AI assistant and notebooks each have their own entry and panel.**
   "Allow notebook connection" let both in, with the assistant's set-up tucked
   inside the notebook panel. Now **Tools → AI assistant (MCP)…** and **Tools →
