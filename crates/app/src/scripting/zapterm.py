@@ -107,6 +107,10 @@ _next_id = random.randrange(1, 2**31) * 1000
 #: How to reconnect after the connection drops (notebook mode): the arguments
 #: of the last ``connect()``, or None for a script started by ZapTerm.
 _notebook: Optional[dict] = None
+#: Who is connecting, told to ZapTerm on every (re)connection so its activity
+#: record names the source: ``{"kind": "notebook" | "mcp", "client": "..."}``.
+#: ``connect()`` fills it in; the MCP server sets it to its client's name.
+_identity: Optional[dict] = None
 
 
 def _open(port: int, token: str) -> None:
@@ -193,6 +197,26 @@ def _connect_notebook() -> None:
                 + ")"
             )
     _open(port, token)
+    _announce()
+
+
+def _announce() -> None:
+    """Tell ZapTerm who connected (for its activity record). Best effort: a
+    ZapTerm that doesn't know the call just answers with an error."""
+    global _next_id
+    if _identity is None or _sock is None:
+        return
+    _next_id += 1
+    rid = _next_id
+    req = {"id": rid, "method": "identify", "params": _identity}
+    try:
+        _sock.sendall((json.dumps(req) + "\n").encode("utf-8"))
+        while True:
+            line = _reader.readline()
+            if not line or json.loads(line).get("id") == rid:
+                return
+    except (OSError, ValueError):
+        return
 
 
 def _connect() -> None:
@@ -219,9 +243,12 @@ def connect(path: Optional[str] = None, port: Optional[int] = None, token: Optio
     If the connection drops later (ZapTerm restarted, connection turned off and
     on), the next call reconnects on its own.
     """
-    global _notebook
+    global _notebook, _identity
     with _lock:
         _notebook = {"path": path, "port": port, "token": token}
+        if _identity is None:
+            in_jupyter = "ipykernel" in sys.modules
+            _identity = {"kind": "notebook", "client": "Jupyter" if in_jupyter else "Python"}
         _connect_notebook()
 
 

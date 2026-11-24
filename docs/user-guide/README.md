@@ -307,6 +307,12 @@ progress. -->
 Record a session to a rotating file (plain text or raw), started from the pane
 header's record button. A per-session history panel lists past logs.
 
+What scripts, notebooks and AI assistants send is recorded on its own, always:
+**Tools → Automation activity…** shows every command, when, on which device
+and whether it was sent, from a text file in the same logs folder
+(`automation/activity-YYYY-MM.log`). See
+[Connect an AI assistant](automation/5-ai-assistant.md#what-it-did-automation-activity).
+
 ---
 
 ## 12. Settings & appearance

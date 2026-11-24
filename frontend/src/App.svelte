@@ -43,6 +43,8 @@
   import ScriptPanel from '$lib/scripting/ScriptPanel.svelte'
   import ScriptStartDialog from '$lib/scripting/ScriptStartDialog.svelte'
   import BulkAddDialog from '$lib/inventory/BulkAddDialog.svelte'
+  import ActivityDialog from '$lib/activity/ActivityDialog.svelte'
+  import { activity, showActivity } from '$lib/activity/activity.svelte'
   import {
     hostBusy,
     initScriptHost,
@@ -913,7 +915,7 @@
     } else if (!pane.ssh && !pane.telnet) {
       platform = 'linux' // local shell tab
     }
-    return { id: sessionId, name: pane.label, platform }
+    return { id: sessionId, name: pane.label, platform, address: paneTarget(pane) }
   }
 
   /// Re-read the stored platform of the saved session behind `sessionId`, so a
@@ -1458,6 +1460,13 @@
       run: () => void openNotebookConnection(),
     },
     {
+      id: 'act-activity',
+      label: 'Automation activity',
+      icon: 'pulse' as const,
+      section: 'Actions' as const,
+      run: showActivity,
+    },
+    {
       id: 'act-script-examples',
       label: 'Open script examples folder',
       icon: 'folder' as const,
@@ -1855,6 +1864,7 @@
     onRunScript={chooseScript}
     onScriptExamples={() => scriptExamplesDir(true).catch(() => {})}
     onNotebook={() => void openNotebookConnection()}
+    onActivity={showActivity}
     onCheckUpdates={handleCheckUpdates}
     onSetTheme={(k) => applyTheme(k)}
     onAbout={() => (showAbout = true)}
@@ -2180,6 +2190,10 @@
 {/if}
 
 <KeyboardInteractiveDialog />
+
+{#if activity.visible}
+  <ActivityDialog onClose={() => (activity.visible = false)} />
+{/if}
 
 {#if showBulkAdd}
   <BulkAddDialog {sessions} {folders} onClose={() => (showBulkAdd = false)} onAdded={load} />

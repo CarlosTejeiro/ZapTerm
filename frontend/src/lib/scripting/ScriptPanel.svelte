@@ -11,6 +11,7 @@
     stopScript,
   } from './scriptHost.svelte'
   import { setSetting } from '$lib/bridge/commands'
+  import { showActivity } from '$lib/activity/activity.svelte'
 
   let logEl = $state<HTMLPreElement | null>(null)
   let collapsed = $state(false)
@@ -35,7 +36,9 @@
           : scriptRun.status === 'waiting'
             ? 'Waiting for a notebook…'
             : scriptRun.status === 'connected'
-              ? 'Notebook connected'
+              ? scriptRun.client?.kind === 'mcp'
+                ? `AI assistant connected · ${scriptRun.client.name}`
+                : 'Notebook connected'
               : scriptRun.status === 'off'
                 ? 'Off'
                 : 'Failed',
@@ -140,6 +143,12 @@
         >Run again</button
       >
     {/if}
+    <button
+      class="icon"
+      onclick={showActivity}
+      title="Automation activity: everything sent, when and where"
+      aria-label="Automation activity"><Icon name="pulse" size={12} /></button
+    >
     <button
       class="icon"
       onclick={() => (collapsed = !collapsed)}

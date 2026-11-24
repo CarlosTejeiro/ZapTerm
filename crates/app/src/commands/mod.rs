@@ -1,3 +1,4 @@
+pub mod activity;
 pub mod backup;
 pub mod bulk;
 pub mod cmdlists;

@@ -25,6 +25,7 @@
     onRunScript?: () => void
     onScriptExamples?: () => void
     onNotebook?: () => void
+    onActivity?: () => void
     onCheckUpdates?: () => void
     onSetTheme?: (key: string) => void
     onAbout?: () => void
@@ -49,6 +50,7 @@
     onRunScript,
     onScriptExamples,
     onNotebook,
+    onActivity,
     onCheckUpdates,
     onSetTheme,
     onAbout,
@@ -168,6 +170,13 @@
         label: 'Allow notebook connection…',
         action: () => {
           onNotebook?.()
+          openMenu = null
+        },
+      },
+      {
+        label: 'Automation activity…',
+        action: () => {
+          onActivity?.()
           openMenu = null
         },
       },
