@@ -94,6 +94,7 @@
     mcp: 'spark',
     notebook: 'book',
     script: 'file',
+    unknown: 'info',
   }
   const TILES: { id: Outcome | 'all'; label: string; icon: IconName | null; hint: string }[] = [
     { id: 'all', label: 'All actions', icon: null, hint: 'Everything that was sent or attempted' },
@@ -129,6 +130,7 @@
     return g.client || SOURCE_LABEL[g.source]
   }
   function groupKind(g: ActivityGroup): string {
+    if (g.source === 'unknown') return 'older zapterm.py — restart the app or kernel that runs it'
     return g.source === 'mcp' ? 'AI assistant · MCP' : g.source === 'script' ? 'Script' : ''
   }
   function groupSpan(g: ActivityGroup): string {

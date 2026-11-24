@@ -38,7 +38,9 @@
             : scriptRun.status === 'connected'
               ? scriptRun.client?.kind === 'mcp'
                 ? `AI assistant connected · ${scriptRun.client.name}`
-                : 'Notebook connected'
+                : scriptRun.client?.kind === 'unknown'
+                  ? 'Unidentified client connected'
+                  : 'Notebook connected'
               : scriptRun.status === 'off'
                 ? 'Off'
                 : 'Failed',

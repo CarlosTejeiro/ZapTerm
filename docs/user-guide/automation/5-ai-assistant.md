@@ -90,8 +90,16 @@ button in the panel).
   tab-separated fields, so it opens in any editor or as a table in a
   spreadsheet. **Open file** and **Folder** take you there; delete old months
   whenever you like. Nothing is sent anywhere.
-- **Only the command line is kept**, never what the device printed and never
-  a password. To keep the output too, record the tab (the ● button in the
-  pane header, [session logging](../README.md#11-session-logging)).
+- **Only the command line is kept**, never what the device printed. To keep
+  the output too, record the tab (the ● button in the pane header,
+  [session logging](../README.md#11-session-logging)).
+- **Passwords are masked**: the value after a secret keyword is written as
+  `******` (`set password ******`, `secret 0 ******`, `snmp-server community
+  ****** RO`, `--password=******`…), and what is typed in answer to a
+  password prompt is masked whole. This is best effort: a password in a place
+  no rule knows is kept as typed.
+- **"Unidentified client"** means the assistant app (or notebook kernel) was
+  already running when ZapTerm was updated and still uses the older files:
+  quit it completely and open it again.
 
 [← 4. Add devices in bulk](4-bulk-add.md) · [Guide index](README.md) · [Scripting reference](../scripting.md)

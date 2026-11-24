@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
-## [1.8.12-beta] - beta of the automation work (branch `claude/automation`, not on main yet)
+## [1.8.13-beta] - beta of the automation work (branch `claude/automation`, not on main yet)
 
 Betas are the 1.8.x versions: 1.8.0, 1.8.1… tagged `v1.8.0-beta`, `v1.8.1-beta`…
 (1.6.0 was the first beta, before the encrypted vault reached main as 1.7.)
@@ -16,6 +16,24 @@ The app version itself carries no suffix, because the MSI and RPM bundlers
 disagree on which suffixes they accept.
 
 Includes everything up to 1.7.18 (the sections below), plus:
+
+### Changed
+- **Passwords are masked in the activity record and in the panel's log.** A
+  command is kept as typed with the value after a secret keyword replaced by
+  `******`: `set password ******`, `secret 0 ******`, `snmp-server community
+  ****** RO`, `--password=******`, `curl -u admin:******`, the password of a
+  FortiOS backup over FTP… and anything typed in answer to a password prompt
+  is recorded as `******` whole. The question ZapTerm asks before a change
+  still shows the command as it is. Best effort: a password in a place no
+  rule knows is not recognised.
+
+### Fixed
+- **An AI assistant could show up as "Notebook" in the activity record.** An
+  assistant app that was already running when ZapTerm was updated keeps the
+  older `zapterm_mcp.py` in memory, which doesn't say what it is; ZapTerm took
+  it for a notebook. Such a client is now recorded as *Unidentified client*,
+  and the panel says to quit and reopen the assistant app (or restart the
+  notebook kernel) so it can be named.
 
 ### Added
 - **Automation activity: a record of everything a script, a notebook or an AI

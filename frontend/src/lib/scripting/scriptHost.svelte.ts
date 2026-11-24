@@ -33,6 +33,7 @@ import {
 } from './output'
 import { errorText } from '$lib/bridge/errors'
 import { recordActivity } from '$lib/activity/activity.svelte'
+import { asksForSecret, MASK, maskSecrets } from './redact'
 import type { ActivitySource } from '$lib/activity/activityView'
 
 /** Output must stay quiet this long (after the echo) to count as finished
@@ -107,7 +108,7 @@ export const scriptRun = $state({
   /** Notebook connection: who is connected, as it announced itself — a
    *  notebook (`Jupyter`, `Python`) or an AI assistant through the MCP
    *  server (its client's name). Null while nobody is. */
-  client: null as { kind: 'notebook' | 'mcp'; name: string } | null,
+  client: null as { kind: 'notebook' | 'mcp' | 'unknown'; name: string } | null,
   python: '',
   status: 'done' as RunStatus,
   exitCode: null as number | null,
@@ -174,11 +175,13 @@ function actor(): { source: ActivitySource; client: string } {
   }
   const c = scriptRun.client
   if (c?.kind === 'mcp') return { source: 'mcp', client: c.name }
+  if (c?.kind === 'unknown') return { source: 'unknown', client: '' }
   return { source: 'notebook', client: c?.name ?? '' }
 }
 
 /** Record one event in the activity file. `sessionId` names the tab it was
- *  about (null for a connection event), `startedAt` when it took time. */
+ *  about (null for a connection event), `startedAt` when it took time.
+ *  Command lines are kept with their passwords masked. */
 function audit(
   action: string,
   sessionId: string | null,
@@ -195,7 +198,7 @@ function audit(
     action,
     result,
     seconds: startedAt === undefined ? null : (Date.now() - startedAt) / 1000,
-    detail,
+    detail: action === 'run' || action === 'send' ? maskSecrets(detail) : detail,
   })
 }
 
@@ -214,11 +217,19 @@ function announceClient() {
   announceTimer = null
   if (announced) return
   announced = true
+  // Every zapterm.py since 1.8.12 says what it is on connecting. One that
+  // doesn't is an older copy still in memory (an assistant app or a notebook
+  // kernel started before ZapTerm was updated): don't guess which.
+  scriptRun.client ??= { kind: 'unknown', name: '' }
   const c = scriptRun.client
   log(
-    c?.kind === 'mcp'
+    c.kind === 'mcp'
       ? `AI assistant connected: ${c.name} (MCP).`
-      : `Notebook connected${c?.name ? ` (${c.name})` : ''}.`,
+      : c.kind === 'notebook'
+        ? `Notebook connected${c.name ? ` (${c.name})` : ''}.`
+        : 'A client connected without saying what it is: it runs an older copy of ' +
+          'zapterm.py. Quit and reopen the AI assistant app (or restart the notebook ' +
+          'kernel) so ZapTerm can name it.',
   )
   audit('connect', null, '', 'ok')
 }
@@ -318,10 +329,16 @@ export async function initScriptHost(hostApi: ScriptHostApi): Promise<() => void
 
 /** Read-only gate for text about to be typed in `sessionId`: true when it may
  *  be sent; otherwise logs what would have been and returns false. */
-function readOnlyLets(sessionId: string, text: string, verb: string, strict = false): boolean {
+function readOnlyLets(
+  sessionId: string,
+  text: string,
+  verb: string,
+  strict = false,
+  recorded = text,
+): boolean {
   if (!scriptRun.readOnly || readOnlyAllows(text, scriptRun.allow)) return true
-  log(`[read-only] ${name(sessionId)}: would ${verb} ${JSON.stringify(text)}`)
-  audit(verb, sessionId, text, 'refused')
+  log(`[read-only] ${name(sessionId)}: would ${verb} ${JSON.stringify(maskSecrets(recorded))}`)
+  audit(verb, sessionId, recorded, 'refused')
   if (strict) {
     throw new ApiError(
       'refused',
@@ -350,17 +367,21 @@ async function approveChange(
   const who =
     scriptRun.client?.kind === 'mcp'
       ? `The AI assistant (${scriptRun.client.name})`
-      : 'The notebook'
+      : scriptRun.client?.kind === 'unknown'
+        ? 'The client'
+        : 'The notebook'
+  // The question shows the command as it is; the log masks its passwords.
+  const logged = action === 'secret' ? what : `${action} ${JSON.stringify(maskSecrets(detail))}`
   const yes = await api.confirm(
     `${who} connected to ZapTerm wants to do this on ${name(sessionId)}:\n\n` +
       `${what}\n\nAllow it?`,
   )
   if (!yes) {
-    log(`[declined] ${name(sessionId)}: ${what}`)
+    log(`[declined] ${name(sessionId)}: ${logged}`)
     audit(action, sessionId, detail, 'declined')
     throw new ApiError('refused', 'not sent — declined by the user in ZapTerm')
   }
-  log(`[approved] ${name(sessionId)}: ${what}`)
+  log(`[approved] ${name(sessionId)}: ${logged}`)
   return 'approved'
 }
 
@@ -620,20 +641,25 @@ async function dispatch(
       const sid = str(p.session, 'session')
       const text = str(p.text, 'text')
       const enter = p.enter !== false
+      // Typed in answer to a password prompt: it is a password whatever it
+      // looks like, so nothing of it is written down.
+      const recorded = asksForSecret(lastLine(taps.get(sid)?.raw ?? '')) ? MASK : text
       if (scriptRun.dryRun) {
-        log(`[dry-run] ${name(sid)}: would send ${JSON.stringify(text)}${enter ? ' + Enter' : ''}`)
+        log(
+          `[dry-run] ${name(sid)}: would send ${JSON.stringify(maskSecrets(recorded))}${enter ? ' + Enter' : ''}`,
+        )
         return null
       }
-      if (!readOnlyLets(sid, text, 'send')) return null
+      if (!readOnlyLets(sid, text, 'send', false, recorded)) return null
       const how = await approveChange(
         sid,
         `send ${JSON.stringify(text)}${enter ? ' + Enter' : ''}`,
         text,
         'send',
-        text,
+        recorded,
       )
       await sendText(sid, enter ? text + '\r' : text)
-      audit('send', sid, text, how)
+      audit('send', sid, recorded, how)
       return null
     }
     case 'expect':
@@ -836,7 +862,7 @@ async function sendAndWait(
   const tap = attach(sessionId)
   tap.raw = ''
   tap.lastData = Date.now()
-  if (scriptRun.mode === 'notebook') log(`→ ${name(sessionId)}: ${command}`)
+  if (scriptRun.mode === 'notebook') log(`→ ${name(sessionId)}: ${maskSecrets(command)}`)
   await sendText(sessionId, command + '\r')
   const deadline = Date.now() + timeoutMs
   let lastPagerAt = -1

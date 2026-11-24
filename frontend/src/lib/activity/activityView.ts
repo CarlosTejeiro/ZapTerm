@@ -2,7 +2,9 @@
 // into one client's visit, what the filters keep and what the counters say.
 // Free of Svelte and Tauri so it can be unit-tested.
 
-export type ActivitySource = 'script' | 'notebook' | 'mcp'
+/** `unknown`: a client that connected without saying what it is (an older
+ *  copy of zapterm.py still running). */
+export type ActivitySource = 'script' | 'notebook' | 'mcp' | 'unknown'
 
 /** What the script host reports; the backend stamps the time. */
 export interface NewActivity {
@@ -268,6 +270,7 @@ export const SOURCE_LABEL: Record<ActivitySource, string> = {
   mcp: 'AI assistant',
   notebook: 'Notebook',
   script: 'Script',
+  unknown: 'Unidentified client',
 }
 
 /** "0.4 s", "12 s", "1 min 05 s"; '' when unknown. */
