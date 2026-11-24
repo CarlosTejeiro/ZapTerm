@@ -59,6 +59,10 @@ You need Python 3.9 or newer on the same computer.
 Once the assistant has connected, the panel shows its name, and under **Since
 it was turned on** every command it sends, as it happens.
 
+The panel can be made bigger: drag its left edge, top edge or top-left corner
+(the size is remembered; double-click an edge for the default), or use
+**Enlarge** in its header to fill the window.
+
 ## What the assistant can do
 
 | Tool | What it does |

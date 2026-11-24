@@ -8,6 +8,7 @@
   import Icon from '$lib/icons/Icon.svelte'
   import type { IconName } from '$lib/icons/icons'
   import { showToast } from '$lib/ui/toast-store.svelte'
+  import { getSetting, setSetting } from '$lib/bridge/commands'
   import { scriptRun } from '$lib/scripting/scriptHost.svelte'
   import { activity, loadActivity, openActivity } from './activity.svelte'
   import {
@@ -45,6 +46,22 @@
   let maxRows = $state(300)
   /** Day under the pointer / focus in the strip. */
   let hoverDay = $state('')
+  /** Fill the window; remembered between runs. */
+  let large = $state(false)
+  // A click before the saved choice arrives wins over it.
+  let chosen = false
+  getSetting('ui.activity.large')
+    .then((v) => {
+      if (!chosen) large = v === 'true'
+    })
+    .catch(() => {
+      /* not saved: the usual size */
+    })
+  function toggleLarge() {
+    chosen = true
+    large = !large
+    setSetting('ui.activity.large', String(large)).catch(console.error)
+  }
   const today = new Date()
 
   onMount(() => {
@@ -184,6 +201,7 @@
 <div class="overlay" role="presentation" onkeydown={onKeydown}>
   <div
     class="dialog"
+    class:large
     role="dialog"
     aria-modal="true"
     aria-label="Automation activity"
@@ -210,6 +228,13 @@
       >
       <button class="ghost" onclick={() => open(false)} title="Show the folder with the files"
         ><Icon name="folder" size={13} /> Folder</button
+      >
+      <button
+        class="icon"
+        onclick={toggleLarge}
+        title={large ? 'Restore size' : 'Enlarge'}
+        aria-label={large ? 'Restore size' : 'Enlarge'}
+        aria-pressed={large}><Icon name={large ? 'shrink' : 'expand'} size={14} /></button
       >
       <!-- svelte-ignore a11y_autofocus -->
       <button class="icon" onclick={onClose} title="Close" aria-label="Close" autofocus
@@ -442,6 +467,11 @@
     --err: var(--zx-err);
     --line: color-mix(in srgb, var(--zx-text) 9%, transparent);
     --fill: color-mix(in srgb, var(--zx-text) 4%, transparent);
+  }
+  .dialog.large {
+    width: calc(100vw - 24px);
+    max-width: none;
+    height: calc(100vh - 24px);
   }
   .spacer {
     flex: 1;

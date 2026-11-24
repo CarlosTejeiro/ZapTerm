@@ -6,6 +6,7 @@
   /// the client drives stay visible.
   import Icon from '$lib/icons/Icon.svelte'
   import type { IconName } from '$lib/icons/icons'
+  import { createPanelSizer } from '$lib/ui/panelSizer.svelte'
   import { activity, showActivity } from '$lib/activity/activity.svelte'
   import {
     actionTag,
@@ -29,6 +30,8 @@
   let setupOpen = $state(true)
   let copied = $state(false)
   let listEl = $state<HTMLDivElement | null>(null)
+  let panelEl = $state<HTMLDivElement | null>(null)
+  const sizer = createPanelSizer('ui.panel.connection', { w: 420, h: 300 })
 
   const assistant = $derived(scriptRun.audience === 'assistant')
   const on = $derived(scriptRun.status === 'waiting' || scriptRun.status === 'connected')
@@ -140,7 +143,45 @@
   }
 </script>
 
-<div class="panel" class:collapsed role="region" aria-label={title}>
+<div
+  class="panel"
+  class:collapsed
+  class:sized={!!sizer.size && !collapsed}
+  class:dragging={sizer.dragging}
+  role="region"
+  aria-label={title}
+  bind:this={panelEl}
+  style:width={sizer.size ? `${sizer.size.w}px` : null}
+  style:height={sizer.size && !collapsed ? `${sizer.size.h}px` : null}
+>
+  {#if !collapsed}
+    <!-- Resize handles: left edge, top edge and their corner (the panel is
+         anchored bottom-right). Double-click: the default size. -->
+    <div
+      class="grip gx"
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Resize panel width"
+      onpointerdown={(e) => sizer.startDrag(e, panelEl, 'x')}
+      ondblclick={sizer.reset}
+    ></div>
+    <div
+      class="grip gy"
+      role="separator"
+      aria-orientation="horizontal"
+      aria-label="Resize panel height"
+      onpointerdown={(e) => sizer.startDrag(e, panelEl, 'y')}
+      ondblclick={sizer.reset}
+    ></div>
+    <div
+      class="grip gxy"
+      role="separator"
+      aria-label="Resize panel"
+      title="Drag to resize · double-click for the default size"
+      onpointerdown={(e) => sizer.startDrag(e, panelEl, 'both')}
+      ondblclick={sizer.reset}
+    ></div>
+  {/if}
   <header class="head">
     <span class="who" class:assistant><Icon name={assistant ? 'spark' : 'book'} size={14} /></span>
     <span class="title">{title}</span>
@@ -154,6 +195,16 @@
         class="btn primary"
         onclick={() => void startNotebookFromSettings(scriptRun.audience).catch(console.error)}
         >Turn on</button
+      >
+    {/if}
+    {#if !collapsed}
+      <button
+        class="icon"
+        onclick={sizer.toggleLarge}
+        title={sizer.large ? 'Restore size' : 'Enlarge'}
+        aria-label={sizer.large ? 'Restore size' : 'Enlarge'}
+        aria-pressed={sizer.large}
+        ><Icon name={sizer.large ? 'shrink' : 'expand'} size={12} /></button
       >
     {/if}
     <button
@@ -589,6 +640,17 @@
   .live {
     flex: 1;
   }
+  /* With a size of its own, the list takes the room that is left. */
+  .sized .body {
+    flex: 1;
+  }
+  .sized .live {
+    min-height: 9rem;
+  }
+  .sized .list {
+    flex: 1;
+    max-height: none;
+  }
   .live-head {
     display: flex;
     align-items: baseline;
@@ -714,5 +776,45 @@
   .foot {
     font-size: 11px;
     color: var(--zx-text-muted);
+  }
+  /* ── resizing ───────────────────────────────────────────────────────── */
+  .panel.sized {
+    max-height: none;
+  }
+  .panel.dragging {
+    user-select: none;
+  }
+  .grip {
+    position: absolute;
+    z-index: 2;
+    touch-action: none;
+  }
+  .gx {
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 5px;
+    cursor: ew-resize;
+  }
+  .gy {
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 5px;
+    cursor: ns-resize;
+  }
+  .gxy {
+    left: 0;
+    top: 0;
+    width: 13px;
+    height: 13px;
+    cursor: nwse-resize;
+    z-index: 3;
+  }
+  .gx:hover,
+  .gy:hover,
+  .panel.dragging .gx,
+  .panel.dragging .gy {
+    background: color-mix(in srgb, var(--zx-accent) 35%, transparent);
   }
 </style>
