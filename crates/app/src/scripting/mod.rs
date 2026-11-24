@@ -561,7 +561,7 @@ mod tests {
                     Ok(serde_json::json!([{"id": "s1", "name": "fw1", "platform": "fortigate"}]))
                 }
                 "sessions" => Ok(serde_json::json!(["fw1", "sw1"])),
-                "report" | "send" | "close" | "note" | "cancel" => Ok(Value::Null),
+                "report" | "send" | "close" | "note" | "cancel" | "identify" => Ok(Value::Null),
                 _ => Err(
                     serde_json::json!({"kind": "error", "message": format!("unknown {method}")}),
                 ),
@@ -930,6 +930,17 @@ print(zapterm.session().name)
             ],
             "{log:#?}"
         );
+        // Each connection said it is a notebook (plain Python here), for the
+        // activity record.
+        let identified = log
+            .iter()
+            .filter(|l| {
+                l.starts_with("req identify")
+                    && l.contains("\"kind\":\"notebook\"")
+                    && l.contains("\"client\":\"Python\"")
+            })
+            .count();
+        assert_eq!(identified, 2, "{log:#?}");
         nb.run.stop();
         let code = tokio::time::timeout(Duration::from_secs(5), nb.exited)
             .await
@@ -1054,6 +1065,15 @@ print(zapterm.session().name)
 
         // Every command went through ZapTerm, the refused one flagged strict.
         let log = nb.host.log.lock().unwrap().clone();
+        // The server said who it is (its client's name) before anything else,
+        // so the activity record names the assistant.
+        let requests: Vec<&String> = log.iter().filter(|l| l.starts_with("req ")).collect();
+        assert!(
+            requests[0].starts_with("req identify")
+                && requests[0].contains("\"kind\":\"mcp\"")
+                && requests[0].contains("\"client\":\"t 0\""),
+            "{log:#?}"
+        );
         assert!(
             log.iter().any(|l| l.starts_with("req run")
                 && l.contains("reload")

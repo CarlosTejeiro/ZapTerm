@@ -32,6 +32,8 @@ import {
   stripAnsi,
 } from './output'
 import { errorText } from '$lib/bridge/errors'
+import { recordActivity } from '$lib/activity/activity.svelte'
+import type { ActivitySource } from '$lib/activity/activityView'
 
 /** Output must stay quiet this long (after the echo) to count as finished
  *  when no prompt is recognised. */
@@ -48,6 +50,8 @@ export interface SessionInfo {
   id: string
   name: string
   platform: string | null
+  /** `host:port` of the device, when the tab has one (activity record). */
+  address?: string | null
 }
 
 export interface ScriptHostApi {
@@ -100,6 +104,10 @@ export const scriptRun = $state({
    *  command that isn't a display command (a notebook or an AI client can't
    *  change a device unseen). Toggleable live. */
   askChanges: true,
+  /** Notebook connection: who is connected, as it announced itself — a
+   *  notebook (`Jupyter`, `Python`) or an AI assistant through the MCP
+   *  server (its client's name). Null while nobody is. */
+  client: null as { kind: 'notebook' | 'mcp'; name: string } | null,
   python: '',
   status: 'done' as RunStatus,
   exitCode: null as number | null,
@@ -157,6 +165,72 @@ function log(line: string, stream: LogLine['stream'] = 'zapterm') {
   if (scriptRun.log.length > 5000) scriptRun.log.splice(0, scriptRun.log.length - 5000)
 }
 
+// ── activity record ──────────────────────────────────────────────────────────
+
+/** Who is driving ZapTerm right now, for the activity record. */
+function actor(): { source: ActivitySource; client: string } {
+  if (scriptRun.mode === 'script') {
+    return { source: 'script', client: scriptRun.path.split(/[\\/]/).pop() ?? '' }
+  }
+  const c = scriptRun.client
+  if (c?.kind === 'mcp') return { source: 'mcp', client: c.name }
+  return { source: 'notebook', client: c?.name ?? '' }
+}
+
+/** Record one event in the activity file. `sessionId` names the tab it was
+ *  about (null for a connection event), `startedAt` when it took time. */
+function audit(
+  action: string,
+  sessionId: string | null,
+  detail: string,
+  result: string,
+  startedAt?: number,
+  device?: string,
+) {
+  const tab = sessionId && !sessionId.startsWith('dry:') ? info(sessionId) : null
+  void recordActivity({
+    ...actor(),
+    device: device ?? tab?.name ?? '',
+    address: tab?.address ?? '',
+    action,
+    result,
+    seconds: startedAt === undefined ? null : (Date.now() - startedAt) / 1000,
+    detail,
+  })
+}
+
+/** How a failed call ended, as an activity result. */
+const failure = (e: unknown): string =>
+  e instanceof ApiError && e.kind === 'timeout' ? 'timeout' : 'error'
+
+/** A client is connected and has been recorded as such. */
+let announced = false
+/** Waits a moment for a new client to say who it is (`identify`). */
+let announceTimer: ReturnType<typeof setTimeout> | null = null
+
+/** Record (once) that the connected client is here, under the name it gave. */
+function announceClient() {
+  if (announceTimer) clearTimeout(announceTimer)
+  announceTimer = null
+  if (announced) return
+  announced = true
+  const c = scriptRun.client
+  log(
+    c?.kind === 'mcp'
+      ? `AI assistant connected: ${c.name} (MCP).`
+      : `Notebook connected${c?.name ? ` (${c.name})` : ''}.`,
+  )
+  audit('connect', null, '', 'ok')
+}
+
+/** Record that the client left, if it had been recorded as connected. */
+function clientLeft() {
+  if (announceTimer) announceClient() // it left before saying who it was
+  if (announced) audit('disconnect', null, '', 'ok')
+  announced = false
+  scriptRun.client = null
+}
+
 function checkAborted(reqId?: number) {
   if (aborted) throw new ApiError('error', 'script stopped')
   if (reqId !== undefined && cancelled.has(reqId)) throw new ApiError('error', 'cancelled')
@@ -195,17 +269,23 @@ export async function initScriptHost(hostApi: ScriptHostApi): Promise<() => void
       if (e.payload.run_id !== scriptRun.runId) return
       if (e.payload.status === 'connected') {
         scriptRun.status = 'connected'
-        log('Notebook connected.')
+        // The client says who it is right away (`identify`); one that
+        // doesn't is taken for a notebook.
+        if (announceTimer) clearTimeout(announceTimer)
+        announceTimer = setTimeout(announceClient, 500)
       } else {
         scriptRun.status = 'waiting'
         for (const id of inFlight) cancelled.add(id)
-        log('Notebook disconnected — waiting for a notebook…')
+        const what = scriptRun.client?.kind === 'mcp' ? 'AI assistant' : 'Notebook'
+        clientLeft()
+        log(`${what} disconnected — waiting for a notebook or an AI assistant…`)
       }
     }),
     await listen<{ run_id: string; code: number | null }>('script-exit', (e) => {
       if (e.payload.run_id !== scriptRun.runId) return
       if (scriptRun.mode === 'notebook') {
         aborted = true
+        clientLeft()
         scriptRun.status = 'off'
         log('Notebook connection turned off.')
         taps.clear()
@@ -215,6 +295,12 @@ export async function initScriptHost(hostApi: ScriptHostApi): Promise<() => void
       if (scriptRun.status === 'running') {
         scriptRun.status = e.payload.code === 0 ? 'done' : 'failed'
       }
+      audit(
+        'finish',
+        null,
+        scriptRun.status === 'stopped' ? 'stopped' : `exit code ${e.payload.code ?? '—'}`,
+        scriptRun.status === 'done' ? 'ok' : 'error',
+      )
       log(
         scriptRun.status === 'stopped'
           ? 'Script stopped.'
@@ -235,6 +321,7 @@ export async function initScriptHost(hostApi: ScriptHostApi): Promise<() => void
 function readOnlyLets(sessionId: string, text: string, verb: string, strict = false): boolean {
   if (!scriptRun.readOnly || readOnlyAllows(text, scriptRun.allow)) return true
   log(`[read-only] ${name(sessionId)}: would ${verb} ${JSON.stringify(text)}`)
+  audit(verb, sessionId, text, 'refused')
   if (strict) {
     throw new ApiError(
       'refused',
@@ -246,20 +333,35 @@ function readOnlyLets(sessionId: string, text: string, verb: string, strict = fa
 }
 
 /** Notebook connection with Read-only off: have the user approve `what`
- *  (shown as is) unless it is a display command. Throws when they decline. */
-async function approveChange(sessionId: string, what: string, displayCommand: string | null) {
-  if (scriptRun.mode !== 'notebook' || scriptRun.readOnly || !scriptRun.askChanges) return
-  if (displayCommand !== null && readOnlyAllows(displayCommand, scriptRun.allow)) return
+ *  (shown as is) unless it is a display command. Throws when they decline;
+ *  returns `approved` when they were asked and said yes, `sent` when there
+ *  was no need to ask — the activity result of what is sent next. `action`
+ *  and `detail` are how a refusal is recorded. */
+async function approveChange(
+  sessionId: string,
+  what: string,
+  displayCommand: string | null,
+  action: string,
+  detail: string,
+): Promise<'approved' | 'sent'> {
+  if (scriptRun.mode !== 'notebook' || scriptRun.readOnly || !scriptRun.askChanges) return 'sent'
+  if (displayCommand !== null && readOnlyAllows(displayCommand, scriptRun.allow)) return 'sent'
   if (!api) throw new ApiError('error', 'ZapTerm is not ready')
+  const who =
+    scriptRun.client?.kind === 'mcp'
+      ? `The AI assistant (${scriptRun.client.name})`
+      : 'The notebook'
   const yes = await api.confirm(
-    `The notebook or AI client connected to ZapTerm wants to do this on ${name(sessionId)}:\n\n` +
+    `${who} connected to ZapTerm wants to do this on ${name(sessionId)}:\n\n` +
       `${what}\n\nAllow it?`,
   )
   if (!yes) {
     log(`[declined] ${name(sessionId)}: ${what}`)
+    audit(action, sessionId, detail, 'declined')
     throw new ApiError('refused', 'not sent — declined by the user in ZapTerm')
   }
   log(`[approved] ${name(sessionId)}: ${what}`)
+  return 'approved'
 }
 
 export async function startScript(
@@ -280,6 +382,7 @@ export async function startScript(
     dryRun,
     readOnly: readOnly && !dryRun,
     allow: [...allow],
+    client: null,
     python: '',
     status: 'running',
     exitCode: null,
@@ -304,6 +407,12 @@ export async function startScript(
     })
     scriptRun.runId = started.run_id
     scriptRun.python = started.python
+    audit(
+      'start',
+      null,
+      dryRun ? 'dry run — nothing is sent' : scriptRun.readOnly ? 'read-only' : '',
+      'ok',
+    )
   } catch (e) {
     scriptRun.status = 'failed'
     log(
@@ -351,6 +460,7 @@ export async function startNotebook(
     readOnly,
     askChanges,
     allow: [...allow],
+    client: null,
     python: '',
     status: 'waiting',
     exitCode: null,
@@ -431,6 +541,26 @@ async function dispatch(
 ): Promise<unknown> {
   if (!api) throw new ApiError('error', 'ZapTerm is not ready')
   switch (method) {
+    case 'identify': {
+      // Sent by the client right after it connects.
+      if (scriptRun.mode === 'notebook' && !announced) {
+        // The name is the client's own word and is shown when ZapTerm asks
+        // before a change: one line of plain text, nothing else.
+        const client =
+          typeof p.client === 'string'
+            ? p.client
+                .replace(/[\x00-\x1f\x7f]+/g, ' ')
+                .trim()
+                .slice(0, 80)
+            : ''
+        scriptRun.client =
+          p.kind === 'mcp'
+            ? { kind: 'mcp', name: client || 'MCP client' }
+            : { kind: 'notebook', name: client }
+        announceClient()
+      }
+      return null
+    }
     case 'cancel':
       // A stopped notebook cell: abandon the call it was waiting on.
       if (typeof p.id === 'number' && inFlight.has(p.id)) cancelled.add(p.id)
@@ -465,8 +595,19 @@ async function dispatch(
       return { dry_run: scriptRun.dryRun, read_only: scriptRun.readOnly }
     case 'sessions':
       return api.savedNames(typeof p.folder === 'string' ? p.folder : null)
-    case 'open':
-      return openSaved(str(p.name, 'name'), secs(p.timeout, 60), reqId)
+    case 'open': {
+      const wanted = str(p.name, 'name')
+      if (scriptRun.dryRun) return openSaved(wanted, secs(p.timeout, 60), reqId)
+      const t0 = Date.now()
+      try {
+        const opened = await openSaved(wanted, secs(p.timeout, 60), reqId)
+        audit('open', opened.id, wanted, 'ok', t0, wanted)
+        return opened
+      } catch (e) {
+        audit('open', null, wanted, failure(e), t0, wanted)
+        throw e
+      }
+    }
     case 'run':
       return run(
         str(p.session, 'session'),
@@ -484,8 +625,15 @@ async function dispatch(
         return null
       }
       if (!readOnlyLets(sid, text, 'send')) return null
-      await approveChange(sid, `send ${JSON.stringify(text)}${enter ? ' + Enter' : ''}`, text)
+      const how = await approveChange(
+        sid,
+        `send ${JSON.stringify(text)}${enter ? ' + Enter' : ''}`,
+        text,
+        'send',
+        text,
+      )
       await sendText(sid, enter ? text + '\r' : text)
+      audit('send', sid, text, how)
       return null
     }
     case 'expect':
@@ -514,16 +662,25 @@ async function dispatch(
       if (scriptRun.readOnly) {
         // Not a display command, and typed blind: keep it out of read-only.
         log(`[read-only] ${name(sid)}: would type the vault ${field} of "${ref.slice(0, dot)}"`)
+        audit('secret', sid, `${field} of "${ref.slice(0, dot)}"`, 'refused')
         return null
       }
-      await approveChange(sid, `type the vault ${field} of "${ref.slice(0, dot)}"`, null)
+      // The record says which vault entry was typed, never its value.
+      const what = `${field} of "${ref.slice(0, dot)}"`
+      const how = await approveChange(sid, `type the vault ${what}`, null, 'secret', what)
       attach(sid)
-      await sendVaultField(
-        sid,
-        ref.slice(0, dot),
-        field as 'password' | 'username',
-        p.enter !== false,
-      )
+      try {
+        await sendVaultField(
+          sid,
+          ref.slice(0, dot),
+          field as 'password' | 'username',
+          p.enter !== false,
+        )
+      } catch (e) {
+        audit('secret', sid, what, 'error')
+        throw e
+      }
+      audit('secret', sid, what, how)
       return null
     }
     case 'close': {
@@ -532,6 +689,7 @@ async function dispatch(
         log(`[dry-run] would close ${name(sid)}`)
         return null
       }
+      audit('close', sid, '', 'ok')
       api.closeSession(sid)
       taps.delete(sid)
       return null
@@ -650,10 +808,35 @@ async function run(
     throw new ApiError('error', 'run() takes one command line — call it once per line')
   }
   if (!readOnlyLets(sessionId, command, 'run', strict)) return ''
-  await approveChange(sessionId, `run ${JSON.stringify(command)}`, command)
+  const how = await approveChange(
+    sessionId,
+    `run ${JSON.stringify(command)}`,
+    command,
+    'run',
+    command,
+  )
+  const t0 = Date.now()
+  try {
+    const out = await sendAndWait(sessionId, command, timeoutMs, reqId)
+    audit('run', sessionId, command, how, t0)
+    return out
+  } catch (e) {
+    audit('run', sessionId, command, failure(e), t0)
+    throw e
+  }
+}
+
+/** Type `command` + Enter and wait for its output to finish. */
+async function sendAndWait(
+  sessionId: string,
+  command: string,
+  timeoutMs: number,
+  reqId: number,
+): Promise<string> {
   const tap = attach(sessionId)
   tap.raw = ''
   tap.lastData = Date.now()
+  if (scriptRun.mode === 'notebook') log(`→ ${name(sessionId)}: ${command}`)
   await sendText(sessionId, command + '\r')
   const deadline = Date.now() + timeoutMs
   let lastPagerAt = -1

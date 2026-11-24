@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
-## [1.8.11-beta] - beta of the automation work (branch `claude/automation`, not on main yet)
+## [1.8.12-beta] - beta of the automation work (branch `claude/automation`, not on main yet)
 
 Betas are the 1.8.x versions: 1.8.0, 1.8.1… tagged `v1.8.0-beta`, `v1.8.1-beta`…
 (1.6.0 was the first beta, before the encrypted vault reached main as 1.7.)
@@ -16,6 +16,29 @@ The app version itself carries no suffix, because the MSI and RPM bundlers
 disagree on which suffixes they accept.
 
 Includes everything up to 1.7.18 (the sections below), plus:
+
+### Added
+- **Automation activity: a record of everything a script, a notebook or an AI
+  assistant sent.** Until now you saw the commands go by in the tab, and the
+  panel listed only the ones refused, declined or approved, until ZapTerm
+  closed. Now every command sent or attempted is written to a text file on
+  your computer (`automation/activity-YYYY-MM.log` in the logs folder, one
+  line per event, tab-separated): when, who (the script, the notebook, or the
+  AI assistant by its own name), on which device and address, the command,
+  and what became of it — sent, blocked by Read-only, declined by you,
+  approved and sent, no prompt in time, or an error — with how long it took.
+  Only the command line is kept: never what the device printed (session
+  logging does that) and never a password.
+- **Tools → Automation activity…** (also in the command palette and from the
+  notebook panel) shows that record: counters and the last 14 days on top —
+  click one to filter — then the list, newest day first, one card per visit
+  (from the moment a client connected until it left), with filters by source
+  and device and a search box. Click a line to copy its command; **Open
+  file** and **Folder** take you to the text.
+- The MCP server tells ZapTerm which assistant is connected, and a notebook
+  says it is one: the panel shows "AI assistant connected · name", the
+  question before a change names who is asking, and the panel's log now
+  lists every command sent, not only the exceptions.
 
 ### Fixed
 - **`run()` timed out on devices that end lines with `\r\r\n`** (seen on a

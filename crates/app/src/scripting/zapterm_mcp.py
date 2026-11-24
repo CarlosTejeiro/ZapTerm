@@ -182,6 +182,18 @@ def _ensure_connected() -> None:
         _connected = True
 
 
+def _remember_client(info: Any) -> None:
+    """Keep the MCP client's own name (from its ``initialize``) so ZapTerm's
+    activity record says which assistant sent each command."""
+    name = ""
+    if isinstance(info, dict):
+        name = str(info.get("title") or info.get("name") or "").strip()
+        version = str(info.get("version") or "").strip()
+        if name and version:
+            name = f"{name} {version}"
+    zapterm._identity = {"kind": "mcp", "client": name[:80] or "MCP client"}
+
+
 def call_tool(name: str, args: dict) -> dict:
     handler = HANDLERS.get(name)
     if handler is None:
@@ -212,6 +224,7 @@ def handle(msg: dict) -> Optional[dict]:
         return {"jsonrpc": "2.0", "id": mid, "result": result}
 
     if method == "initialize":
+        _remember_client((msg.get("params") or {}).get("clientInfo"))
         asked = (msg.get("params") or {}).get("protocolVersion")
         version = asked if asked in PROTOCOL_VERSIONS else PROTOCOL_VERSIONS[0]
         return ok(

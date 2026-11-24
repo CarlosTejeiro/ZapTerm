@@ -73,6 +73,9 @@ Meanwhile, in ZapTerm, you see each command in the tab:
 
 - **Re-run only what changed.** Variables stay between cells: fix your parsing
   in cell 5 and re-run just that cell — no need to ask the device again.
+- **What did I run?** Tools → Automation activity… lists every command a
+  notebook, a script or an AI assistant sent, when and on which device
+  ([more](5-ai-assistant.md#what-it-did-automation-activity)).
 - **Stop a cell** with ■ if it waits too long. ZapTerm abandons that call and the
   next cell starts clean.
 - **One notebook at a time.** A second notebook's `connect()` is refused while

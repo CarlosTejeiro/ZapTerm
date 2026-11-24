@@ -16,7 +16,7 @@ session and run commands — and ZapTerm decides what is actually sent.
 
 | | |
 |---|---|
-| **You see everything** | Each command is typed in a real tab, as with scripts and notebooks. |
+| **You see everything** | Each command is typed in a real tab, as with scripts and notebooks, and kept in the [activity record](#what-it-did-automation-activity). |
 | **Read-only by default** | Only commands starting with `get` or `show` (your list) reach a device. Anything else — including a display command chained with `;`, `|` or `&` — is refused, and the assistant is told it was not sent. |
 | **Ask me first** | With Read-only off, ZapTerm shows every other command and waits for your **Yes** before sending it. |
 | **No passwords** | ZapTerm logs in from its vault. No tool gives the assistant a password or lets it type one. |
@@ -66,8 +66,32 @@ command that is not a display command, ZapTerm shows it and waits.
 
 ![ZapTerm asking before a command](../images/mcp-approve.png)
 
-**No** tells the assistant the command was declined. The panel's log keeps a
-line for every command refused, declined or approved. Untick *Ask me first*
+**No** tells the assistant the command was declined. Untick *Ask me first*
 only for work you would also hand to a script without watching.
+
+## What it did: Automation activity
+
+Everything the assistant sent — or tried to send — is kept, with what a
+notebook or a script did: **Tools → Automation activity…** (or the pulse
+button in the panel).
+
+![Automation activity](../images/activity.png)
+
+- **Each line**: the time, the tab and the device's address, the command, and
+  what became of it — *Sent*, *Blocked · read-only*, *Declined by you*,
+  *Approved · sent*, *No prompt in time* or *Error* — and how long it took.
+- **One card per visit**: from the moment the assistant (shown by the name it
+  gives), a notebook or a script connected until it left.
+- **On top**: counters and the last 14 days; click one to see only that. Then
+  filters by source and device, and a search box. Click a line to copy its
+  command.
+- **It is a text file on your computer**: `automation/activity-YYYY-MM.log`
+  in the logs folder, one file per month, one line per event with
+  tab-separated fields, so it opens in any editor or as a table in a
+  spreadsheet. **Open file** and **Folder** take you there; delete old months
+  whenever you like. Nothing is sent anywhere.
+- **Only the command line is kept**, never what the device printed and never
+  a password. To keep the output too, record the tab (the ● button in the
+  pane header, [session logging](../README.md#11-session-logging)).
 
 [← 4. Add devices in bulk](4-bulk-add.md) · [Guide index](README.md) · [Scripting reference](../scripting.md)
