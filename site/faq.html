@@ -35,7 +35,7 @@
     <header class="section-head">
       <p class="kicker">Q&amp;A</p>
       <h1>Questions people ask</h1>
-      <p>Answers describe the latest version, <b data-version>v1.7.12</b>, and are updated with every release.</p>
+      <p>Answers describe the latest version, <b data-version>v1.9.0</b>, and are updated with every release.</p>
     </header>
 
     <div class="faq-tools">
@@ -107,7 +107,15 @@
         </details>
         <details id="many-at-once">
           <summary>Can I work on several devices side by side?</summary>
-          <p>Yes. Split a tab into panes as many times as you like, open a group of hosts as a grid, and broadcast what you type to all of them. Compare shows their output together so differences stand out.</p>
+          <p>Yes. Split a tab into panes as many times as you like, or open a group of hosts as a grid. Turn on Multi (it is per tab, and needs at least two sessions) and the SEND TO ALL bar types what you write in every session of that tab. Run &amp; compare then says whether they all answered the same and, when they didn't, shows the differences side by side; each pane's header is marked = (same everywhere) or A, B… (which version it printed).</p>
+        </details>
+        <details id="pager">
+          <summary>What happens when a device stops at --More-- while I compare?</summary>
+          <p>ZapTerm presses Space for you in that session until the prompt comes back (up to 200 pages), so the whole output is compared; the pager prompts themselves are left out of the comparison. It does the same for a line sent with Enter in the SEND TO ALL bar. "Page through --More--" in that bar turns it off. What you type straight into a pane is left alone.</p>
+        </details>
+        <details id="bulk-add">
+          <summary>Can I add many devices at once?</summary>
+          <p>Yes: File → Add devices in bulk… Paste one device per line (<code>host</code>, <code>host:port</code>, <code>name host</code> or <code>name host port</code>) or open a CSV file whose first line names the columns (name, host, port, protocol, username, folder, tags, notes, credential, jump_host). A preview marks every row New, Exists or Error before anything is added; devices already in the inventory are skipped. The credential and the jump host are given by name, so no password is ever in the list.</p>
         </details>
       </section>
       <section class="faq-group" data-group="lists">
@@ -149,7 +157,23 @@
         </details>
         <details id="notebooks">
           <summary>Can I use a Jupyter notebook or VS Code?</summary>
-          <p>Yes. Turn on Tools → Allow notebook connection…, then <code>import zapterm</code> and <code>zapterm.connect()</code> from a notebook or a Python prompt you started yourself. Every call is carried out on a real ZapTerm tab, so you see it happen.</p>
+          <p>Yes. Turn on Tools → Notebook connection…, then <code>import zapterm</code> and <code>zapterm.connect()</code> from a notebook or a Python prompt you started yourself. Every call is carried out on a real ZapTerm tab, so you see it happen. It starts Read-only; the panel has the same three levels as for an AI assistant.</p>
+        </details>
+        <details id="ai-assistant">
+          <summary>Can I connect an AI assistant such as Claude?</summary>
+          <p>Yes, any assistant that speaks MCP (the Model Context Protocol) and can start a local server, such as Claude Desktop. Tools → AI assistant (MCP)… shows the configuration to paste into it; it points at <code>zapterm_mcp.py</code>, plain Python with no packages to install. The assistant can list your tabs and saved sessions, open a session and run commands, all through ZapTerm's tabs, where you see them. <a href="automation.html#assistant">How it works →</a></p>
+        </details>
+        <details id="ai-limits">
+          <summary>Can the assistant change the configuration of my devices?</summary>
+          <p>Only if you let it. "What the assistant may send" has three levels: Read-only (the default — only commands starting with <code>get</code> or <code>show</code> reach a device, the same list as for scripts, and anything else is refused), Ask me first (ZapTerm shows each other command and waits for your Yes) and No questions (everything is sent). ZapTerm enforces the level, not the assistant: a refused command never reaches the device, and the assistant is told so.</p>
+        </details>
+        <details id="ai-privacy">
+          <summary>What does the assistant see? Does it get my passwords?</summary>
+          <p>It sees the names of your tabs and saved sessions, and what a device prints in answer to the commands it runs — that text goes to the assistant and so to its provider, so choose which devices and commands you let it reach. It never gets a password: ZapTerm logs in from its vault and no tool exposes or types one. The connection is local to your computer, off until you turn it on, and turns itself off after 60 minutes without calls.</p>
+        </details>
+        <details id="activity">
+          <summary>Is there a record of what a script, notebook or assistant did?</summary>
+          <p>Yes. Every command sent or attempted is written to a text file on your computer (one per month, in the logs folder): when, who, on which device, the command, and whether it was sent, blocked by Read-only, declined by you, approved, timed out or failed. Tools → Automation activity… shows it with counters, filters and search. Only the command line is kept, not the device's output, and passwords that ZapTerm recognises in a command are masked (<code>set password ******</code>).</p>
         </details>
         <details id="netconf">
           <summary>Does ZapTerm support NETCONF or RESTCONF?</summary>
@@ -160,11 +184,12 @@
         <h2>Privacy, updates &amp; licence</h2>
         <details id="privacy">
           <summary>Does it send any data anywhere?</summary>
-          <p>No. There is no account, no telemetry and no automatic update check: the app only connects to the devices you open, and to GitHub when you use Help → Check for updates. (This website asks GitHub for the latest release to point the download buttons at it.)</p>
+          <p>ZapTerm doesn't. There is no account, no telemetry and no automatic update check: the app only connects to the devices you open, and to GitHub when you use Help → Check for updates. (This website asks GitHub for the latest release to point the download buttons at it.)</p>
+          <p>The one thing to know: if you connect an AI assistant (Tools → AI assistant (MCP)…, off unless you turn it on), what your devices print in answer to its commands goes to that assistant, and so to its provider. Passwords do not.</p>
         </details>
         <details id="updates">
           <summary>How do I update ZapTerm?</summary>
-          <p>Help → Check for updates… asks GitHub for the newest version and shows it with its release notes. If you want it, ZapTerm downloads the installer that matches your copy, checks it against the SHA-256 GitHub publishes, and starts it (on Windows ZapTerm closes so the installer can replace it). Copies from the Microsoft Store are updated by the Store. Nothing is checked or downloaded unless you open that dialog.</p>
+          <p>Help → Check for updates… asks GitHub for the newest version and shows it with its release notes. If you want it, ZapTerm downloads the installer that matches your copy, checks it against the SHA-256 GitHub publishes, and starts it: on Windows ZapTerm closes so the installer can replace it; on macOS ZapTerm closes, the new version takes the place of the old one and ZapTerm opens again (if it can't replace itself, the disk image opens for you to drag it to Applications). Your sessions, vault and settings are not touched. Copies from the Microsoft Store are updated by the Store. Nothing is checked or downloaded unless you open that dialog.</p>
         </details>
         <details id="licence">
           <summary>Is it really free?</summary>

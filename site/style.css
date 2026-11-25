@@ -302,6 +302,8 @@ h3 { font-size: clamp(24px, 2.6vw, 32px); line-height: 1.15; letter-spacing: -0.
 .auto-modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 24px; }
 .auto-modes > div { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
 .auto-modes p { color: var(--muted); font-size: 15px; margin: 10px 0 0; }
+.auto-modes + .auto-points, .auto-shot + .auto-points { margin-top: 28px; }
+.feature-text .ticks + p { margin-top: 14px; }
 .mode { display: inline-block; font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 999px; }
 .mode.dry { background: rgba(56,189,248,.14); color: #7dd3fc; }
 .mode.ro { background: rgba(234,179,8,.14); color: #fde047; }
