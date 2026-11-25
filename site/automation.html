@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Automation — ZapTerm</title>
-  <meta name="description" content="Automate network devices with Python from ZapTerm: scripts that run on many devices with Dry run and Read-only modes, Jinja2 templates, and Jupyter or VS Code notebooks driving real terminal tabs.">
+  <meta name="description" content="Automate network devices from ZapTerm: Python scripts with Dry run and Read-only modes, Jinja2 templates, Jupyter or VS Code notebooks, and an AI assistant over MCP that works within the limits you set — all in real terminal tabs, with a record of every command.">
   <meta name="theme-color" content="#0b0d14">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css">
@@ -36,12 +36,13 @@
     <div class="wrap">
       <p class="kicker">Automation</p>
       <h1>Python drives the devices.<br><span class="grad">You watch every command.</span></h1>
-      <p class="lede">ZapTerm runs your Python scripts and notebooks against the sessions you already
-        have. Every command is typed in a real terminal tab, through the same jump hosts, vault passwords
-        and login scripts as when you connect by hand — so nothing happens out of sight.</p>
+      <p class="lede">ZapTerm runs your Python scripts and notebooks — and lets an AI assistant work — against
+        the sessions you already have. Every command is typed in a real terminal tab, through the same jump
+        hosts, vault passwords and login scripts as when you connect by hand — so nothing happens out of sight.</p>
       <nav class="auto-toc" aria-label="On this page">
         <a href="#how">How it works</a><a href="#run">Run a script</a><a href="#audit">Example: audit</a>
-        <a href="#template">Example: Jinja2 template</a><a href="#notebooks">Notebooks</a><a href="#api">API</a>
+        <a href="#template">Example: Jinja2 template</a><a href="#notebooks">Notebooks</a>
+        <a href="#assistant">AI assistant</a><a href="#activity">Activity</a><a href="#api">API</a>
       </nav>
     </div>
   </section>
@@ -49,8 +50,8 @@
   <section id="how" class="auto-section">
     <div class="wrap">
       <h2>How it works</h2>
-      <div class="auto-flow" aria-label="Your script asks ZapTerm to run a command; ZapTerm types it in a terminal tab connected to the device and returns the output.">
-        <div class="auto-box"><b>Your script or notebook</b><code>out = sw.run("show version")</code><span>decides what to do</span></div>
+      <div class="auto-flow" aria-label="Your script, notebook or AI assistant asks ZapTerm to run a command; ZapTerm types it in a terminal tab connected to the device and returns the output.">
+        <div class="auto-box"><b>Your script, notebook or assistant</b><code>out = sw.run("show version")</code><span>decides what to do</span></div>
         <div class="auto-arrow" aria-hidden="true">⇄</div>
         <div class="auto-box accent"><b>ZapTerm</b><code>a real tab you can see</code><span>connects, types, reads the output</span></div>
         <div class="auto-arrow" aria-hidden="true">⇄</div>
@@ -78,7 +79,7 @@
       <div class="auto-two">
       <figure class="window auto-shot">
         <div class="window-bar"><i></i><i></i><i></i></div>
-        <img src="img/auto-tools-menu.webp" width="860" height="420" alt="The Tools menu with Run Python script, Script examples, Allow notebook connection, Send command list, Active tunnels and Settings." loading="lazy" data-zoom>
+        <img src="img/auto-tools-menu.webp" width="859" height="420" alt="The Tools menu with Run Python script, Script examples, AI assistant (MCP), Notebook connection, Automation activity, Send command list, Active tunnels and Settings." loading="lazy" data-zoom>
       </figure>
       <figure class="window auto-shot">
         <div class="window-bar"><i></i><i></i><i></i></div>
@@ -225,7 +226,7 @@ for row in rows:
         look at what the device really prints, write the parsing against it, try again. A Jupyter notebook in
         JupyterLab or VS Code does that, driving ZapTerm's tabs with the same <code>zapterm</code> module.</p>
       <ol class="auto-steps">
-        <li><b>Tools → Allow notebook connection…</b> The panel shows the two lines a notebook needs; Copy puts them on the
+        <li><b>Tools → Notebook connection…</b> The panel shows the two lines a notebook needs; Copy puts them on the
           clipboard. It is local to your computer, off by default, and turns itself off after 60 minutes without
           notebook calls.</li>
         <li><b>In the notebook,</b> <code>import zapterm</code> and <code>zapterm.connect()</code>. Then
@@ -235,7 +236,7 @@ for row in rows:
       </ol>
       <figure class="window auto-shot narrow">
         <div class="window-bar"><i></i><i></i><i></i></div>
-        <img src="img/auto-notebook-panel.webp" width="1130" height="665" alt="The Notebook connection panel: waiting for a notebook, Read-only ticked, and the sys.path and import lines to paste into the notebook." loading="lazy" data-zoom>
+        <img src="img/auto-notebook-panel.webp" width="1210" height="920" alt="The Notebook connection panel: waiting for a notebook, what a notebook may send set to Read-only (the other levels are Ask me first and No questions), the sys.path and import lines to paste into the notebook, and an empty list of what was sent since it was turned on." loading="lazy" data-zoom>
       </figure>
       <div class="auto-two tall">
       <figure class="window auto-shot">
@@ -245,14 +246,79 @@ for row in rows:
       </figure>
       <figure class="window auto-shot">
         <div class="window-bar"><i></i><i></i><i></i></div>
-        <img src="img/auto-notebook-zapterm.webp" width="1920" height="1200" alt="ZapTerm at the same time: the core-rtr-01 tab shows show ip interface brief typed by the notebook, and the panel says Notebook connected, read-only." loading="lazy" data-zoom>
+        <img src="img/auto-notebook-zapterm.webp" width="1920" height="1200" alt="ZapTerm at the same time: the core-rtr-01 tab shows show ip interface brief typed by the notebook, and the panel says Connected · Python, Read-only, and lists the session it opened and the command it sent." loading="lazy" data-zoom>
         <figcaption>…and ZapTerm at the same moment.</figcaption>
       </figure>
       </div>
-      <p class="auto-note">A notebook starts <b>read-only</b>: only <code>get</code> and <code>show</code> reach the device.
-        Untick Read-only in the panel only when you mean to change something — bigger changes belong in a script you've
-        dry-run. When the cells work, copy them into a <code>.py</code> file, loop over <code>zapterm.sessions(folder)</code>
+      <p class="auto-note">A notebook starts <b>Read-only</b>: only <code>get</code> and <code>show</code> reach the device.
+        Move the panel's control to <b>Ask me first</b> when you mean to change something: ZapTerm then shows each
+        other command and waits for your Yes. Bigger changes belong in a script you've dry-run. When the cells work, copy them into a <code>.py</code> file, loop over <code>zapterm.sessions(folder)</code>
         and add <code>report()</code> lines.</p>
+    </div>
+  </section>
+
+  <section id="assistant" class="auto-section">
+    <div class="wrap">
+      <h2>An AI assistant, on your terms</h2>
+      <p class="auto-lede">Ask in plain words — "which interfaces are down on core-rtr-01?", "compare the HA state of
+        the two firewalls" — and an assistant that speaks MCP (the Model Context Protocol) runs the commands through
+        ZapTerm and reads the answers. It gets the same deal as a script: real tabs you can watch, and rules that
+        ZapTerm enforces, whatever the assistant decides.</p>
+      <ol class="auto-steps">
+        <li><b>Tools → AI assistant (MCP)…</b> The panel shows the configuration to paste into your assistant
+          (Claude Desktop, or any other MCP client that can start a local server); Copy puts it on the clipboard.
+          It points at <code>zapterm_mcp.py</code>, plain Python with no packages to install.</li>
+        <li><b>Quit the assistant completely and open it again,</b> so it reads the configuration.</li>
+        <li><b>Ask it something about a device.</b> The panel shows who connected, by name, and every command as
+          it happens.</li>
+      </ol>
+      <figure class="window auto-shot">
+        <div class="window-bar"><i></i><i></i><i></i></div>
+        <img src="img/auto-assistant.webp" width="1920" height="1200" alt="ZapTerm with an AI assistant connected in Read-only. The fw-hq-01 tab shows get system status typed by the assistant; the panel lists what it sent since it was turned on — open session fw-hq-01, get system status, get system performance status, show ip bgp summary and show interfaces status on core-rtr-01 — and marks 'configure terminal' as blocked." loading="lazy" data-zoom>
+      </figure>
+      <div class="auto-modes">
+        <div><span class="mode ro">Read-only</span><p>The default. Only commands starting with <code>get</code> or
+          <code>show</code> (the same list as for scripts, set in the Run script dialog) reach a device. Anything else is refused, and the assistant is
+          told it was not sent.</p></div>
+        <div><span class="mode dry">Ask me first</span><p>Display commands go straight through. Before any other
+          command, ZapTerm shows it to you, says who is asking, and waits for your Yes.</p></div>
+        <div><span class="mode real">No questions</span><p>Every command is sent as it comes. Only for work you
+          would hand over without watching.</p></div>
+      </div>
+      <div class="auto-points">
+        <div><h3>What it can do</h3><p>List open tabs and saved sessions, open a saved session, run a command in a
+          tab and read its output, and ask which level is on. Five tools, nothing else.</p></div>
+        <div><h3>What it can't</h3><p>See or type a password: ZapTerm logs in from its vault, and no tool exposes
+          one. Nor chain commands past the rules — a line with <code>;</code>, <code>|</code>, <code>&amp;</code>,
+          <code>&lt;</code>, <code>&gt;</code>, a backtick or <code>$(</code> is not a display command.</p></div>
+        <div><h3>One at a time, only on this computer</h3><p>The connection is local, off until you turn it on,
+          accepts one client, and turns itself off after 60 minutes without calls. A notebook is refused while
+          the assistant's entry is on, and the other way round.</p></div>
+      </div>
+      <p class="auto-note"><b>What leaves your computer:</b> ZapTerm sends nothing anywhere. But what your devices
+        print in answer to the assistant's commands goes to that assistant, and so to its provider — think about
+        which devices and which commands you let it reach. Passwords are not part of it.</p>
+    </div>
+  </section>
+
+  <section id="activity" class="auto-section">
+    <div class="wrap">
+      <h2>A record of everything that was sent</h2>
+      <p class="auto-lede">Every command a script, a notebook or an assistant sent — or tried to send — is written to a
+        plain text file on your computer, one line per event: when, who, on which device, the command, and what
+        became of it. <b>Tools → Automation activity…</b> shows it with counters, filters and search.</p>
+      <figure class="window auto-shot">
+        <div class="window-bar"><i></i><i></i><i></i></div>
+        <img src="img/auto-activity.webp" width="1600" height="1173" alt="Automation activity: 9 actions, 8 sent and 1 blocked, with the last 14 days. One card per visit: the assistant's, with the sessions it opened, the commands it ran on fw-hq-01 and core-rtr-01 and 'configure terminal' blocked by Read-only; and a notebook's, with show ip interface brief." loading="lazy" data-zoom>
+      </figure>
+      <div class="auto-points">
+        <div><h3>What became of each command</h3><p>Sent, blocked by Read-only, declined by you, approved and sent,
+          no prompt in time, or an error — with how long it took.</p></div>
+        <div><h3>Commands, not output</h3><p>Only the command line is kept, never what the device printed (session
+          logging does that). Passwords that ZapTerm recognises in a command are masked: <code>set password ******</code>.</p></div>
+        <div><h3>Yours to keep or delete</h3><p>One file per month in the logs folder, tab-separated, readable in any
+          editor or spreadsheet. <b>Open file</b> and <b>Folder</b> take you there.</p></div>
+      </div>
     </div>
   </section>
 
@@ -267,7 +333,7 @@ for row in rows:
             <tr><td><code>zapterm.open(name)</code></td><td>Open a saved session in a new tab and wait until it is connected.</td></tr>
             <tr><td><code>zapterm.tab(name)</code> / <code>tabs()</code></td><td>A tab already open, by name / all open tabs.</td></tr>
             <tr><td><code>zapterm.sessions(folder)</code></td><td>Names of the saved sessions, or only those in a folder and its sub-folders.</td></tr>
-            <tr><td><code>s.run(cmd, timeout=30)</code></td><td>Type a command, wait for the prompt, return the output.</td></tr>
+            <tr><td><code>s.run(cmd, timeout=30)</code></td><td>Type a command, wait for the prompt, return the output. With <code>strict=True</code> it raises when Read-only keeps the command from being sent.</td></tr>
             <tr><td><code>s.send(text)</code> / <code>s.expect(pattern)</code></td><td>Type without waiting / wait for a text or regex to appear.</td></tr>
             <tr><td><code>s.send_secret("Name.Password")</code></td><td>Type a vault credential; the script never sees it.</td></tr>
             <tr><td><code>s.poll(cmd, until, every, max)</code></td><td>Repeat a command until a condition holds or time runs out.</td></tr>

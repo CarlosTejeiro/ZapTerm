@@ -32,7 +32,7 @@
     <header class="section-head">
       <p class="kicker">Privacy</p>
       <h1>Privacy policy</h1>
-      <p>Last updated: 22 November 2026 (version 1.7.16)</p>
+      <p>Last updated: 25 November 2026 (version 1.9.0)</p>
     </header>
 
     <p>ZapTerm is a free, open-source terminal application for network engineers, developed by
@@ -58,6 +58,10 @@
         keys.</li>
       <li>The commands you recently ran, to offer them again.</li>
       <li>Session logs, when you record a session.</li>
+      <li>The automation activity record: the commands that scripts, notebooks or an AI assistant
+        sent or tried to send through ZapTerm (when, on which device, and the result), as text
+        files in the logs folder. It holds command lines only, not what the devices printed; passwords
+        that ZapTerm recognises in a command are replaced by asterisks.</li>
     </ul>
     <p>None of this is sent to the developer or to any third party. You can delete it at any
       time by removing the entries in the app or by deleting ZapTerm's data folder.</p>
@@ -85,6 +89,17 @@
     <h3>Scripts</h3>
     <p>Python scripts and notebooks that you run from ZapTerm are your own code and run on your
       device. What they do with the data they read is under your control.</p>
+
+    <h3>AI assistants (optional)</h3>
+    <p>ZapTerm contains no AI and sends nothing to any AI service by itself. If you choose to
+      connect an assistant of your own (Tools → AI assistant (MCP)…, off unless you turn it on),
+      a small program on your computer passes that assistant's requests to ZapTerm and the
+      answers back. The assistant then receives the names of your open tabs and saved sessions
+      and what your devices print in answer to the commands it runs, and its provider's own
+      privacy policy applies to that data. It does not receive passwords: ZapTerm logs in from
+      its vault and offers the assistant no way to read or type one. You decide which commands
+      it may send (display commands only, by default), and you can turn the connection off at
+      any time.</p>
 
     <h2>This website</h2>
     <ul>

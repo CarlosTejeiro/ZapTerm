@@ -40,11 +40,11 @@
   <section class="hero">
     <div class="glow glow-a"></div><div class="glow glow-b"></div>
     <div class="wrap hero-inner">
-      <p class="eyebrow"><span class="dot"></span> Latest <span data-version>v1.7.12</span> · free &amp; open source</p>
+      <p class="eyebrow"><span class="dot"></span> Latest <span data-version>v1.9.0</span> · free &amp; open source</p>
       <h1>The terminal built for<br><span class="grad">network engineers</span></h1>
       <p class="lede">SSH, Telnet and Serial in one fast app. Command lists for every vendor you touch,
-        hints as you type, split panes, broadcast to many devices, a credential vault and
-        Python automation — on Windows, macOS and Linux.</p>
+        hints as you type, split panes, broadcast to many devices, a credential vault,
+        Python automation and a safe way to let an AI assistant help — on Windows, macOS and Linux.</p>
       <div class="cta">
         <a class="btn btn-primary" href="#download" data-dl-primary>Download ZapTerm</a>
         <a class="btn btn-ghost" href="https://github.com/CarlosTejeiro/ZapTerm">View source</a>
@@ -117,17 +117,19 @@
       <article class="feature">
         <div class="feature-text">
           <span class="tag">Workspace</span>
-          <h3>Split panes and broadcast</h3>
+          <h3>Split panes, broadcast and compare</h3>
           <p>Split any tab into panes and watch a router, a switch and a firewall side by side.
-            Turn on <b>Multi</b> and one master input sends the same command to every pane —
-            with <b>Run &amp; compare</b> to line the outputs up.</p>
+            Turn on <b>Multi</b> and the <b>SEND TO ALL</b> bar types the same command in every pane
+            of the tab. <b>Run &amp; compare</b> then tells you whether they all answered the same —
+            and shows the differences side by side when they didn't.</p>
           <ul class="ticks">
-            <li>Recursive splits, horizontal and vertical</li>
+            <li>Each pane is marked <b>=</b>, <b>A</b> or <b>B</b>: which answer it gave</li>
+            <li>Pages through <code>--More--</code> for you, so nothing is compared cut short</li>
             <li>Broadcast groups open many hosts as a grid</li>
             <li>Command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>) for sessions and actions</li>
           </ul>
         </div>
-        <figure class="shot"><img src="img/multi.webp" width="1920" height="1200" alt="Three panes — a Cisco core router, an Arista spine and a FortiGate — with the broadcast bar at the bottom about to send 'show version' to all three hosts." data-zoom></figure>
+        <figure class="shot"><img src="img/compare.webp" width="1920" height="1200" alt="Two FortiGates of an HA pair side by side with Multi on. Run &amp; compare of 'get system status' says Output differs: 2 versions, marks the panes A and B, and shows the four lines that differ side by side: IPS database, serial number, hostname and HA role." data-zoom></figure>
       </article>
 
       <article class="feature flip">
@@ -156,6 +158,7 @@
             sessions, port forwarding, anti-idle keepalives and macros that run on connect.</p>
           <ul class="ticks">
             <li>Import from <code>~/.ssh/config</code>, PuTTY, MobaXterm and SecureCRT</li>
+            <li>Add devices in bulk from a pasted list or a CSV file</li>
             <li>Login automation with expect / send steps</li>
             <li>SFTP browser with streaming transfers</li>
           </ul>
@@ -188,6 +191,24 @@
           <figure class="shot"><img src="img/script-run.webp" width="990" height="580" alt="The Run script dialog for hello.py with Dry run, Read-only and Run modes." data-zoom></figure>
           <figure class="shot"><img src="img/script-panel.webp" width="1124" height="470" alt="The script panel after a dry run: core-rtr-01 OK, and a log saying it would run 'uname -a'." data-zoom></figure>
         </div>
+      </article>
+
+      <article class="feature flip">
+        <div class="feature-text">
+          <span class="tag">AI assistant</span>
+          <h3>Let an assistant look — you set the limits</h3>
+          <p>Connect an AI assistant that speaks MCP (Claude Desktop, or any other MCP client) and ask it
+            about your network in plain words. It works through ZapTerm's tabs, where you see every command,
+            and ZapTerm — not the assistant — decides what may be sent.</p>
+          <ul class="ticks">
+            <li><b>Read-only</b> by default: only display commands reach a device</li>
+            <li><b>Ask me first</b>: any other command waits for your Yes</li>
+            <li>No tool shows or types a password; ZapTerm logs in from its vault</li>
+            <li>Everything it sent, or tried to send, is kept in a text file on your computer</li>
+          </ul>
+          <p><a href="automation.html#assistant">How to connect one, and what it can do →</a></p>
+        </div>
+        <figure class="shot"><img src="img/auto-assistant.webp" width="1920" height="1200" alt="ZapTerm with an AI assistant connected in Read-only: the panel lists what it sent since it was turned on — open session fw-hq-01, get system status, show ip bgp summary on core-rtr-01 — and marks 'configure terminal' as blocked." data-zoom></figure>
       </article>
     </div>
   </section>
@@ -280,7 +301,7 @@
       <header class="section-head">
         <p class="kicker">Q&amp;A</p>
         <h2>Questions people ask</h2>
-        <p>Answers describe the latest version, <b data-version>v1.7.12</b>, and are updated with every release.</p>
+        <p>Answers describe the latest version, <b data-version>v1.9.0</b>, and are updated with every release.</p>
       </header>
       <div class="faq-list">
         <form class="faq-search" action="faq.html" method="get" role="search">
@@ -298,7 +319,8 @@
         </details>
         <details id="privacy">
           <summary>Does it send any data anywhere?</summary>
-          <p>No. There is no account, no telemetry and no automatic update check: the app only connects to the devices you open, and to GitHub when you use Help → Check for updates. (This website asks GitHub for the latest release to point the download buttons at it.)</p>
+          <p>ZapTerm doesn't. There is no account, no telemetry and no automatic update check: the app only connects to the devices you open, and to GitHub when you use Help → Check for updates. (This website asks GitHub for the latest release to point the download buttons at it.)</p>
+          <p>The one thing to know: if you connect an AI assistant (Tools → AI assistant (MCP)…, off unless you turn it on), what your devices print in answer to its commands goes to that assistant, and so to its provider. Passwords do not.</p>
         </details>
         <details id="import">
           <summary>Can I bring my sessions from another tool?</summary>
