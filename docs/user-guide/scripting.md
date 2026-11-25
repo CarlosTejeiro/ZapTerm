@@ -53,6 +53,9 @@ fills with `zapterm.report()`, and the live log (`print`, errors, `[dry-run]` an
 `[read-only]` lines). **Stop** kills the script; after a dry run or a
 read-only run, **Run for real** runs it again with sending enabled. The panel doesn't block the window, so you can
 watch and use the tabs while a script runs.
+Drag the panel's left or top edge (or their corner) to resize it, or use
+**Enlarge** in its header to fill the window; double-click an edge for the
+default size. The notebook and AI assistant panels resize the same way.
 
 One script runs at a time.
 
@@ -95,7 +98,7 @@ To work out a script step by step — run a command, look at the real output,
 write the next bit against it — connect a notebook to ZapTerm instead of running a
 file:
 
-1. In ZapTerm: **Tools → Allow notebook connection…**. The script panel shows
+1. In ZapTerm: **Tools → Notebook connection…**. Its panel shows
    "Waiting for a notebook…" and the lines to paste.
 2. In the notebook's Python, install `ipykernel` once (VS Code offers to when
    you pick an interpreter without it).
@@ -117,13 +120,13 @@ file:
 How it behaves:
 
 - Same API as scripts. `zapterm.session()` is the tab focused *now*.
-- **Read-only by default**: the panel's **Read-only** box (ticked the first
+- **Read-only by default**: the panel's **Read-only** level (chosen the first
   time; ZapTerm remembers it as `notebook.read_only`) applies the same allowlist
   as a read-only script run, so only `get` / `show` commands reach the device
-  and the rest is logged as "would run". Untick it to make changes from the
-  notebook; it takes effect on the next call. `zapterm.read_only` reads the box
-  each time, so the notebook's code can follow it. There is no dry run in a
-  notebook.
+  and the rest is blocked. Choose **Ask me first** or **No questions** to make
+  changes from the notebook; it takes effect on the next call.
+  `zapterm.read_only` reads the level each time, so the notebook's code can
+  follow it. There is no dry run in a notebook.
 - One notebook at a time; a second `connect()` is refused while one is
   connected.
 - Stopping a cell (■) makes ZapTerm abandon what that call was waiting on; the

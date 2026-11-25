@@ -16,6 +16,7 @@
   import MasterInputBar from '$lib/pylon/MasterInputBar.svelte'
   import ComparisonPanel from '$lib/orchestrator/ComparisonPanel.svelte'
   import { CommandRunner, type RunnerHost } from '$lib/orchestrator/commandRunner.svelte'
+  import { paneTarget } from '$lib/orchestrator/compare'
   import CommandListDialog from '$lib/orchestrator/CommandListDialog.svelte'
   import TunnelsManagerDialog from '$lib/terminal/TunnelsManagerDialog.svelte'
   import {
@@ -41,13 +42,18 @@
   import KeyboardInteractiveDialog from '$lib/terminal/KeyboardInteractiveDialog.svelte'
   import ScriptPanel from '$lib/scripting/ScriptPanel.svelte'
   import ScriptStartDialog from '$lib/scripting/ScriptStartDialog.svelte'
+  import BulkAddDialog from '$lib/inventory/BulkAddDialog.svelte'
+  import ActivityDialog from '$lib/activity/ActivityDialog.svelte'
+  import { activity, showActivity } from '$lib/activity/activity.svelte'
   import {
     hostBusy,
     initScriptHost,
     scriptRun,
-    startNotebookFromSettings,
     startScript,
+    switchConnection,
+    type Audience,
   } from '$lib/scripting/scriptHost.svelte'
+  import ConnectionPanel from '$lib/scripting/ConnectionPanel.svelte'
   import CommandPalette from '$lib/palette/CommandPalette.svelte'
   import type { PaletteItem } from '$lib/palette/CommandPalette.svelte'
   import Toasts from '$lib/ui/Toasts.svelte'
@@ -128,6 +134,7 @@
   } from '$lib/stores/settings.svelte'
   import type { SavedSession, Folder, BroadcastGroup, Snippet, LoginStep } from '$lib/bridge/types'
   import { groups, loadGroups } from '$lib/stores/groups.svelte'
+  import { compareSettings } from '$lib/orchestrator/compareSettings.svelte'
   import GroupsDialog from '$lib/sessions/GroupsDialog.svelte'
 
   // ── types ───────────────────────────────────────────────────────────────────
@@ -152,6 +159,10 @@
     /** Stable label/colour for the tab (mirrors the first leaf at creation). */
     label: string
     color: string
+    /** Multi on for this tab: what is typed in one of its panes, and the
+     *  command-list items clicked, go to all its sessions. Per tab, so
+     *  switching tabs never carries it over. */
+    multi: boolean
   }
 
   /** All panes in a tab, regardless of layout. */
@@ -273,6 +284,7 @@
       statuses: new SvelteMap<number, PaneStatus>([[pane.id, 'connecting']]),
       label: pane.label,
       color: pane.color,
+      multi: false,
     }
   }
 
@@ -286,6 +298,7 @@
       statuses,
       label,
       color: panes[0]?.color ?? pickColor(),
+      multi: false,
     }
   }
 
@@ -298,6 +311,8 @@
   let focusedPaneId = $state(firstPane.id)
   let sessions = $state<SavedSession[]>([])
   let folders = $state<Folder[]>([])
+  /** File → Add devices in bulk… */
+  let showBulkAdd = $state(false)
   let showNewSession = $state(false)
   let showQuickConnect = $state(false)
   let showSettings = $state(false)
@@ -340,7 +355,6 @@
   let bytesPerSecBySession = $state<Record<string, number>>({})
   /// When set, opens NewSessionDialog in edit mode with the given session pre-filled.
   let editingSession = $state<SavedSession | null>(null)
-  let multiOn = $state(false)
 
   // Macro library (sidebar Macros section): macros are snippets carrying steps.
   let editingMacro = $state<Snippet | 'new' | null>(null)
@@ -529,9 +543,6 @@
   $effect(() => {
     sessionRuntime.focusedPaneId = focusedPaneId
   })
-  $effect(() => {
-    broadcast.enabled = multiOn
-  })
 
   // Tell the bottom bar which session is focused, so it shows that vendor's
   // command lists and that session's recent commands. Effects
@@ -564,6 +575,37 @@
 
   const activeTab = $derived(tabs.find((t) => t.id === activeTabId))
 
+  // ── Multi (broadcast) — per tab, and only with two or more sessions ──────
+  /** Panes of a tab that hold a session (connected or connecting). */
+  function tabSessionCount(t: AppTab): number {
+    return tabPanes(t).filter((p) => !p.empty).length
+  }
+  const activeSessionCount = $derived(activeTab ? tabSessionCount(activeTab) : 0)
+  const multiOn = $derived(!!activeTab?.multi && activeSessionCount > 1)
+
+  function toggleMulti() {
+    if (!activeTab) return
+    if (!activeTab.multi && activeSessionCount < 2) {
+      showToast({
+        kind: 'info',
+        title: 'Multi needs two or more sessions',
+        detail: 'Split the tab or open a group, then turn Multi on to type in all of them at once.',
+      })
+      return
+    }
+    activeTab.multi = !activeTab.multi
+  }
+
+  // A tab left with a single session drops Multi, so it isn't silently on
+  // again the next time the tab is split.
+  $effect(() => {
+    for (const t of tabs) if (t.multi && tabSessionCount(t) < 2) t.multi = false
+  })
+
+  $effect(() => {
+    broadcast.enabled = multiOn
+  })
+
   /// Returns the first leaf's status as a coarse summary for the tab strip.
   function summaryStatus(tab: AppTab): PaneStatus {
     const id = firstPaneId(tab)
@@ -588,6 +630,7 @@
       label: tabDisplayLabel(t),
       color: t.color,
       status: summaryStatus(t),
+      multi: t.multi && tabSessionCount(t) > 1,
     })),
   )
 
@@ -655,19 +698,34 @@
   // send one command to every live pane of the active tab and diff the outputs.
   const compareRunner = new CommandRunner()
   let showComparePanel = $state(false)
+  /** The tab whose panes the comparison is about; the panel shows only there. */
+  let compareTabId = $state<number | null>(null)
 
-  async function runCompareActiveTab(command: string) {
+  async function runCompareActiveTab(command: string, typed: boolean) {
     if (!activeTab) return
     const hosts: RunnerHost[] = []
-    for (const pane of tabPanes(activeTab)) {
+    for (const [i, pane] of tabPanes(activeTab).entries()) {
       const sid = paneToSession.get(pane.id)
       if (!sid) continue
       const savedId = pane.savedSession?.id
       const platform = savedId != null ? await getSessionPlatform(savedId).catch(() => null) : null
-      hosts.push({ sessionId: sid, label: pane.label, platform })
+      hosts.push({
+        sessionId: sid,
+        label: pane.label,
+        platform,
+        position: i + 1,
+        target: paneTarget(pane),
+      })
     }
+    compareTabId = activeTab.id
     showComparePanel = true
-    await compareRunner.run(hosts, command)
+    await compareRunner.run(hosts, command, { typed, autoPage: compareSettings.autoPage })
+  }
+
+  function closeComparePanel() {
+    showComparePanel = false
+    compareTabId = null
+    compareRunner.reset()
   }
 
   /// Every live session across all tabs, labelled — target list for the
@@ -803,30 +861,41 @@
     if (typeof picked === 'string') scriptPending = picked
   }
 
-  /// Tools → Allow notebook connection: turn it on, or show the panel if it
-  /// already is.
-  async function openNotebookConnection() {
-    if (scriptRun.mode === 'notebook' && hostBusy()) {
+  /// Tools → Notebook connection / AI assistant (MCP): turn the connection on
+  /// for that kind of client, or show its panel if it already is. One
+  /// connection at a time: the other kind is turned off first, after asking.
+  async function openConnection(audience: Audience) {
+    const label = audience === 'assistant' ? 'AI assistant (MCP)' : 'Notebook connection'
+    if (scriptRun.mode === 'notebook' && hostBusy() && scriptRun.audience === audience) {
       scriptRun.visible = true
+      return
+    }
+    if (hostBusy() && scriptRun.mode !== 'notebook') {
+      scriptRun.visible = true
+      await message('A script is running — wait for it or stop it first.', {
+        title: label,
+        kind: 'info',
+      })
       return
     }
     if (hostBusy()) {
-      scriptRun.visible = true
-      await message('A script is running — wait for it or stop it first.', {
-        title: 'Notebook connection',
-        kind: 'info',
-      })
-      return
+      const other =
+        scriptRun.audience === 'assistant' ? 'AI assistant access' : 'notebook connection'
+      const yes = await ask(
+        `The ${other} is on. Only one of the two can be on at a time.\n\nTurn it off and turn on ${label}?`,
+        { title: label, kind: 'info' },
+      )
+      if (!yes) {
+        scriptRun.visible = true
+        return
+      }
     }
     try {
-      await startNotebookFromSettings()
+      await switchConnection(audience)
     } catch (e) {
       // e.g. a script was started while the settings were being read.
       scriptRun.visible = true
-      await message(String(e instanceof Error ? e.message : e), {
-        title: 'Notebook connection',
-        kind: 'info',
-      })
+      await message(String(e instanceof Error ? e.message : e), { title: label, kind: 'info' })
     }
   }
 
@@ -859,7 +928,7 @@
     } else if (!pane.ssh && !pane.telnet) {
       platform = 'linux' // local shell tab
     }
-    return { id: sessionId, name: pane.label, platform }
+    return { id: sessionId, name: pane.label, platform, address: paneTarget(pane) }
   }
 
   /// Re-read the stored platform of the saved session behind `sessionId`, so a
@@ -1139,7 +1208,7 @@
         handleSplit(focusedPaneId, 'v')
         break
       case 'multi-exec':
-        multiOn = !multiOn
+        toggleMulti()
         break
       case 'quick-connect':
         showQuickConnect = true
@@ -1397,11 +1466,25 @@
       run: chooseScript,
     },
     {
-      id: 'act-notebook',
-      label: 'Allow notebook connection',
-      icon: 'term' as const,
+      id: 'act-assistant',
+      label: 'AI assistant (MCP)',
+      icon: 'spark' as const,
       section: 'Actions' as const,
-      run: () => void openNotebookConnection(),
+      run: () => void openConnection('assistant'),
+    },
+    {
+      id: 'act-notebook',
+      label: 'Notebook connection',
+      icon: 'book' as const,
+      section: 'Actions' as const,
+      run: () => void openConnection('notebook'),
+    },
+    {
+      id: 'act-activity',
+      label: 'Automation activity',
+      icon: 'pulse' as const,
+      section: 'Actions' as const,
+      run: showActivity,
     },
     {
       id: 'act-script-examples',
@@ -1467,7 +1550,7 @@
       label: 'Toggle multi-exec',
       icon: 'cast' as const,
       section: 'Actions' as const,
-      run: () => (multiOn = !multiOn),
+      run: toggleMulti,
     },
     {
       id: 'act-close-tab',
@@ -1524,6 +1607,13 @@
       icon: 'transfer' as const,
       section: 'Actions' as const,
       run: handleImportSecureCrt,
+    },
+    {
+      id: 'act-bulk-add',
+      label: 'Add devices in bulk…',
+      icon: 'transfer' as const,
+      section: 'Actions' as const,
+      run: () => (showBulkAdd = true),
     },
     {
       id: 'act-about',
@@ -1793,7 +1883,9 @@
     onSettings={() => (showSettings = true)}
     onRunScript={chooseScript}
     onScriptExamples={() => scriptExamplesDir(true).catch(() => {})}
-    onNotebook={() => void openNotebookConnection()}
+    onNotebook={() => void openConnection('notebook')}
+    onAssistant={() => void openConnection('assistant')}
+    onActivity={showActivity}
     onCheckUpdates={handleCheckUpdates}
     onSetTheme={(k) => applyTheme(k)}
     onAbout={() => (showAbout = true)}
@@ -1803,6 +1895,7 @@
     onImportPutty={handleImportPutty}
     onImportMobaXterm={handleImportMobaXterm}
     onImportSecureCrt={handleImportSecureCrt}
+    onBulkAdd={() => (showBulkAdd = true)}
     onCommandList={() => (showCommandList = true)}
     onTunnelsManager={() => (showTunnelsManager = true)}
   />
@@ -1980,6 +2073,7 @@
         {activeTabId}
         {splitOn}
         {multiOn}
+        multiCount={activeSessionCount}
         onActivate={activateTab}
         onAdd={addLocalTab}
         onClose={closeTab}
@@ -1987,7 +2081,7 @@
         onDuplicate={duplicateTab}
         onSetColor={setTabColor}
         onToggleSplit={handleSplitFocused}
-        onToggleMulti={() => (multiOn = !multiOn)}
+        onToggleMulti={toggleMulti}
       />
 
       <div class="pylon-panes">
@@ -2005,6 +2099,7 @@
                 {theme}
                 {focusedPaneId}
                 active={tab.id === activeTabId}
+                broadcasting={tab.multi && tabSessionCount(tab) > 1}
                 onFocus={(id) => (focusedPaneId = id)}
                 onClosePane={(id) => handleClosePane(id)}
                 onStatusChange={(id, s) => handleStatusChange(tab.id, id, s)}
@@ -2016,6 +2111,7 @@
                 {theme}
                 {focusedPaneId}
                 {canClosePanes}
+                broadcasting={tab.multi && tabSessionCount(tab) > 1}
                 onFocus={(id) => (focusedPaneId = id)}
                 onSplit={(id, dir) => handleSplit(id, dir)}
                 onClosePane={(id) => handleClosePane(id)}
@@ -2028,6 +2124,17 @@
           </div>
         {/each}
       </div>
+
+      {#if showComparePanel && activeTab?.id === compareTabId}
+        <ComparisonPanel
+          {theme}
+          command={compareRunner.command}
+          hosts={compareRunner.hosts}
+          running={compareRunner.running}
+          timeoutMs={compareRunner.timeoutMs}
+          onClose={closeComparePanel}
+        />
+      {/if}
 
       {#if multiOn && activeTab?.layout.kind === 'split'}
         <!-- Multi-exec on a regular tab: same master bar as grid mode,
@@ -2105,6 +2212,13 @@
 
 <KeyboardInteractiveDialog />
 
+{#if activity.visible}
+  <ActivityDialog onClose={() => (activity.visible = false)} />
+{/if}
+
+{#if showBulkAdd}
+  <BulkAddDialog {sessions} {folders} onClose={() => (showBulkAdd = false)} onAdded={load} />
+{/if}
 {#if scriptPending}
   {@const path = scriptPending}
   <ScriptStartDialog
@@ -2123,7 +2237,9 @@
   />
 {/if}
 
-{#if scriptRun.visible}
+{#if scriptRun.visible && scriptRun.mode === 'notebook'}
+  <ConnectionPanel />
+{:else if scriptRun.visible}
   <ScriptPanel />
 {/if}
 
@@ -2140,19 +2256,6 @@
 
 {#if showCommandList}
   <CommandListDialog targets={liveTargets} onClose={() => (showCommandList = false)} />
-{/if}
-
-{#if showComparePanel}
-  <ComparisonPanel
-    {theme}
-    command={compareRunner.command}
-    hosts={compareRunner.hosts}
-    running={compareRunner.running}
-    onClose={() => {
-      showComparePanel = false
-      compareRunner.reset()
-    }}
-  />
 {/if}
 
 {#if showTunnelsManager}

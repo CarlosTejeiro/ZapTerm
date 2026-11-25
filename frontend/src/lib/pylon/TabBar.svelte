@@ -9,6 +9,8 @@
     label: string
     color: string
     status: 'connecting' | 'connected' | 'error' | 'lost' | 'closed'
+    /** Multi is on in this tab. */
+    multi?: boolean
   }
 
   interface Props {
@@ -17,6 +19,8 @@
     activeTabId: number
     splitOn?: boolean
     multiOn?: boolean
+    /** Sessions in the active tab: Multi needs two or more. */
+    multiCount?: number
     onActivate: (id: number) => void
     onAdd: () => void
     onClose: (id: number) => void
@@ -33,6 +37,7 @@
     activeTabId,
     splitOn = false,
     multiOn = false,
+    multiCount = 0,
     onActivate,
     onAdd,
     onClose,
@@ -161,6 +166,11 @@
             }}
           />
         {:else}
+          {#if tab.multi}
+            <span class="tab-multi" style:color={theme.accent2} title="Multi is on in this tab"
+              ><Icon name="cast" size={11} /></span
+            >
+          {/if}
           <span class="tab-label" style:color={active ? theme.textPrimary : theme.textMuted}>
             {tab.label}
           </span>
@@ -207,15 +217,21 @@
     <button
       class="tab-action-btn"
       class:active={multiOn}
+      class:unavailable={multiCount < 2}
       style:color={multiOn ? theme.accent2 : theme.textMuted}
       style:background={multiOn ? `${theme.accent2}18` : 'transparent'}
       style:border="1px solid {multiOn ? `${theme.accent2}55` : theme.border}"
       style:border-radius={theme.radius}
       onclick={onToggleMulti}
-      title="Toggle MultiExec broadcast (Ctrl+Shift+M)"
+      aria-pressed={multiOn}
+      title={multiCount < 2
+        ? 'Multi types in several sessions at once. Split this tab or open a group first (Ctrl+Shift+M)'
+        : multiOn
+          ? `On: what you type in a pane, and the list commands you click, go to all ${multiCount} sessions of this tab (Ctrl+Shift+M)`
+          : `Type in all ${multiCount} sessions of this tab at once (Ctrl+Shift+M)`}
     >
       <Icon name="cast" size={13} />
-      Multi
+      {multiOn ? `Multi · ${multiCount}` : 'Multi'}
     </button>
   </div>
 </div>
@@ -424,6 +440,15 @@
 
   .tab-action-btn:hover {
     background: var(--item-hover-bg, rgba(255, 255, 255, 0.06));
+  }
+  /* Multi with fewer than two sessions in the tab: still clickable (it says
+     why), but reads as unavailable. */
+  .tab-action-btn.unavailable {
+    opacity: 0.55;
+  }
+  .tab-multi {
+    display: inline-flex;
+    flex-shrink: 0;
   }
 
   .tab-rename {

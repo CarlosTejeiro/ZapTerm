@@ -8,6 +8,143 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
+## [1.9.0] - 2026-11-25
+
+The automation work, tested as the 1.8.x betas (`v1.8.0-beta` to
+`v1.8.16-beta`), is now in the stable version.
+
+### Added
+- **Connect an AI assistant (MCP).** **Tools → AI assistant (MCP)…** lets an
+  MCP client (Claude Desktop, Claude Code or any other) list tabs and saved
+  sessions, open a session and run commands through ZapTerm, with
+  `zapterm_mcp.py` (plain Python, no packages). The panel shows the
+  configuration to copy, who is connected, by name, and what was sent since
+  it was turned on. ZapTerm enforces the rules, not the assistant: no tool
+  exposes or types passwords (ZapTerm logs in from its vault), and the client
+  is told when a command was not sent.
+- **What an assistant or a notebook may send: three levels.** **Read-only**
+  (only display commands reach a device; anything else is refused),
+  **Ask me first** (display commands go through; before any other, ZapTerm
+  shows it and waits for your Yes, naming who is asking) and **No
+  questions**. The assistant and the notebooks each remember their own level.
+- **Automation activity: a record of everything a script, a notebook or an AI
+  assistant sent.** Every command sent or attempted is written to a text
+  file on your computer (`automation/activity-YYYY-MM.log` in the logs
+  folder, one line per event, tab-separated): when, who (the script, the
+  notebook, or the AI assistant by its own name), on which device and
+  address, the command, and what became of it — sent, blocked by Read-only,
+  declined by you, approved and sent, no prompt in time, or an error — with
+  how long it took. Only the command line is kept: never what the device
+  printed (session logging does that).
+- **Tools → Automation activity…** (also in the command palette and from the
+  panels) shows that record: counters and the last 14 days on top — click one
+  to filter — then the list, newest day first, one card per visit (from the
+  moment a client connected until it left), with filters by source and
+  device and a search box. Click a line to copy its command; **Open file**
+  and **Folder** take you to the text; **Enlarge** fills the window.
+- **Add devices in bulk** (File menu and command palette). Paste one device
+  per line (`host`, `host:port`, `name host`, `name host port`) or open a CSV
+  file whose first line names the columns (name, host, port, protocol,
+  username, folder, tags, notes, credential, jump_host — commas, semicolons
+  or tabs). Defaults fill what the list leaves out; folders are created from
+  a `DC/Madrid` path; the credential is a vault entry and the jump host a
+  saved SSH session, both by name, so no password is ever in the list. A
+  preview marks every row New, Exists or Error; devices already in the
+  inventory are skipped and nothing is added while any row has an error.
+- **Run & compare pages through `--More--` for you.** A device that stopped at
+  a pager prompt (`--More--`, `---(more)---`, `<--- More --->`) left that pane
+  waiting and its output was compared cut short. Now Run & compare presses
+  Space in that session only, while it is capturing, until the prompt comes
+  back (up to 200 pages; the time limit starts again with each page). The
+  pager prompts and the way devices erase them are left out of the
+  comparison. It also works for a line sent with Enter in the SEND TO ALL
+  bar: each session that stops at a pager prompt gets a space, until it has
+  been quiet for 10 s, or after 200 pages. What you type straight into a pane
+  is left alone. On by default; **Page through --More--** in the SEND TO ALL
+  bar turns it off.
+- `Session.run(..., strict=True)` raises instead of returning an empty string
+  when read-only keeps a command from being sent.
+
+### Changed
+- **Notebooks and the AI assistant each have their own entry and panel**:
+  **Tools → Notebook connection…** (it was "Allow notebook connection") and
+  **Tools → AI assistant (MCP)…**. Each lets in only its kind of client: a
+  notebook is refused while the assistant's entry is on, and the other way
+  round, and is told which entry to use. Only one of the two can be on at a
+  time; asking for the other offers to switch. A client that doesn't say what
+  it is (an older `zapterm.py` still in memory) is recorded as *Unidentified
+  client*, and the panel says to restart it.
+- **Passwords are masked in the activity record and in the panels.** A
+  command is kept as typed with the value after a secret keyword replaced by
+  `******`: `set password ******`, `secret 0 ******`, `snmp-server community
+  ****** RO`, `--password=******`, `curl -u admin:******`, the password of a
+  FortiOS backup over FTP… and anything typed in answer to a password prompt
+  is recorded as `******` whole. The question ZapTerm asks before a change
+  still shows the command as it is. Best effort: a password in a place no
+  rule knows is not recognised.
+- **The automation panels can be made bigger.** Drag the left edge, top edge
+  or top-left corner of the AI assistant, notebook or script panel to resize
+  it; the list of what was sent (or the script's log) takes the extra room.
+  The size is remembered, per kind of panel; double-click an edge for the
+  default size. **Enlarge** in the panel's header fills the window, leaving
+  the title bar and its menus in reach; **Restore size** goes back.
+- **Run & compare says what it found.** The result was a modal with "2 hosts
+  identical" and a "diff" button even when there was nothing to compare. Now:
+  - It is a panel under the terminals, and each pane's header shows its result:
+    **=** same output everywhere, **A** / **B**… which version the pane printed
+    (A is the most common, or on a tie the left-most pane's), **…** waiting,
+    **–** no reply, **!** possibly incomplete.
+  - The status reads "Same output on both panes", "Output differs: 2
+    versions"… and the panel says what is compared (the text between the
+    command and the prompt, spaces at line ends ignored).
+  - The differences show side by side: the two outputs face each other, each
+    with its own line numbers; removed and added lines are paired across,
+    and identical runs stay folded. **Split / Unified** switches to the
+    single-column view. With more than two versions, each can be compared
+    with A in one click.
+  - Panes with the same name are told apart ("FWF-40F (pane 2)"), and panes
+    connected to the same device (same host and port) are pointed out: the
+    same output is then expected.
+  - It warns when an output is still stopped at a `--More--` prompt and when
+    no prompt came back within 10 s.
+  - A device that pauses mid-output is no longer cut short: if more output
+    arrives after a quiet second, the capture carries on.
+- **Multi is per tab and needs two or more sessions.** It was one global
+  switch: it stayed on when you moved to another tab, so typing there could
+  reach several devices unnoticed, and in a tab with a single session it did
+  nothing at all. Now each tab has its own Multi; with fewer than two
+  sessions the button is greyed out and explains how to get there (split the
+  tab or open a group), and a tab left with one session turns it off. While
+  it is on, the button reads "Multi · N", the tab shows a broadcast icon and
+  every pane in it has a coloured border.
+- **The "MASTER" bar is now "SEND TO ALL"**, and its tooltip says how many
+  sessions of the tab (or group) receive what is typed there.
+- **"live" in the bar is now "Send keys as I type"**, with a tooltip
+  saying what it does: off (the default), nothing is sent until Enter; on,
+  every key goes to all the sessions as you type it, for what a device
+  answers before Enter (such as `?` for context help on Cisco IOS). The box's
+  placeholder says which mode is on.
+- **macOS: "Download and install" now installs.** It used to open the disk
+  image and leave ZapTerm running, so the old copy was in the way of the new
+  one. Now **Install and reopen** closes ZapTerm, puts the new version in the
+  place of the old one and opens it again; sessions, vault and settings are
+  not touched (they live outside the app). The old version is kept until the
+  new one is in place and is put back if anything fails, and then the disk
+  image opens so you can drag ZapTerm to Applications yourself. That is also
+  what happens where ZapTerm can't replace itself (no permission on its
+  folder). What it did is written to `update.log` in the data folder.
+  ZapTerm is not signed with an Apple Developer ID yet, so the updater runs
+  the `xattr -cr` step on the new version itself. A copy downloaded with a
+  browser still needs that command the first time.
+
+### Fixed
+- **Run & compare with "live" on sent the command twice.** Live mode had
+  already typed it on every device, and Run & compare typed it again
+  (`show versionshow version`). It now only presses Enter.
+- **"live" ignored Backspace.** Characters deleted in the bar stayed on the
+  devices' command line; they are now erased there too.
+- The `\r\r\n` fix of 1.7.19 also covers commands run by an AI assistant.
+
 ## [1.7.19] - 2026-11-24
 
 ### Fixed

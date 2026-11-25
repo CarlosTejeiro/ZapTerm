@@ -517,9 +517,9 @@ fn reveal(path: &Path) -> Result<(), AppError> {
     }
 }
 
-/// Start installing the downloaded file. Returns `true` when ZapTerm should
-/// close so the installer can replace it (setup EXE, MSI); for the other
-/// kinds it opens the file (DMG, DEB, RPM) or shows it in its folder
+/// Start installing the downloaded file. Returns `true` when ZapTerm closes
+/// so it can be replaced (setup EXE, MSI, and the app on macOS); for the
+/// other kinds it opens the file (DEB, RPM) or shows it in its folder
 /// (portable EXE, AppImage).
 #[tauri::command]
 pub async fn install_update(app: AppHandle) -> Result<bool, AppError> {
@@ -544,10 +544,34 @@ pub async fn install_update(app: AppHandle) -> Result<bool, AppError> {
             Ok(true)
         }
         #[cfg(target_os = "macos")]
-        InstallKind::Dmg => spawn("open", &[p]).map(|_| false),
+        InstallKind::Dmg => install_dmg(app, &path),
         InstallKind::Deb | InstallKind::Rpm => spawn("xdg-open", &[p]).map(|_| false),
         _ => reveal(&path).map(|_| false),
     }
+}
+
+/// macOS: ZapTerm quits, a small script replaces the app with the one in the
+/// disk image and opens it again (see `mac_update`). Where ZapTerm can't
+/// replace itself (no permission on its folder, not running from an app
+/// bundle) the disk image is opened instead, for the user to drag the app.
+/// Either way ZapTerm closes, so the old copy is not in the way.
+#[cfg(unix)]
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn install_dmg(app: AppHandle, dmg: &Path) -> Result<bool, AppError> {
+    let log = app
+        .path()
+        .app_data_dir()
+        .unwrap_or_else(|_| std::env::temp_dir())
+        .join("update.log");
+    let started = std::env::current_exe()
+        .map_err(|e| e.to_string())
+        .and_then(|exe| super::mac_update::install(&exe, dmg, std::process::id(), &log));
+    if let Err(why) = started {
+        tracing::warn!("update: ZapTerm can't replace itself ({why}); opening the disk image");
+        spawn("open", &[dmg.as_os_str()])?;
+    }
+    exit_soon(app);
+    Ok(true)
 }
 
 /// Show the downloaded file in its folder.

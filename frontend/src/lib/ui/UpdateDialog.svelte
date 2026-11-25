@@ -112,7 +112,7 @@
       case 'msi':
         return 'ZapTerm closes so the installer can replace it; open sessions are disconnected.'
       case 'dmg':
-        return 'The disk image opens: drag ZapTerm to Applications, replacing the old one, then open it again.'
+        return 'ZapTerm closes, the new version takes the place of this one and ZapTerm opens again; open sessions are disconnected. Where ZapTerm cannot replace itself, the disk image opens instead: drag ZapTerm to Applications.'
       case 'deb':
       case 'rpm':
         return 'The package opens in your software installer. If nothing opens, install it from a terminal (for example sudo apt install ./file.deb).'
@@ -130,6 +130,7 @@
       case 'msi':
         return 'Install now'
       case 'dmg':
+        return 'Install and reopen'
       case 'deb':
       case 'rpm':
         return 'Open installer'

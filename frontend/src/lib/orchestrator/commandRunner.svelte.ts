@@ -14,27 +14,49 @@
 //   2. Time window — a global timeout flips any still-running host to
 //      `timeout`. This is also the ONLY mechanism for hosts whose platform is
 //      unknown (prompt_returned always returns false there).
+//
+// With `autoPage`, a host whose output stops at a pager prompt (`--More--`,
+// `---(more)---`, `<--- More --->`) is sent a space so the device prints the
+// next page, and the deadline starts again, up to MAX_PAGES pages per host.
 
 import { invoke } from '@tauri-apps/api/core'
 import { onTerminalData } from '$lib/bridge/events'
 import { promptReturned } from '$lib/bridge/commands'
 import type { UnlistenFn } from '@tauri-apps/api/event'
+import { endsAtPager, MAX_PAGES, type CompareHost, type HostState } from './compare'
 
-export type HostState = 'running' | 'done' | 'timeout'
+export type { HostState }
+export { MAX_PAGES }
 
-export interface HostCapture {
-  sessionId: string
-  label: string
+export interface HostCapture extends CompareHost {
   platform: string | null
-  state: HostState
-  /** ANSI-stripped accumulated output. */
-  buffer: string
+  /** How a finished host was judged finished: its prompt came back, or it
+   *  went quiet (`settle`). A settled host that sends more output while the
+   *  run is still open goes back to `running`, so a pause mid-output doesn't
+   *  cut the capture short. */
+  doneBy: 'prompt' | 'settle' | null
+  /** Spaces sent to page on through a `--More--` pager. */
+  pages: number
 }
 
 export interface RunnerHost {
   sessionId: string
   label: string
   platform: string | null
+  /** 1-based position of the pane in its tab. */
+  position: number
+  /** `host:port`, or null for a local shell. */
+  target: string | null
+}
+
+export interface RunOptions {
+  /** The command is already on the devices' command line (the master bar's
+   *  "live" mode streamed it while it was typed): only press Enter, and don't
+   *  wait for an echo that arrived before the run started. */
+  typed?: boolean
+  /** Answer pager prompts (`--More--`) with a space so the whole output is
+   *  captured. */
+  autoPage?: boolean
 }
 
 const QUIET_MS = 150
@@ -45,6 +67,10 @@ const QUIET_MS = 150
 // timeout and their (captured) output was being discarded.
 const SETTLE_MS = 900
 const DEFAULT_TIMEOUT_MS = 10_000
+// When every host is finished but some only because they went quiet, keep
+// listening this much longer before closing the run: a device that pauses
+// mid-output then still gets its full output compared.
+const GRACE_MS = 1_500
 
 function stripAnsi(s: string): string {
   return (
@@ -71,23 +97,38 @@ export class CommandRunner {
   #quietTimers = new Map<string, ReturnType<typeof setTimeout>>()
   #settleTimers = new Map<string, ReturnType<typeof setTimeout>>()
   #globalTimer: ReturnType<typeof setTimeout> | null = null
+  #graceTimer: ReturnType<typeof setTimeout> | null = null
   #timeoutMs: number
+  /** Wait for the command's echo before trusting completion. */
+  #needEcho = true
+  #autoPage = false
 
   constructor(timeoutMs: number = DEFAULT_TIMEOUT_MS) {
     this.#timeoutMs = timeoutMs
   }
 
+  /** How long a host may take before it counts as "no reply". */
+  get timeoutMs(): number {
+    return this.#timeoutMs
+  }
+
   /** Send `command` to every host and begin capturing. */
-  async run(hosts: RunnerHost[], command: string): Promise<void> {
+  async run(hosts: RunnerHost[], command: string, opts: RunOptions = {}): Promise<void> {
     this.reset()
     if (hosts.length === 0) return
     this.command = command
     this.running = true
+    this.#needEcho = !opts.typed
+    this.#autoPage = opts.autoPage ?? false
     this.hosts = hosts.map((h) => ({
       sessionId: h.sessionId,
       label: h.label,
       platform: h.platform,
+      position: h.position,
+      target: h.target,
       state: 'running' as HostState,
+      doneBy: null,
+      pages: 0,
       buffer: '',
     }))
     for (const h of hosts) this.#decoders.set(h.sessionId, new TextDecoder())
@@ -95,17 +136,34 @@ export class CommandRunner {
     // Subscribe BEFORE sending so we don't miss the first bytes.
     this.#unlisten = await onTerminalData((p) => this.#onData(p.session_id, p.data))
 
-    const bytes = Array.from(new TextEncoder().encode(command + '\r'))
+    const bytes = Array.from(new TextEncoder().encode(opts.typed ? '\r' : command + '\r'))
     for (const h of hosts) {
       invoke('send_input', { sessionId: h.sessionId, data: bytes }).catch(console.error)
     }
 
+    this.#armDeadline()
+  }
+
+  /** (Re)start the time limit for the run. */
+  #armDeadline() {
+    if (this.#globalTimer) clearTimeout(this.#globalTimer)
     this.#globalTimer = setTimeout(() => this.#expire(), this.#timeoutMs)
   }
 
   #onData(sessionId: string, data: number[]) {
     const host = this.hosts.find((h) => h.sessionId === sessionId)
-    if (!host || host.state !== 'running') return
+    if (!host) return
+    // More output from a host that was only presumed finished (it had gone
+    // quiet): it wasn't, keep capturing.
+    if (host.state === 'done' && host.doneBy === 'settle') {
+      host.state = 'running'
+      host.doneBy = null
+      if (this.#graceTimer) {
+        clearTimeout(this.#graceTimer)
+        this.#graceTimer = null
+      }
+    }
+    if (host.state !== 'running') return
     const decoder = this.#decoders.get(sessionId)
     if (!decoder) return
     host.buffer += stripAnsi(decoder.decode(new Uint8Array(data), { stream: true }))
@@ -134,9 +192,14 @@ export class CommandRunner {
     // Only settle once the command echo has come back, so we don't complete on
     // a pre-command burst. A host that never echoes (truly silent) keeps
     // running and is caught by the global timeout = a genuine no-reply.
-    if (this.command && !host.buffer.includes(this.command)) return
+    if (!this.#echoSeen(host)) return
     host.state = 'done'
+    host.doneBy = 'settle'
     this.#settleCheck()
+  }
+
+  #echoSeen(host: HostCapture): boolean {
+    return !this.#needEcho || !this.command || host.buffer.includes(this.command)
   }
 
   async #maybeComplete(sessionId: string) {
@@ -144,14 +207,30 @@ export class CommandRunner {
     if (!host || host.state !== 'running') return
     // Wait until the command echo has shown up before trusting a prompt match;
     // otherwise the echoed prompt right after sending can look "done".
-    if (this.command && !host.buffer.includes(this.command)) return
+    if (!this.#echoSeen(host)) return
+
+    // Stopped at a pager: press Space for the next page. Only looked at once
+    // the host has gone quiet, so it is really waiting for a key; the next
+    // check comes with the device's next output, so one space per prompt.
+    // Past MAX_PAGES it is left at the prompt (and flagged as incomplete).
+    if (this.#autoPage && endsAtPager(host.buffer.slice(-2048))) {
+      if (host.pages < MAX_PAGES) {
+        host.pages++
+        invoke('send_input', { sessionId, data: [0x20] }).catch(console.error)
+        this.#armDeadline()
+      }
+      return
+    }
+
     if (!host.platform) return // unknown platform → time-window only
 
     // Check only the tail to keep the regex cheap and end-anchored.
     const tail = host.buffer.slice(-512)
     try {
       if (await promptReturned(host.platform, tail)) {
+        if (host.state !== 'running') return
         host.state = 'done'
+        host.doneBy = 'prompt'
         this.#settleCheck()
       }
     } catch {
@@ -160,6 +239,8 @@ export class CommandRunner {
   }
 
   #expire() {
+    // The deadline has passed: close the run now, no grace period.
+    this.#globalTimer = null
     for (const h of this.hosts) {
       if (h.state === 'running') h.state = 'timeout'
     }
@@ -167,11 +248,22 @@ export class CommandRunner {
   }
 
   #settleCheck() {
-    if (this.hosts.every((h) => h.state !== 'running')) {
-      this.running = false
-      this.done = true
-      this.#teardownListeners()
+    if (!this.hosts.every((h) => h.state !== 'running')) return
+    if (this.hosts.some((h) => h.doneBy === 'settle') && this.#globalTimer) {
+      if (this.#graceTimer) clearTimeout(this.#graceTimer)
+      this.#graceTimer = setTimeout(() => {
+        this.#graceTimer = null
+        if (this.hosts.every((h) => h.state !== 'running')) this.#finish()
+      }, GRACE_MS)
+      return
     }
+    this.#finish()
+  }
+
+  #finish() {
+    this.running = false
+    this.done = true
+    this.#teardownListeners()
   }
 
   #teardownListeners() {
@@ -186,6 +278,10 @@ export class CommandRunner {
     if (this.#globalTimer) {
       clearTimeout(this.#globalTimer)
       this.#globalTimer = null
+    }
+    if (this.#graceTimer) {
+      clearTimeout(this.#graceTimer)
+      this.#graceTimer = null
     }
   }
 

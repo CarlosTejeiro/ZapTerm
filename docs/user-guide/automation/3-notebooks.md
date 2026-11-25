@@ -12,10 +12,10 @@ next cells. ZapTerm lets a notebook drive its tabs with the same `zapterm` modul
 scripts.
 
 > 🔒 **A notebook starts read-only.** Only `get …` / `show …` commands reach
-> the device; anything else is listed in the ZapTerm panel as "would run" and
-> `run()` returns an empty text for it. Untick **Read-only** in the panel only
-> when you really mean to change something — and keep bigger changes for a
-> script you've dry-run.
+> the device; anything else shows in the ZapTerm panel as blocked and
+> `run()` returns an empty text for it. Move the panel's control off
+> **Read-only** only when you really mean to change something — and keep
+> bigger changes for a script you've dry-run.
 
 ## One-time setup
 
@@ -29,15 +29,21 @@ You need one of these:
 
 ## Step 1 — let notebooks connect
 
-In ZapTerm: **Tools → Allow notebook connection…**. The panel shows *Waiting for a
+In ZapTerm: **Tools → Notebook connection…**. The panel shows *Waiting for a
 notebook…* and the lines a notebook needs:
 
 ![Notebook connection waiting](../images/notebook-waiting.png)
 
 The connection is off by default, local to your computer only, and turns
 itself off after 60 minutes without notebook activity or when ZapTerm closes.
-**Turn off** in the panel ends it any time. The **Read-only** box is ticked;
-leave it that way while you explore.
+**Turn off** in the panel ends it any time. **What a notebook may send** is on
+**Read-only**; leave it that way while you explore. The other two levels are
+**Ask me first** (any command, but ZapTerm asks you before each one that is
+not a display command) and **No questions**.
+
+This connection is for notebooks only: an AI assistant is let in through its
+own entry, [Tools → AI assistant (MCP)…](5-ai-assistant.md), and only one of
+the two can be on at a time.
 
 ## Step 2 — open the example notebook
 
@@ -73,6 +79,9 @@ Meanwhile, in ZapTerm, you see each command in the tab:
 
 - **Re-run only what changed.** Variables stay between cells: fix your parsing
   in cell 5 and re-run just that cell — no need to ask the device again.
+- **What did I run?** Tools → Automation activity… lists every command a
+  notebook, a script or an AI assistant sent, when and on which device
+  ([more](5-ai-assistant.md#what-it-did-automation-activity)).
 - **Stop a cell** with ■ if it waits too long. ZapTerm abandons that call and the
   next cell starts clean.
 - **One notebook at a time.** A second notebook's `connect()` is refused while
@@ -94,4 +103,4 @@ When the cells do what you want:
 `sase_reset.py` is exactly that: the parsing from `explore.ipynb`, plus the
 reset, run on a folder of devices.
 
-[← 2. Python scripts](2-scripts.md) · [Guide index](README.md) · [Scripting reference](../scripting.md)
+[← 2. Python scripts](2-scripts.md) · [Guide index](README.md) · [4. Add devices in bulk →](4-bulk-add.md) · [Scripting reference](../scripting.md)

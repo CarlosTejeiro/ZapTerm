@@ -267,8 +267,38 @@ progress. -->
 - **Split panes** (`Ctrl+\` / `Ctrl+Shift+\`): recursive horizontal/vertical
   splits; open a saved session into an empty split by clicking it in the
   sidebar or dragging it onto the empty pane.
-- **Multi-exec broadcast** (`Ctrl+Shift+M`): type once, send to many sessions;
-  open N hosts as a grid with a master input bar and **Compare** their output.
+- **Multi** (`Ctrl+Shift+M`): type once in several sessions. It is set per
+  tab and needs two or more sessions in it — split the tab or open a group;
+  with one session the button is greyed out and says so. While it is on, the
+  button reads "Multi · 3", the tab shows a broadcast icon, every pane has a
+  coloured border, and what you type in any pane (or a list command you click)
+  goes to all the sessions of that tab — never to other tabs. It turns itself
+  off when the tab is left with one session. The **SEND TO ALL** bar under the
+  panes sends a whole line to all of them; in a grid opened from a group it is
+  always there.
+- **Run & compare** (SEND TO ALL bar, in a split or a grid): sends the command
+  to every pane and compares what each one printed between the command and the
+  prompt that came back (spaces at line ends ignored). The result opens in a
+  panel under the terminals and as a mark in each pane's header: **=** every
+  pane printed the same; **A**, **B**… which version this pane printed (A is
+  the most common, or on a tie the left-most pane's); **…** still waiting;
+  **–** no reply; **!** the capture may be incomplete. With two versions the
+  differences show straight away; with more, each one can be compared with A.
+  The differences show side by side, each output with its line numbers
+  (**Split**, the default), or in one column (**Unified**).
+  The panel warns when panes are connected to the same device (same output
+  expected), when the output still stopped at a `--More--` prompt, and when no
+  prompt came back within 10 s. **Page through --More--** (on by default)
+  presses Space for you when a device stops at a pager prompt (`--More--`,
+  `---(more)---`, `<--- More --->`) after a line sent from the SEND TO ALL bar,
+  with Enter or with Run & compare: only in that session, up to 200 pages, so
+  you get the whole output; Run & compare leaves the pager prompts out of the
+  comparison. What you type straight into a pane is not paged. Panes with the same
+  name are told apart as "name (pane 2)". **Send keys as I type** in the SEND
+  TO ALL bar sends every key to all the sessions as you type it (for what a
+  device answers before Enter, such as `?` for context help on Cisco IOS),
+  Backspace included; Run & compare then only presses Enter. Off (the default),
+  nothing is sent until Enter.
 
 ---
 
@@ -276,6 +306,12 @@ progress. -->
 
 Record a session to a rotating file (plain text or raw), started from the pane
 header's record button. A per-session history panel lists past logs.
+
+What scripts, notebooks and AI assistants send is recorded on its own, always:
+**Tools → Automation activity…** shows every command, when, on which device
+and whether it was sent, from a text file in the same logs folder
+(`automation/activity-YYYY-MM.log`). See
+[Connect an AI assistant](automation/5-ai-assistant.md#what-it-did-automation-activity).
 
 ---
 
@@ -295,8 +331,12 @@ selector, Font family + size, cursor style. -->
   with its notes and, if you want, downloads the installer that matches your
   copy (setup EXE, MSI, portable EXE, DMG, DEB, RPM or AppImage) into your
   Downloads folder, checked against the SHA-256 GitHub publishes. The setup
-  EXE and the MSI install with one click (ZapTerm closes for it); the others
-  open the installer or show the file. A copy from the Microsoft Store is
+  EXE and the MSI install with one click (ZapTerm closes for it). On macOS,
+  **Install and reopen** closes ZapTerm, replaces the app with the new
+  version and opens it again; if ZapTerm can't replace itself, the disk image
+  opens for you to drag it to Applications. The others open the installer or
+  show the file. Your sessions, vault and settings are never touched by an
+  update. A copy from the Microsoft Store is
   updated by the Store. Stable versions are offered to stable copies; a beta
   copy is also offered newer betas.
 
@@ -311,6 +351,9 @@ selector, Font family + size, cursor style. -->
   backup** (Settings → Backup) and sync include them, together with the
   passwords and vault entries.
 - **Importers**: `~/.ssh/config`, PuTTY, MobaXterm and SecureCRT.
+- **Add devices in bulk** (File menu): paste a list of hosts or open a CSV
+  file and add them all as saved sessions, after a preview — see
+  [Add devices in bulk](automation/4-bulk-add.md).
 - **Macros**: exported/imported separately as their own JSON (see
   [Macros](#5-macros)).
 - The **vault and its secrets are never included** in any export.

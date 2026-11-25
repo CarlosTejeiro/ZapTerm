@@ -25,6 +25,8 @@
     onRunScript?: () => void
     onScriptExamples?: () => void
     onNotebook?: () => void
+    onAssistant?: () => void
+    onActivity?: () => void
     onCheckUpdates?: () => void
     onSetTheme?: (key: string) => void
     onAbout?: () => void
@@ -34,6 +36,7 @@
     onImportPutty?: () => void
     onImportMobaXterm?: () => void
     onImportSecureCrt?: () => void
+    onBulkAdd?: () => void
     onCommandList?: () => void
     onTunnelsManager?: () => void
     themeName?: string
@@ -48,6 +51,8 @@
     onRunScript,
     onScriptExamples,
     onNotebook,
+    onAssistant,
+    onActivity,
     onCheckUpdates,
     onSetTheme,
     onAbout,
@@ -57,6 +62,7 @@
     onImportPutty,
     onImportMobaXterm,
     onImportSecureCrt,
+    onBulkAdd,
     onCommandList,
     onTunnelsManager,
     themeName = 'parchment',
@@ -111,6 +117,13 @@
           openMenu = null
         },
       },
+      {
+        label: 'Add devices in bulk…',
+        action: () => {
+          onBulkAdd?.()
+          openMenu = null
+        },
+      },
       { label: '', divider: true },
       { label: 'Quit', action: () => win.close() },
     ],
@@ -156,9 +169,23 @@
         },
       },
       {
-        label: 'Allow notebook connection…',
+        label: 'AI assistant (MCP)…',
+        action: () => {
+          onAssistant?.()
+          openMenu = null
+        },
+      },
+      {
+        label: 'Notebook connection…',
         action: () => {
           onNotebook?.()
+          openMenu = null
+        },
+      },
+      {
+        label: 'Automation activity…',
+        action: () => {
+          onActivity?.()
           openMenu = null
         },
       },

@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
+import type { BulkRow } from '$lib/inventory/bulkParse'
 import type {
   SavedSession,
   Folder,
@@ -1147,6 +1148,36 @@ export async function deleteUserCmdlist(platform: string): Promise<void> {
 /** Reveal the user lists folder; returns its path. */
 export async function openCmdlistsDir(): Promise<string> {
   return invoke<string>('open_cmdlists_dir')
+}
+
+// ── Bulk add devices (File → Add devices in bulk…) ──────────────────────────
+
+export interface BulkRowResult {
+  status: 'new' | 'exists' | 'error'
+  message: string | null
+  /** Folder path segments this row needs that don't exist yet. */
+  newFolders: string[]
+}
+
+export interface BulkResult {
+  rows: BulkRowResult[]
+  added: number
+  skipped: number
+  errors: number
+  foldersAdded: number
+  /** Sessions were created (not a preview, and no row had an error). */
+  applied: boolean
+}
+
+/** Check the rows against the inventory, and create them when `apply` (only
+ *  if no row has an error). */
+export async function bulkAddSessions(rows: BulkRow[], apply: boolean): Promise<BulkResult> {
+  return invoke<BulkResult>('bulk_add_sessions', { rows, apply })
+}
+
+/** A device list file as text (UTF-8, UTF-16 or Windows-1252). */
+export async function readDeviceListFile(path: string): Promise<string> {
+  return invoke<string>('read_device_list_file', { path })
 }
 
 // ── Vault (master password) ─────────────────────────────────────────────────

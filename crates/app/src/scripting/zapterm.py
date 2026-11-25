@@ -24,7 +24,7 @@ skipped and logged as "would run", and ``run()`` returns an empty string for
 it. ZapTerm enforces this, not the script.
 
 From a notebook (VS Code, JupyterLab) or a Python prompt you started yourself,
-turn on **Tools → Allow notebook connection** in ZapTerm, then::
+turn on **Tools → Notebook connection** in ZapTerm, then::
 
     import zapterm
     zapterm.connect()
@@ -107,6 +107,10 @@ _next_id = random.randrange(1, 2**31) * 1000
 #: How to reconnect after the connection drops (notebook mode): the arguments
 #: of the last ``connect()``, or None for a script started by ZapTerm.
 _notebook: Optional[dict] = None
+#: Who is connecting, told to ZapTerm on every (re)connection so its activity
+#: record names the source: ``{"kind": "notebook" | "mcp", "client": "..."}``.
+#: ``connect()`` fills it in; the MCP server sets it to its client's name.
+_identity: Optional[dict] = None
 
 
 def _open(port: int, token: str) -> None:
@@ -123,8 +127,7 @@ def _open(port: int, token: str) -> None:
             sock = socket.create_connection(("127.0.0.1", int(port)), timeout=10)
         except OSError:
             raise Error(
-                "ZapTerm isn't accepting notebooks (is it open, with Tools → Allow "
-                "notebook connection on?)"
+                f"ZapTerm isn't accepting {_who()} (is it open, with {_menu()} on?)"
             ) from None
         reader = sock.makefile("r", encoding="utf-8", newline="\n")
         sock.sendall((json.dumps({"token": token}) + "\n").encode("utf-8"))
@@ -134,8 +137,8 @@ def _open(port: int, token: str) -> None:
             break
         sock.close()
         message = hello.get("error") or (
-            "ZapTerm refused the connection (token out of date? turn the "
-            "notebook connection off and on, then connect() again)"
+            f"ZapTerm refused the connection (token out of date? turn {_menu()} "
+            "off and on, then connect again)"
         )
         if "already connected" in message and time.monotonic() < deadline:
             time.sleep(0.1)
@@ -143,6 +146,19 @@ def _open(port: int, token: str) -> None:
         raise Error(message)
     sock.settimeout(None)
     _sock, _reader = sock, reader
+
+
+def _is_assistant() -> bool:
+    return bool(_identity) and _identity.get("kind") == "mcp"
+
+
+def _who() -> str:
+    return "AI assistants" if _is_assistant() else "notebooks"
+
+
+def _menu() -> str:
+    """The ZapTerm menu entry that lets this kind of client in."""
+    return "Tools → AI assistant (MCP)" if _is_assistant() else "Tools → Notebook connection"
 
 
 def _close() -> None:
@@ -187,12 +203,30 @@ def _connect_notebook() -> None:
                 break
         else:
             raise Error(
-                "ZapTerm isn't accepting notebooks: turn on Tools → Allow notebook "
-                "connection in ZapTerm (looked for "
-                + ", ".join(str(t) for t in tried)
-                + ")"
+                f"ZapTerm isn't accepting {_who()}: turn on {_menu()} in ZapTerm "
+                "(looked for " + ", ".join(str(t) for t in tried) + ")"
             )
     _open(port, token)
+    _announce()
+
+
+def _announce() -> None:
+    """Tell ZapTerm who connected (for its activity record). Best effort: a
+    ZapTerm that doesn't know the call just answers with an error."""
+    global _next_id
+    if _identity is None or _sock is None:
+        return
+    _next_id += 1
+    rid = _next_id
+    req = {"id": rid, "method": "identify", "params": _identity}
+    try:
+        _sock.sendall((json.dumps(req) + "\n").encode("utf-8"))
+        while True:
+            line = _reader.readline()
+            if not line or json.loads(line).get("id") == rid:
+                return
+    except (OSError, ValueError):
+        return
 
 
 def _connect() -> None:
@@ -211,7 +245,7 @@ def _connect() -> None:
 
 def connect(path: Optional[str] = None, port: Optional[int] = None, token: Optional[str] = None) -> None:
     """Connect a notebook (or any Python you started yourself) to a running
-    ZapTerm. Turn on **Tools → Allow notebook connection** in ZapTerm first.
+    ZapTerm. Turn on **Tools → Notebook connection** in ZapTerm first.
 
     With no arguments the connection details are read from the file ZapTerm
     writes (found automatically); ``path`` points at that file when ZapTerm keeps
@@ -219,9 +253,12 @@ def connect(path: Optional[str] = None, port: Optional[int] = None, token: Optio
     If the connection drops later (ZapTerm restarted, connection turned off and
     on), the next call reconnects on its own.
     """
-    global _notebook
+    global _notebook, _identity
     with _lock:
         _notebook = {"path": path, "port": port, "token": token}
+        if _identity is None:
+            in_jupyter = "ipykernel" in sys.modules
+            _identity = {"kind": "notebook", "client": "Jupyter" if in_jupyter else "Python"}
         _connect_notebook()
 
 
@@ -243,7 +280,7 @@ def _call(method: str, **params):
                     raise Error(
                         "ZapTerm closed the connection"
                         + (
-                            " (notebook connection turned off, or ZapTerm closed) — "
+                            " (connection turned off, or ZapTerm closed) — "
                             "run the cell again to reconnect"
                             if _notebook is not None
                             else ""
@@ -288,14 +325,20 @@ class Session:
     def __repr__(self) -> str:
         return f"<zapterm.Session {self.name!r}>"
 
-    def run(self, command: str, timeout: float = 30) -> str:
+    def run(self, command: str, timeout: float = 30, strict: bool = False) -> str:
         """Type ``command`` + Enter and return its output.
 
         The output is what the device printed after echoing the command, up
         to (not including) the prompt that ends it. Raises :class:`Timeout`
         when the prompt does not come back within ``timeout`` seconds.
+
+        In read-only mode a command that isn't a display command is not sent
+        and ``run()`` returns an empty string; with ``strict=True`` it raises
+        :class:`Error` instead, so the caller can tell "not sent" from "printed
+        nothing". From a notebook with Read-only off, ZapTerm may ask the user
+        before sending such a command; if they say no, :class:`Error` is raised.
         """
-        return _call("run", session=self.id, command=command, timeout=timeout)
+        return _call("run", session=self.id, command=command, timeout=timeout, strict=strict)
 
     def send(self, text: str, enter: bool = True) -> None:
         """Type ``text`` (and Enter, unless ``enter=False``) without waiting."""
