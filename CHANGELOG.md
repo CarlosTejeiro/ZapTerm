@@ -8,56 +8,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ZapTerm continues ZAPX, which is frozen at 0.42.1; its history is in the
 [ZAPX changelog](https://github.com/CarlosTejeiro/zapx/blob/main/CHANGELOG.md).
 
-## [1.8.16-beta] - beta of the automation work (branch `claude/automation`, not on main yet)
+## [1.9.0] - 2026-11-25
 
-Betas are the 1.8.x versions: 1.8.0, 1.8.1… tagged `v1.8.0-beta`, `v1.8.1-beta`…
-(1.6.0 was the first beta, before the encrypted vault reached main as 1.7.)
-The app version itself carries no suffix, because the MSI and RPM bundlers
-disagree on which suffixes they accept.
+The automation work, tested as the 1.8.x betas (`v1.8.0-beta` to
+`v1.8.16-beta`), is now in the stable version.
 
-Includes everything up to 1.7.18 (the sections below), plus:
+### Added
+- **Connect an AI assistant (MCP).** **Tools → AI assistant (MCP)…** lets an
+  MCP client (Claude Desktop, Claude Code or any other) list tabs and saved
+  sessions, open a session and run commands through ZapTerm, with
+  `zapterm_mcp.py` (plain Python, no packages). The panel shows the
+  configuration to copy, who is connected, by name, and what was sent since
+  it was turned on. ZapTerm enforces the rules, not the assistant: no tool
+  exposes or types passwords (ZapTerm logs in from its vault), and the client
+  is told when a command was not sent.
+- **What an assistant or a notebook may send: three levels.** **Read-only**
+  (only display commands reach a device; anything else is refused),
+  **Ask me first** (display commands go through; before any other, ZapTerm
+  shows it and waits for your Yes, naming who is asking) and **No
+  questions**. The assistant and the notebooks each remember their own level.
+- **Automation activity: a record of everything a script, a notebook or an AI
+  assistant sent.** Every command sent or attempted is written to a text
+  file on your computer (`automation/activity-YYYY-MM.log` in the logs
+  folder, one line per event, tab-separated): when, who (the script, the
+  notebook, or the AI assistant by its own name), on which device and
+  address, the command, and what became of it — sent, blocked by Read-only,
+  declined by you, approved and sent, no prompt in time, or an error — with
+  how long it took. Only the command line is kept: never what the device
+  printed (session logging does that).
+- **Tools → Automation activity…** (also in the command palette and from the
+  panels) shows that record: counters and the last 14 days on top — click one
+  to filter — then the list, newest day first, one card per visit (from the
+  moment a client connected until it left), with filters by source and
+  device and a search box. Click a line to copy its command; **Open file**
+  and **Folder** take you to the text; **Enlarge** fills the window.
+- **Add devices in bulk** (File menu and command palette). Paste one device
+  per line (`host`, `host:port`, `name host`, `name host port`) or open a CSV
+  file whose first line names the columns (name, host, port, protocol,
+  username, folder, tags, notes, credential, jump_host — commas, semicolons
+  or tabs). Defaults fill what the list leaves out; folders are created from
+  a `DC/Madrid` path; the credential is a vault entry and the jump host a
+  saved SSH session, both by name, so no password is ever in the list. A
+  preview marks every row New, Exists or Error; devices already in the
+  inventory are skipped and nothing is added while any row has an error.
+- **Run & compare pages through `--More--` for you.** A device that stopped at
+  a pager prompt (`--More--`, `---(more)---`, `<--- More --->`) left that pane
+  waiting and its output was compared cut short. Now Run & compare presses
+  Space in that session only, while it is capturing, until the prompt comes
+  back (up to 200 pages; the time limit starts again with each page). The
+  pager prompts and the way devices erase them are left out of the
+  comparison. It also works for a line sent with Enter in the SEND TO ALL
+  bar: each session that stops at a pager prompt gets a space, until it has
+  been quiet for 10 s, or after 200 pages. What you type straight into a pane
+  is left alone. On by default; **Page through --More--** in the SEND TO ALL
+  bar turns it off.
+- `Session.run(..., strict=True)` raises instead of returning an empty string
+  when read-only keeps a command from being sent.
 
 ### Changed
-- **The automation panels can be made bigger.** The AI assistant, notebook
-  and script panels were a fixed size in the corner:
-  - Drag the panel's left edge, top edge or top-left corner to resize it;
-    the list of what was sent (or the script's log) takes the extra room.
-    The size is remembered, per kind of panel. Double-click an edge for the
-    default size.
-  - **Enlarge** in the panel's header fills the window, leaving the title
-    bar and its menus in reach; **Restore size** goes back.
-  - **Automation activity** has the same Enlarge button, and remembers it.
-- **macOS: "Download and install" now installs.** It used to open the disk
-  image and leave ZapTerm running, so the old copy was in the way of the new
-  one. Now **Install and reopen** closes ZapTerm, puts the new version in the
-  place of the old one and opens it again; sessions, vault and settings are
-  not touched (they live outside the app). The old version is kept until the
-  new one is in place and is put back if anything fails, and then the disk
-  image opens so you can drag ZapTerm to Applications yourself. That is also
-  what happens where ZapTerm can't replace itself (no permission on its
-  folder). What it did is written to `update.log` in the data folder.
-  ZapTerm is not signed with an Apple Developer ID yet, so the updater runs
-  the `xattr -cr` step on the new version itself. A copy downloaded with a
-  browser still needs that command the first time.
-- **An AI assistant and notebooks each have their own entry and panel.**
-  "Allow notebook connection" let both in, with the assistant's set-up tucked
-  inside the notebook panel. Now **Tools → AI assistant (MCP)…** and **Tools →
-  Notebook connection…** are separate:
-  - Each panel says who is connected, by name, and only what its kind of
-    client needs to connect.
-  - Each lets in only its kind: a notebook is refused while the assistant's
-    entry is on, and the other way round, and is told which entry to use.
-    Only one of the two can be on at a time; asking for the other offers to
-    switch.
-  - **What it may send** is one control with three levels — **Read-only**,
-    **Ask me first**, **No questions** — instead of two checkboxes, and the
-    assistant and the notebooks each remember their own level.
-  - In place of the text log, the panel lists what was sent since it was
-    turned on, as it happens: time, device, command and result, with **All
-    activity** one click away.
-
-### Changed
-- **Passwords are masked in the activity record and in the panel's log.** A
+- **Notebooks and the AI assistant each have their own entry and panel**:
+  **Tools → Notebook connection…** (it was "Allow notebook connection") and
+  **Tools → AI assistant (MCP)…**. Each lets in only its kind of client: a
+  notebook is refused while the assistant's entry is on, and the other way
+  round, and is told which entry to use. Only one of the two can be on at a
+  time; asking for the other offers to switch. A client that doesn't say what
+  it is (an older `zapterm.py` still in memory) is recorded as *Unidentified
+  client*, and the panel says to restart it.
+- **Passwords are masked in the activity record and in the panels.** A
   command is kept as typed with the value after a secret keyword replaced by
   `******`: `set password ******`, `secret 0 ******`, `snmp-server community
   ****** RO`, `--password=******`, `curl -u admin:******`, the password of a
@@ -65,74 +82,12 @@ Includes everything up to 1.7.18 (the sections below), plus:
   is recorded as `******` whole. The question ZapTerm asks before a change
   still shows the command as it is. Best effort: a password in a place no
   rule knows is not recognised.
-
-### Fixed
-- **An AI assistant could show up as "Notebook" in the activity record.** An
-  assistant app that was already running when ZapTerm was updated keeps the
-  older `zapterm_mcp.py` in memory, which doesn't say what it is; ZapTerm took
-  it for a notebook. Such a client is now recorded as *Unidentified client*,
-  and the panel says to quit and reopen the assistant app (or restart the
-  notebook kernel) so it can be named.
-
-### Added
-- **Automation activity: a record of everything a script, a notebook or an AI
-  assistant sent.** Until now you saw the commands go by in the tab, and the
-  panel listed only the ones refused, declined or approved, until ZapTerm
-  closed. Now every command sent or attempted is written to a text file on
-  your computer (`automation/activity-YYYY-MM.log` in the logs folder, one
-  line per event, tab-separated): when, who (the script, the notebook, or the
-  AI assistant by its own name), on which device and address, the command,
-  and what became of it — sent, blocked by Read-only, declined by you,
-  approved and sent, no prompt in time, or an error — with how long it took.
-  Only the command line is kept: never what the device printed (session
-  logging does that) and never a password.
-- **Tools → Automation activity…** (also in the command palette and from the
-  notebook panel) shows that record: counters and the last 14 days on top —
-  click one to filter — then the list, newest day first, one card per visit
-  (from the moment a client connected until it left), with filters by source
-  and device and a search box. Click a line to copy its command; **Open
-  file** and **Folder** take you to the text.
-- The MCP server tells ZapTerm which assistant is connected, and a notebook
-  says it is one: the panel shows "AI assistant connected · name", the
-  question before a change names who is asking, and the panel's log now
-  lists every command sent, not only the exceptions.
-
-### Fixed
-- **`run()` timed out on devices that end lines with `\r\r\n`** (seen on a
-  FortiGate 90G over a serial console), from scripts, notebooks and the MCP
-  server. The output came back complete, but the trailing `\r` wiped the
-  echoed command line, so `run()` never saw the echo and waited until its time
-  limit. Lines are now read the way the terminal shows them: a carriage return
-  or backspace moves the cursor and what follows overwrites, nothing is
-  erased. The FortiOS 7.6 STS prompt (`FortiGate-90G (STS)# `) was already
-  recognised; a test now covers it.
-
-### Changed
-- **Run & compare shows the differences side by side.** The two outputs face
-  each other, each with its own line numbers; removed and added lines are
-  paired across, and identical runs stay folded. **Split / Unified** next to
-  the legend switches back to the single-column view; Split is the default.
-- **"Page through --More--" also works with Enter in the SEND TO ALL bar**
-  (1.8.8 only paged during Run & compare, so a line sent with Enter still
-  stopped at `--More--`). After the line goes out, each session that stops at
-  a pager prompt gets a space, until it has been quiet for 10 s, or after 200
-  pages. What you type straight into a pane is left alone.
-
-### Added
-- **Run & compare pages through `--More--` for you.** A device that stopped at
-  a pager prompt (`--More--`, `---(more)---`, `<--- More --->`) left that pane
-  waiting and its output was compared cut short. Now Run & compare presses
-  Space in that session only, while it is capturing, until the prompt comes
-  back (up to 200 pages; the time limit starts again with each page). The pager
-  prompts and the way devices erase them are left out of the comparison. On by
-  default; **Page through --More--** in the SEND TO ALL bar turns it off.
-
-### Security
-- **`cookie` updated to 0.18.3** for
-  [RUSTSEC-2026-0594](https://rustsec.org/advisories/RUSTSEC-2026-0594), as
-  in 1.7.17 on main.
-
-### Changed
+- **The automation panels can be made bigger.** Drag the left edge, top edge
+  or top-left corner of the AI assistant, notebook or script panel to resize
+  it; the list of what was sent (or the script's log) takes the extra room.
+  The size is remembered, per kind of panel; double-click an edge for the
+  default size. **Enlarge** in the panel's header fills the window, leaving
+  the title bar and its menus in reach; **Restore size** goes back.
 - **Run & compare says what it found.** The result was a modal with "2 hosts
   identical" and a "diff" button even when there was nothing to compare. Now:
   - It is a panel under the terminals, and each pane's header shows its result:
@@ -142,18 +97,18 @@ Includes everything up to 1.7.18 (the sections below), plus:
   - The status reads "Same output on both panes", "Output differs: 2
     versions"… and the panel says what is compared (the text between the
     command and the prompt, spaces at line ends ignored).
-  - With two versions the differences show straight away, only the changed
-    lines and a few around them; with more, each version can be compared
-    with A in one click. No more picking two groups.
+  - The differences show side by side: the two outputs face each other, each
+    with its own line numbers; removed and added lines are paired across,
+    and identical runs stay folded. **Split / Unified** switches to the
+    single-column view. With more than two versions, each can be compared
+    with A in one click.
   - Panes with the same name are told apart ("FWF-40F (pane 2)"), and panes
     connected to the same device (same host and port) are pointed out: the
     same output is then expected.
-  - It warns when an output stopped at a `--More--` prompt (turn paging off
-    and run again; the pane is still waiting there) and when no prompt came
-    back within 10 s.
+  - It warns when an output is still stopped at a `--More--` prompt and when
+    no prompt came back within 10 s.
   - A device that pauses mid-output is no longer cut short: if more output
     arrives after a quiet second, the capture carries on.
-
 - **Multi is per tab and needs two or more sessions.** It was one global
   switch: it stayed on when you moved to another tab, so typing there could
   reach several devices unnoticed, and in a tab with a single session it did
@@ -169,36 +124,39 @@ Includes everything up to 1.7.18 (the sections below), plus:
   every key goes to all the sessions as you type it, for what a device
   answers before Enter (such as `?` for context help on Cisco IOS). The box's
   placeholder says which mode is on.
+- **macOS: "Download and install" now installs.** It used to open the disk
+  image and leave ZapTerm running, so the old copy was in the way of the new
+  one. Now **Install and reopen** closes ZapTerm, puts the new version in the
+  place of the old one and opens it again; sessions, vault and settings are
+  not touched (they live outside the app). The old version is kept until the
+  new one is in place and is put back if anything fails, and then the disk
+  image opens so you can drag ZapTerm to Applications yourself. That is also
+  what happens where ZapTerm can't replace itself (no permission on its
+  folder). What it did is written to `update.log` in the data folder.
+  ZapTerm is not signed with an Apple Developer ID yet, so the updater runs
+  the `xattr -cr` step on the new version itself. A copy downloaded with a
+  browser still needs that command the first time.
 
 ### Fixed
 - **Run & compare with "live" on sent the command twice.** Live mode had
   already typed it on every device, and Run & compare typed it again
   (`show versionshow version`). It now only presses Enter.
-- **"live" ignored Backspace.** Characters deleted in the MASTER bar stayed
-  on the devices' command line; they are now erased there too.
+- **"live" ignored Backspace.** Characters deleted in the bar stayed on the
+  devices' command line; they are now erased there too.
+- The `\r\r\n` fix of 1.7.19 also covers commands run by an AI assistant.
 
-### Added
-- **Add devices in bulk** (File menu and command palette). Paste one device
-  per line (`host`, `host:port`, `name host`, `name host port`) or open a CSV
-  file whose first line names the columns (name, host, port, protocol,
-  username, folder, tags, notes, credential, jump_host — commas, semicolons
-  or tabs). Defaults fill what the list leaves out; folders are created from
-  a `DC/Madrid` path; the credential is a vault entry and the jump host a
-  saved SSH session, both by name, so no password is ever in the list. A
-  preview marks every row New, Exists or Error; devices already in the
-  inventory are skipped and nothing is added while any row has an error.
-- **MCP server: connect an AI assistant.** `zapterm_mcp.py` (plain Python, no
-  packages) lets an MCP client list tabs and saved sessions, open a session
-  and run commands through ZapTerm, over the notebook connection. ZapTerm
-  enforces the rules: Read-only refuses anything but display commands and now
-  tells the client it was not sent; no tool exposes or types passwords. The
-  notebook panel shows the configuration to copy.
-- **Ask me first.** With the notebook connection's Read-only off, ZapTerm
-  shows each command that isn't a display command and waits for your Yes
-  (for notebooks too; on by default, can be switched off in the panel).
-  Refused, declined and approved commands are logged in the panel.
-- `Session.run(..., strict=True)` raises instead of returning an empty string
-  when read-only keeps a command from being sent.
+## [1.7.19] - 2026-11-24
+
+### Fixed
+- **`run()` timed out on devices that end lines with `\r\r\n`** (seen on a
+  FortiGate 90G over a serial console), in scripts and notebooks. The output
+  came back complete, but the trailing `\r` wiped the echoed command line, so
+  `run()` never saw the echo and waited until its time limit. Lines are now
+  read the way the terminal shows them: a carriage return or backspace moves
+  the cursor and what follows overwrites, nothing is erased. The FortiOS 7.6
+  STS prompt (`FortiGate-90G (STS)# `) was already recognised; a test now
+  covers it.
+
 ## [1.7.18] - 2026-11-23
 
 ### Added
